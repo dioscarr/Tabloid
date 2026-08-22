@@ -23,19 +23,14 @@ class TabloidSharedNav extends HTMLElement {
     const root = this.attachShadow({ mode: 'open' })
     root.innerHTML = `
       <style>
-        :host { display:block; position:fixed; inset:0 0 auto; z-index:2147483647; height:44px; color:#e2e8f0; font:500 14px/1.2 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+        :host { display:inline-block; position:relative; z-index:60; color:#e2e8f0; font:500 14px/1.2 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
         * { box-sizing:border-box; }
-        .bar { height:44px; display:flex; align-items:center; gap:10px; padding:0 clamp(10px,2vw,22px); background:rgba(9,14,24,.96); border-bottom:1px solid rgba(148,163,184,.18); box-shadow:0 5px 18px rgba(2,6,23,.22); backdrop-filter:blur(18px); }
-        .launcher { display:grid; place-items:center; width:32px; height:32px; border:0; border-radius:9px; padding:0; background:transparent; color:#cbd5e1; }
-        .launcher:hover,.launcher:focus-visible { background:#1e293b; color:white; }
-        .brand { display:flex; align-items:center; gap:8px; color:#f8fafc; text-decoration:none; font-weight:780; letter-spacing:-.015em; white-space:nowrap; }
-        .divider { width:1px; height:18px; background:#334155; }
-        .current-label { color:#94a3b8; font-size:12px; font-weight:650; }
-        .spacer { flex:1; }
+        .launcher { display:grid; place-items:center; width:40px; height:40px; border:1px solid rgba(148,163,184,.22); border-radius:12px; padding:0; background:rgba(15,23,42,.38); color:inherit; }
+        .launcher:hover,.launcher:focus-visible { background:rgba(51,65,85,.55); color:white; }
         button { cursor:pointer; font:inherit; }
         button:focus-visible,.app:focus-visible { outline:2px solid #a3e635; outline-offset:2px; }
         .grid { width:17px; height:17px; }
-        .menu { position:absolute; top:50px; left:clamp(10px,2vw,22px); width:min(420px,calc(100vw - 20px)); max-height:min(560px,calc(100vh - 66px)); overflow:auto; border:1px solid #334155; border-radius:20px; padding:10px; background:#0f172a; box-shadow:0 24px 70px rgba(2,6,23,.62); }
+        .menu { position:absolute; top:48px; right:0; width:min(420px,calc(100vw - 24px)); max-height:min(560px,calc(100vh - 78px)); overflow:auto; border:1px solid #334155; border-radius:20px; padding:10px; background:#0f172a; color:#e2e8f0; box-shadow:0 24px 70px rgba(2,6,23,.62); }
         .menu[hidden] { display:none; }
         .menu-head { display:flex; align-items:center; justify-content:space-between; padding:9px 10px 14px; }
         .heading { color:#f8fafc; font-size:15px; font-weight:850; letter-spacing:-.01em; }
@@ -53,15 +48,12 @@ class TabloidSharedNav extends HTMLElement {
         .branch { overflow:hidden; margin-top:4px; color:#64748b; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
         .dot { position:absolute; top:10px; right:10px; width:7px; height:7px; border-radius:50%; background:#a3e635; box-shadow:0 0 0 3px rgba(163,230,53,.12); }
         .status { padding:16px 11px; color:#94a3b8; font-size:12px; line-height:1.5; }
-        @media (max-width:520px) { .current-label,.divider { display:none; } .apps { grid-template-columns:1fr; } }
+        @media (max-width:520px) { .apps { grid-template-columns:1fr; } .menu { position:fixed; top:60px; right:12px; left:12px; width:auto; } }
       </style>
-      <nav class="bar" aria-label="Shared application navigation">
-        <button class="launcher" type="button" aria-label="Open app switcher" aria-expanded="false" aria-controls="shared-app-menu">
-          <svg class="grid" viewBox="0 0 18 18" aria-hidden="true" fill="currentColor"><circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="3" r="1.5"/><circle cx="15" cy="3" r="1.5"/><circle cx="3" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="15" cy="9" r="1.5"/><circle cx="3" cy="15" r="1.5"/><circle cx="9" cy="15" r="1.5"/><circle cx="15" cy="15" r="1.5"/></svg>
-        </button>
-        <a class="brand" href="https://tabloid.${TAILNET}/">Tabloid</a><span class="divider"></span><span class="current-label">Applications</span><span class="spacer"></span>
-        <div id="shared-app-menu" class="menu" hidden><div class="status">Loading applications…</div></div>
-      </nav>`
+      <button class="launcher" type="button" aria-label="Switch application" aria-expanded="false" aria-controls="shared-app-menu">
+        <svg class="grid" viewBox="0 0 18 18" aria-hidden="true" fill="currentColor"><circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="3" r="1.5"/><circle cx="15" cy="3" r="1.5"/><circle cx="3" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="15" cy="9" r="1.5"/><circle cx="3" cy="15" r="1.5"/><circle cx="9" cy="15" r="1.5"/><circle cx="15" cy="15" r="1.5"/></svg>
+      </button>
+      <div id="shared-app-menu" class="menu" hidden><div class="status">Loading applications…</div></div>`
 
     this.button = root.querySelector('button')
     this.menu = root.querySelector('.menu')
@@ -92,8 +84,6 @@ class TabloidSharedNav extends HTMLElement {
       if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
       const branches = (await response.json()).map(({ name }) => name).sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
-      const currentApp = apps.find((app) => new URL(app.url).hostname === window.location.hostname)
-      rootLabel(this.shadowRoot, currentApp?.name || 'Applications')
       this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><a class="repo" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage branches ↗</a></div><div class="apps">${apps.map((app) => {
         const current = new URL(app.url).hostname === window.location.hostname
         return `<a class="app${current ? ' current' : ''}" href="${app.url}"><span class="icon">${app.name[0]}</span><span><span class="name">${app.name}</span><span class="branch">${app.branch}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
@@ -105,17 +95,20 @@ class TabloidSharedNav extends HTMLElement {
   }
 }
 
-const rootLabel = (root, label) => {
-  const element = root?.querySelector('.current-label')
-  if (element) element.textContent = label
-}
-
 if (!customElements.get('tabloid-shared-nav')) customElements.define('tabloid-shared-nav', TabloidSharedNav)
 
 export const mountSharedNav = () => {
   if (document.querySelector('tabloid-shared-nav')) return
-  document.body.prepend(document.createElement('tabloid-shared-nav'))
-  document.body.style.paddingTop = '44px'
-  const fixedSidebar = document.querySelector('#sidebar')
-  if (fixedSidebar) fixedSidebar.style.top = '44px'
+  const sharedNav = document.createElement('tabloid-shared-nav')
+  const legacyLauncher = document.querySelector('#apps-button')?.parentElement
+  if (legacyLauncher) {
+    legacyLauncher.replaceWith(sharedNav)
+    return
+  }
+  const profileControl = document.querySelector('#profile-button')?.parentElement
+  if (profileControl) {
+    profileControl.before(sharedNav)
+    return
+  }
+  document.body.prepend(sharedNav)
 }
