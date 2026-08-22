@@ -98,4 +98,22 @@ document.querySelector('#understood-button')?.addEventListener('click', closeDia
 const workspaceDialog = document.querySelector('#workspace-dialog')
 const closeWorkspaceDialog = () => { workspaceDialog?.classList.add('hidden'); workspaceDialog?.classList.remove('flex') }
 document.querySelector('#close-workspace-dialog')?.addEventListener('click', closeWorkspaceDialog)
-document.querySelector('#workspace-understood')?.addEventListener('click', closeWorkspaceDialog)
+const announce = (message, tone = 'info') => {
+  const notice = document.createElement('div')
+  notice.setAttribute('role', 'status')
+  notice.className = `fixed bottom-5 right-5 z-[60] max-w-sm rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl ${tone === 'success' ? 'border-emerald-500/30 bg-emerald-950 text-emerald-200' : 'border-indigo-500/30 bg-indigo-950 text-indigo-200'}`
+  notice.textContent = message
+  document.body.append(notice)
+  window.setTimeout(() => notice.remove(), 5000)
+}
+
+document.querySelector('#workspace-understood')?.addEventListener('click', () => {
+  closeWorkspaceDialog()
+  announce('Workspace request queued. Provisioning will begin when the Admin API is connected.')
+})
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return
+  if (!dialog?.classList.contains('hidden')) closeDialog()
+  if (!workspaceDialog?.classList.contains('hidden')) closeWorkspaceDialog()
+})
