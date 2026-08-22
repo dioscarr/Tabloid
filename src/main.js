@@ -142,39 +142,55 @@ const footer = `
 `
 
 const homePage = `
-  <main>
-    <section class="mx-auto max-w-7xl px-5 pb-12 pt-10 sm:px-8 sm:pt-14 lg:pb-16">
-      <div class="mb-8 flex flex-wrap items-center justify-between gap-3 border-y border-stone-300 py-3 text-[0.68rem] font-bold uppercase tracking-[0.2em] text-stone-500"><span>Thursday, August 21, 2026</span><span>Independent city journalism · Vol. 42 No. 18</span></div>
-      <div class="grid gap-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,.7fr)] lg:gap-12">
-        <article>
-          <div class="mb-5 flex items-center gap-3 text-xs font-black uppercase tracking-[0.18em] text-red-600"><span class="h-px w-10 bg-red-600"></span> Front Page</div>
-          <h1 class="max-w-5xl font-display text-[clamp(3rem,7vw,6.9rem)] font-black leading-[0.91] tracking-[-0.06em] text-balance">A waterfront reborn—and a city divided.</h1>
-          <p class="mt-6 max-w-2xl text-lg leading-8 text-stone-600 sm:text-xl">The redevelopment package promises public parks, a transit link, and a new skyline. Residents are split between optimism and skepticism.</p>
-          <div class="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm"><span class="font-bold">By Mara Delgado</span><span class="text-stone-400">8 min read</span><span class="text-stone-400">Updated 9:42 AM</span></div>
-        </article>
-        <aside class="divide-y divide-stone-200 border-y border-stone-300 lg:border-t-0">
-          ${frontStories.map(([href, category, title, time]) => `<a href="${href}" class="group block py-5 first:lg:pt-0"><div class="mb-2 flex items-center justify-between text-[0.68rem] font-black uppercase tracking-[0.16em] text-red-600"><span>${category}</span><span class="font-semibold tracking-normal text-stone-400">${time}</span></div><h2 class="font-display text-xl font-bold leading-tight tracking-[-0.025em] transition group-hover:text-red-600 sm:text-2xl">${title}</h2></a>`).join('')}
-        </aside>
-      </div>
-      <figure class="group relative mt-10 overflow-hidden rounded-[1.75rem] bg-stone-900 shadow-2xl shadow-stone-900/10">
-        <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1800&q=90" alt="Modern city skyline beside the waterfront" class="h-[420px] w-full object-cover transition duration-700 group-hover:scale-[1.02] sm:h-[560px]" />
-        <div class="absolute inset-0 bg-gradient-to-t from-stone-950/75 via-transparent to-transparent"></div>
-        <figcaption class="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-6 text-white sm:flex-row sm:items-end sm:justify-between sm:p-9"><p class="max-w-xl text-sm leading-6 text-stone-200">The proposed waterfront district would connect three neighborhoods through nine acres of public space.</p><span class="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-stone-300">Photo · Elias Chen</span></figcaption>
-      </figure>
-    </section>
-
-    <section class="border-y border-red-200 bg-red-50" aria-label="Breaking news"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white">Breaking</span><p class="text-sm font-semibold leading-6 sm:text-base">Power grid upgrades announced as heat wave threatens record demand across the metro area.</p><a href="news.html" class="ml-auto flex shrink-0 items-center gap-1 text-sm font-bold text-red-700 hover:text-red-900">Follow live ${arrowIcon}</a></div></section>
-
-    <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-24">
-      <div class="mb-9 flex items-end justify-between gap-6"><div><p class="eyebrow">Ideas & living</p><h2 class="section-title">Beyond the headlines</h2></div><a href="culture.html" class="hidden items-center gap-2 text-sm font-bold hover:text-red-600 sm:flex">View all stories ${arrowIcon}</a></div>
-      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        ${features.map(([href, category, title, image, size], index) => `<a href="${href}" class="story-card group ${size}"><div class="overflow-hidden rounded-2xl bg-stone-200 ${index === 0 ? 'aspect-[16/9]' : 'aspect-[4/3]'}"><img src="${image}" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" /></div><div class="pt-5"><p class="eyebrow">${category}</p><h3 class="mt-2 font-display font-bold leading-tight tracking-[-0.03em] transition group-hover:text-red-600 ${index === 0 ? 'text-3xl sm:text-4xl' : 'text-2xl'}">${title}</h3><p class="mt-3 text-sm text-stone-400">5 min read</p></div></a>`).join('')}
+  <main class="bg-[#f3f1e8]">
+    <section class="overflow-hidden bg-emerald-950 text-white">
+      <div class="mx-auto max-w-7xl px-5 pb-10 pt-8 sm:px-8 sm:pb-14">
+        <div class="flex items-center justify-between border-y border-emerald-700/70 py-3 text-[0.65rem] font-black uppercase tracking-[0.22em] text-emerald-200"><span>Thursday Edition</span><span>August 21, 2026</span></div>
+        <div class="border-b border-emerald-700/70 py-5 sm:py-7">
+          <p class="text-center text-[clamp(4.3rem,15vw,11rem)] font-black leading-[0.72] tracking-[-0.085em] text-emerald-300">BIG NEWS</p>
+        </div>
+        <div class="grid gap-8 pt-8 lg:grid-cols-[1.05fr_1.45fr] lg:items-stretch">
+          <article class="flex flex-col justify-between">
+            <div>
+              <p class="inline-flex rounded-full bg-lime-300 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-emerald-950">The city changes today</p>
+              <h1 class="mt-6 max-w-2xl font-display text-[clamp(3.2rem,7vw,6.6rem)] font-black leading-[0.86] tracking-[-0.065em]">The waterfront belongs to everyone.</h1>
+              <p class="mt-6 max-w-xl text-lg leading-8 text-emerald-100/80">A once-in-a-generation rebuild promises parks, homes, and a new transit line. The question now: who gets to shape it?</p>
+            </div>
+            <div class="mt-8 flex flex-wrap items-center gap-4 border-t border-emerald-700/70 pt-5 text-sm"><span class="font-bold text-white">Mara Delgado</span><span class="text-emerald-300">8 min read</span><a href="city.html" class="ml-auto inline-flex items-center gap-2 font-bold text-lime-300">Read the investigation ${arrowIcon}</a></div>
+          </article>
+          <figure class="relative min-h-[420px] overflow-hidden rounded-[2rem] bg-emerald-900 sm:min-h-[560px]">
+            <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1800&q=90" alt="Modern city skyline beside the waterfront" class="absolute inset-0 h-full w-full object-cover" />
+            <div class="absolute inset-0 bg-gradient-to-t from-emerald-950/90 via-emerald-950/5 to-transparent"></div>
+            <figcaption class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-5 p-6 sm:p-8"><p class="max-w-lg text-sm leading-6 text-emerald-50">Nine acres of public space could reconnect three neighborhoods with the river.</p><span class="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.17em] text-emerald-200">Elias Chen</span></figcaption>
+          </figure>
+        </div>
       </div>
     </section>
 
-    <section class="bg-stone-950 text-white"><div class="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_1.4fr] lg:py-24"><div><p class="eyebrow text-red-400">The city, in motion</p><h2 class="mt-3 max-w-md font-display text-5xl font-black leading-[0.95] tracking-[-0.05em] sm:text-6xl">What else is moving the city.</h2><p class="mt-6 max-w-md leading-7 text-stone-400">A concise briefing on the stories shaping daily life, delivered every weekday.</p></div><div class="divide-y divide-stone-800 border-y border-stone-800">${[['city.html', 'Metro', 'Commuters brace for fare changes as regional rail expands service.'], ['politics.html', 'Schools', 'Parents push for longer library hours after literacy program gains traction.'], ['business.html', 'Food', 'Local chefs turn historic storefronts into late-night dining destinations.']].map(([href, category, title], index) => `<a href="${href}" class="group grid grid-cols-[2rem_1fr_auto] items-center gap-4 py-7 sm:grid-cols-[3rem_1fr_auto]"><span class="font-display text-lg text-stone-600">0${index + 1}</span><span><span class="mb-2 block text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-400">${category}</span><span class="font-display text-xl font-bold leading-tight sm:text-2xl">${title}</span></span><span class="rounded-full border border-stone-700 p-3 transition group-hover:border-red-500 group-hover:bg-red-600">${arrowIcon}</span></a>`).join('')}</div></div></section>
+    <section class="bg-lime-300 text-emerald-950" aria-label="Breaking news"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-emerald-950 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-lime-300">Live</span><p class="font-display text-lg font-black leading-tight sm:text-xl">Power grid upgrades announced as heat wave threatens record demand.</p><a href="news.html" class="ml-auto inline-flex shrink-0 items-center gap-2 text-sm font-black">Follow updates ${arrowIcon}</a></div></section>
 
-    <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-24"><div class="grid overflow-hidden rounded-[2rem] bg-amber-100 lg:grid-cols-[0.7fr_1.3fr]"><div class="flex min-h-64 items-end bg-[linear-gradient(135deg,#ef4444,#991b1b)] p-8 text-white sm:p-12"><div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-100">Opinion</p><p class="mt-3 font-display text-3xl font-black">The Editorial Board</p></div></div><blockquote class="flex flex-col justify-center p-8 sm:p-12 lg:p-16"><p class="font-display text-4xl font-black leading-[1.02] tracking-[-0.045em] text-stone-950 sm:text-5xl">“We should build for people first, not for headlines.”</p><footer class="mt-6 max-w-xl leading-7 text-stone-600">From zoning reform to public transit, the next chapter of the city will be decided in the details.</footer></blockquote></div></section>
+    <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
+      <div class="grid gap-8 lg:grid-cols-[.72fr_1.28fr]">
+        <div class="flex flex-col justify-between rounded-[2rem] bg-orange-500 p-7 text-white sm:p-9">
+          <div><p class="text-xs font-black uppercase tracking-[0.2em] text-orange-100">Morning briefing</p><h2 class="mt-4 font-display text-5xl font-black leading-[0.9] tracking-[-0.055em]">Three stories. Five minutes. Go.</h2></div>
+          <p class="mt-12 max-w-sm leading-7 text-orange-50">Everything worth knowing before the city gets moving.</p>
+        </div>
+        <div class="divide-y divide-stone-300 border-y border-stone-400">
+          ${frontStories.map(([href, category, title, time], index) => `<a href="${href}" class="group grid grid-cols-[2.5rem_1fr] gap-4 py-6 sm:grid-cols-[4rem_1fr_auto] sm:items-center"><span class="font-display text-3xl font-black text-emerald-800/30">0${index + 1}</span><span><span class="mb-2 block text-[0.65rem] font-black uppercase tracking-[0.18em] text-orange-600">${category}</span><span class="font-display text-2xl font-black leading-tight tracking-[-0.03em] transition group-hover:text-emerald-800 sm:text-3xl">${title}</span></span><span class="hidden text-sm font-bold text-stone-500 sm:block">${time}</span></a>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="border-y border-stone-300 bg-white">
+      <div class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
+        <div class="mb-8 flex items-end justify-between"><div><p class="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">Worth your time</p><h2 class="mt-2 font-display text-5xl font-black tracking-[-0.055em] sm:text-6xl">The big picture.</h2></div><a href="culture.html" class="hidden items-center gap-2 text-sm font-black text-emerald-800 sm:flex">See everything ${arrowIcon}</a></div>
+        <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          ${features.map(([href, category, title, image, size], index) => `<a href="${href}" class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8] ${size}"><div class="overflow-hidden ${index === 0 ? 'aspect-[16/8]' : 'aspect-[4/3]'}"><img src="${image}" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" /></div><div class="p-6"><p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-orange-600">${category}</p><h3 class="mt-3 font-display font-black leading-[0.95] tracking-[-0.04em] transition group-hover:text-emerald-800 ${index === 0 ? 'text-4xl sm:text-5xl' : 'text-3xl'}">${title}</h3></div></a>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20"><div class="grid overflow-hidden rounded-[2rem] bg-emerald-300 lg:grid-cols-[1.2fr_.8fr]"><blockquote class="p-8 sm:p-12 lg:p-16"><p class="text-xs font-black uppercase tracking-[0.2em] text-emerald-900">A bigger opinion</p><p class="mt-5 font-display text-4xl font-black leading-[0.95] tracking-[-0.05em] text-emerald-950 sm:text-6xl">“Build a city people can actually live in.”</p><footer class="mt-7 max-w-xl leading-7 text-emerald-900">The Editorial Board on why the next chapter must be measured in homes, commutes, and public space—not renderings.</footer></blockquote><div class="flex min-h-72 items-end bg-emerald-950 p-8 text-white sm:p-12"><div><p class="text-sm font-bold text-emerald-300">Today’s argument</p><a href="politics.html" class="mt-3 inline-flex items-center gap-2 font-display text-3xl font-black">Read the full case ${arrowIcon}</a></div></div></div></section>
   </main>
 `
 
