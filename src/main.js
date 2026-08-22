@@ -118,6 +118,7 @@ const header = (active) => `
       <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="The Daily Echo home">The Daily Echo<span class="text-emerald-300">.</span></a>
       <nav class="hidden items-center gap-7 md:flex" aria-label="Main navigation">${navMarkup(active)}</nav>
       <div class="flex items-center gap-2">
+        <span data-shared-nav-slot class="inline-flex"></span>
         <a href="subscribe.html" class="hidden rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-white sm:inline-flex">Subscribe</a>
         <button id="menu-button" class="inline-grid size-10 place-items-center rounded-full text-emerald-50 transition hover:bg-emerald-800 md:hidden" type="button" aria-label="Open navigation" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
       </div>
