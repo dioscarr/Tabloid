@@ -12,6 +12,10 @@ services:
       timeout: 3s
       start_period: 5s
       retries: 3
+    networks:
+      default:
+        aliases:
+          - tabloid-app
 
   tabloid-tailscale:
     image: ghcr.io/dioscarr/tabloid-tailscale:${TABLOID_IMAGE_TAG:-main}
