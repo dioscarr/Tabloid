@@ -1,0 +1,121 @@
+[CmdletBinding()]
+param()
+
+$ErrorActionPreference = 'Stop'
+$stateDirectory = Join-Path $env:LOCALAPPDATA 'Tabloid'
+$config = Get-Content -Raw (Join-Path $stateDirectory 'admin-worker.json') | ConvertFrom-Json
+$podman = Join-Path $env:LOCALAPPDATA 'Programs\Podman\podman.exe'
+$tombstonePath = Join-Path $stateDirectory 'preview-tombstones.json'
+$listener = [Net.HttpListener]::new()
+$listener.Prefixes.Add("http://127.0.0.1:$($config.port)/")
+
+function Get-PreviewId([string]$Branch) {
+  $slug = ($Branch.ToLowerInvariant() -replace '[^a-z0-9]+', '-').Trim('-')
+  if (-not $slug) { $slug = 'branch' }
+  if ($slug.Length -gt 38) { $slug = $slug.Substring(0, 38).TrimEnd('-') }
+  $sha = [Security.Cryptography.SHA256]::Create()
+  try { $hash = ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Branch))) -replace '-', '').Substring(0, 6).ToLowerInvariant() }
+  finally { $sha.Dispose() }
+  "$slug-$hash"
+}
+
+function Assert-Branch([string]$Branch) {
+  if (-not $Branch -or $Branch.Length -gt 120 -or $Branch -notmatch '^[A-Za-z0-9._/-]+$' -or $Branch.Contains('..')) { throw 'Invalid branch' }
+}
+
+function Invoke-Podman([string[]]$Arguments, [switch]$AllowFailure) {
+  & $podman @Arguments | Out-Null
+  if ($LASTEXITCODE -ne 0 -and -not $AllowFailure) { throw "Podman command failed: $($Arguments[0])" }
+  $LASTEXITCODE -eq 0
+}
+
+function Test-Resource([string]$Kind, [string]$Name) { Invoke-Podman @($Kind, 'exists', $Name) -AllowFailure }
+
+function Test-Workspace([string]$Id) {
+  Invoke-Podman @('exec', '--user', 'abc', 'code-server', 'test', '-e', "/config/workspaces/$Id/.git") -AllowFailure
+}
+
+function Get-Inventory([string]$Branch) {
+  $id = Get-PreviewId $Branch
+  $project = if ($Branch -eq 'main') { 'my-web-stack' } else { "tabloid-preview-$id" }
+  $appContainerName = if ($Branch -eq 'main') { 'tabloid' } else { "$project-app" }
+  $tailscaleContainerName = if ($Branch -eq 'main') { 'tabloid-tailscale' } else { "$project-tailscale" }
+  $networkName = if ($Branch -eq 'main') { 'my-web-stack_default' } else { $project }
+  [ordered]@{
+    branch = $Branch; id = $id; project = $project
+    image = if ($Branch -eq 'main') { 'ghcr.io/dioscarr/tabloid:main' } else { "ghcr.io/dioscarr/tabloid:preview-$id" }
+    appContainer = Test-Resource 'container' $appContainerName
+    tailscaleContainer = Test-Resource 'container' $tailscaleContainerName
+    network = Test-Resource 'network' $networkName
+    volume = if ($Branch -eq 'main') { $false } else { Test-Resource 'volume' "$project-tailscale-state" }
+    workspace = Test-Workspace $id
+    appUrl = if ($Branch -eq 'main') { 'https://tabloid.tail70b7f1.ts.net/' } else { "https://tabloid-$id.tail70b7f1.ts.net/" }
+    vscodeUrl = "https://dio.tail70b7f1.ts.net:8443/?folder=/config/workspaces/$id"
+  }
+}
+
+function New-Workspace([string]$Branch) {
+  Assert-Branch $Branch
+  $id = Get-PreviewId $Branch
+  Invoke-Podman @('exec', '--user', 'abc', 'code-server', 'mkdir', '-p', '/config/workspaces') | Out-Null
+  Invoke-Podman @('exec', '--user', 'abc', 'code-server', 'git', '-C', '/config/workspace', 'fetch', 'origin', "refs/heads/${Branch}:refs/remotes/origin/${Branch}") | Out-Null
+  if (-not (Test-Workspace $id)) {
+    Invoke-Podman @('exec', '--user', 'abc', 'code-server', 'git', '-C', '/config/workspace', 'worktree', 'add', '-B', "workspace/$id", "/config/workspaces/$id", "origin/$Branch") | Out-Null
+  }
+  Invoke-Podman @('exec', '--user', 'abc', 'code-server', 'sh', '-lc', "cd /config/workspaces/$id && npm run env:branch -- --branch $Branch") | Out-Null
+  Get-Inventory $Branch
+}
+
+function Add-Tombstone([string]$Branch) {
+  $records = @()
+  if (Test-Path $tombstonePath) { $records = @(Get-Content -Raw $tombstonePath | ConvertFrom-Json) }
+  if (-not @($records | Where-Object branch -eq $Branch).Count) { $records += [pscustomobject]@{ branch = $Branch; archivedAt = [DateTime]::UtcNow.ToString('o') } }
+  $records | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 $tombstonePath
+}
+
+function Remove-Preview([string]$Branch, [bool]$PurgeVolume) {
+  Assert-Branch $Branch
+  if ($Branch -eq 'main') { throw 'Production cannot be removed by this worker' }
+  $item = Get-Inventory $Branch
+  Add-Tombstone $Branch
+  foreach ($container in @("$($item.project)-tailscale", "$($item.project)-app")) { if (Test-Resource 'container' $container) { Invoke-Podman @('rm', '--force', $container) | Out-Null } }
+  if (Test-Resource 'network' $item.project) { Invoke-Podman @('network', 'rm', $item.project) | Out-Null }
+  if ($PurgeVolume -and (Test-Resource 'volume' "$($item.project)-tailscale-state")) { Invoke-Podman @('volume', 'rm', "$($item.project)-tailscale-state") | Out-Null }
+  Invoke-Podman @('image', 'rm', $item.image) -AllowFailure | Out-Null
+  Get-Inventory $Branch
+}
+
+function Write-Json($Response, [int]$Status, $Body) {
+  $bytes = [Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Depth 8 -Compress))
+  $Response.StatusCode = $Status
+  $Response.ContentType = 'application/json'
+  $Response.Headers['Access-Control-Allow-Origin'] = [string]$config.adminOrigin
+  $Response.Headers['Access-Control-Allow-Headers'] = 'content-type'
+  $Response.Headers['Access-Control-Allow-Methods'] = 'GET,POST,DELETE,OPTIONS'
+  $Response.OutputStream.Write($bytes, 0, $bytes.Length)
+  $Response.Close()
+}
+
+$listener.Start()
+Write-Host "Tabloid Admin worker listening on http://127.0.0.1:$($config.port)/"
+while ($listener.IsListening) {
+  $context = $listener.GetContext()
+  try {
+    $request = $context.Request
+    if ($request.HttpMethod -eq 'OPTIONS') { Write-Json $context.Response 204 @{}; continue }
+    $login = [string]$request.Headers['Tailscale-User-Login']
+    if ($request.Headers['Origin'] -ne $config.adminOrigin -or $login.ToLowerInvariant() -ne $config.adminLogin.ToLowerInvariant()) {
+      Add-Content -Path (Join-Path $stateDirectory 'admin-worker-auth.log') -Value "$([DateTime]::UtcNow.ToString('o')) origin=$($request.Headers['Origin']) login=$login remote=$($request.RemoteEndPoint.Address)"
+      Write-Json $context.Response 403 @{ error = 'Forbidden' }; continue
+    }
+    if ($request.HttpMethod -eq 'GET' -and $request.Url.AbsolutePath -eq '/api/v1/branches') {
+      $remote = Invoke-RestMethod -Headers @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'tabloid-admin-worker' } -Uri 'https://api.github.com/repos/dioscarr/Tabloid/branches?per_page=100'
+      Write-Json $context.Response 200 @{ branches = @($remote | ForEach-Object { Get-Inventory $_.name }) }; continue
+    }
+    if ($request.Url.AbsolutePath -notmatch '^/api/v1/branches/([^/]+)/(workspace|preview)$') { Write-Json $context.Response 404 @{ error = 'Not found' }; continue }
+    $branch = [Uri]::UnescapeDataString($Matches[1]); $action = $Matches[2]
+    if ($request.HttpMethod -eq 'POST' -and $action -eq 'workspace') { Write-Json $context.Response 200 (New-Workspace $branch); continue }
+    if ($request.HttpMethod -eq 'DELETE' -and $action -eq 'preview') { Write-Json $context.Response 200 (Remove-Preview $branch ($request.QueryString['purgeVolume'] -eq 'true')); continue }
+    Write-Json $context.Response 405 @{ error = 'Method not allowed' }
+  } catch { Write-Json $context.Response 500 @{ error = $_.Exception.Message } }
+}
