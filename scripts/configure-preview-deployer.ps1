@@ -9,7 +9,7 @@ $syncScript = Join-Path $PSScriptRoot 'sync-previews.ps1'
 
 New-Item -ItemType Directory -Force -Path $stateDirectory | Out-Null
 $secret = Read-Host 'Paste the Tailscale OAuth client secret' -AsSecureString
-$secret | ConvertFrom-SecureString | Set-Content -Encoding ascii $SecretPath
+$secret | ConvertFrom-SecureString | Set-Content -Encoding ascii -NoNewline $SecretPath
 
 $taskName = 'Tabloid Branch Preview Deployer'
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$syncScript`""
@@ -21,4 +21,3 @@ Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Pr
 Write-Host "Stored the OAuth secret with Windows DPAPI at $SecretPath"
 Write-Host "Registered '$taskName' to reconcile previews every five minutes while this user is logged in."
 & $syncScript -SecretPath $SecretPath
-

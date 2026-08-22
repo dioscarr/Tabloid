@@ -17,7 +17,8 @@ if (-not (Test-Path $composeFile)) { throw "Preview Compose file was not found a
 if (-not (Test-Path $SecretPath)) { throw "Tailscale OAuth secret is not configured. Run scripts\configure-preview-deployer.ps1 first." }
 
 New-Item -ItemType Directory -Force -Path $stateDirectory | Out-Null
-$secureSecret = Get-Content -Raw $SecretPath | ConvertTo-SecureString
+$encryptedSecret = (Get-Content -Raw $SecretPath).Trim()
+$secureSecret = $encryptedSecret | ConvertTo-SecureString
 $secretHandle = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureSecret)
 try {
   $oauthSecret = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($secretHandle)
