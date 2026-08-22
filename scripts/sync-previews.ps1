@@ -7,13 +7,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$composeFile = Join-Path $repoRoot 'preview\compose.yaml'
 $stateDirectory = Join-Path $env:LOCALAPPDATA 'Tabloid'
 $statePath = Join-Path $stateDirectory 'preview-state.json'
 $podman = Join-Path $env:LOCALAPPDATA 'Programs\Podman\podman.exe'
 
 if (-not (Test-Path $podman)) { throw "Podman was not found at $podman" }
-if (-not (Test-Path $composeFile)) { throw "Preview Compose file was not found at $composeFile" }
 if (-not (Test-Path $SecretPath)) { throw "Tailscale OAuth secret is not configured. Run scripts\configure-preview-deployer.ps1 first." }
 
 New-Item -ItemType Directory -Force -Path $stateDirectory | Out-Null
@@ -42,14 +40,141 @@ function Get-PreviewId([string]$Branch) {
   return "$slug-$hash"
 }
 
-function Invoke-Compose([string[]]$Arguments) {
-  & $podman compose --file $composeFile @Arguments
-  if ($LASTEXITCODE -ne 0) { throw "Podman Compose failed with exit code $LASTEXITCODE" }
+function Invoke-Podman {
+  param(
+    [string[]]$Arguments,
+    [switch]$AllowFailure
+  )
+
+  $process = Start-Process -FilePath $podman -ArgumentList $Arguments -Wait -PassThru -NoNewWindow
+  if ($process.ExitCode -ne 0) {
+    if ($AllowFailure) { return $false }
+    throw "Podman failed with exit code $($process.ExitCode): $($Arguments -join ' ')"
+  }
+  return $true
+}
+
+function Test-Podman([string[]]$Arguments) {
+  return Invoke-Podman -Arguments $Arguments -AllowFailure
+}
+
+function Deploy-Preview {
+  param(
+    [string]$Project,
+    [string]$Branch,
+    [string]$Hostname,
+    [string]$Image
+  )
+
+  $network = $Project
+  $volume = "$Project-tailscale-state"
+  $appContainer = "$Project-app"
+  $tailscaleContainer = "$Project-tailscale"
+
+  if (-not (Test-Podman -Arguments @('network', 'exists', $network))) {
+    Invoke-Podman -Arguments @('network', 'create', $network) | Out-Null
+  }
+  if (-not (Test-Podman -Arguments @('volume', 'exists', $volume))) {
+    Invoke-Podman -Arguments @('volume', 'create', $volume) | Out-Null
+  }
+
+  if (Test-Podman -Arguments @('container', 'exists', $tailscaleContainer)) {
+    Invoke-Podman -Arguments @('rm', '--force', $tailscaleContainer) | Out-Null
+  }
+  if (Test-Podman -Arguments @('container', 'exists', $appContainer)) {
+    Invoke-Podman -Arguments @('rm', '--force', $appContainer) | Out-Null
+  }
+
+  Invoke-Podman -Arguments @(
+    'run', '--detach',
+    '--name', $appContainer,
+    '--restart', 'unless-stopped',
+    '--network', $network,
+    '--network-alias', 'tabloid-app',
+    '--label', 'io.dioscarr.tabloid.preview=true',
+    '--label', "io.dioscarr.tabloid.branch=$Branch",
+    $Image
+  ) | Out-Null
+
+  $healthy = $false
+  for ($attempt = 0; $attempt -lt 30; $attempt++) {
+    if (Test-Podman -Arguments @('healthcheck', 'run', $appContainer)) {
+      $healthy = $true
+      break
+    }
+    Start-Sleep -Seconds 2
+  }
+  if (-not $healthy) { throw "Preview application '$appContainer' did not become healthy." }
+
+  $env:TS_AUTHKEY = "${oauthSecret}?ephemeral=true&preauthorized=true"
+  $env:TS_AUTH_ONCE = 'true'
+  $env:TS_EXTRA_ARGS = '--advertise-tags=tag:preview'
+  $env:TS_HOSTNAME = $Hostname
+  $env:TS_STATE_DIR = '/var/lib/tailscale'
+  $env:TS_SERVE_CONFIG = '/config/serve.json'
+  $env:TS_USERSPACE = 'true'
+
+  Invoke-Podman -Arguments @(
+    'run', '--detach',
+    '--name', $tailscaleContainer,
+    '--hostname', $Hostname,
+    '--restart', 'unless-stopped',
+    '--network', $network,
+    '--env', 'TS_AUTHKEY',
+    '--env', 'TS_AUTH_ONCE',
+    '--env', 'TS_EXTRA_ARGS',
+    '--env', 'TS_HOSTNAME',
+    '--env', 'TS_STATE_DIR',
+    '--env', 'TS_SERVE_CONFIG',
+    '--env', 'TS_USERSPACE',
+    '--volume', "${volume}:/var/lib/tailscale",
+    '--label', 'io.dioscarr.tabloid.preview=true',
+    '--label', "io.dioscarr.tabloid.branch=$Branch",
+    'ghcr.io/dioscarr/tabloid-tailscale:main'
+  ) | Out-Null
+
+  $authenticated = $false
+  for ($attempt = 0; $attempt -lt 30; $attempt++) {
+    if (Test-Podman -Arguments @(
+      'exec', $tailscaleContainer,
+      'tailscale', '--socket=/tmp/tailscaled.sock', 'ip', '-4'
+    )) {
+      $authenticated = $true
+      break
+    }
+    Start-Sleep -Seconds 2
+  }
+  if (-not $authenticated) { throw "Tailscale sidecar '$tailscaleContainer' did not authenticate." }
+
+  if (-not (Test-Podman -Arguments @(
+    'exec', $tailscaleContainer,
+    'wget', '-qO-', 'http://tabloid-app:8080/'
+  ))) {
+    throw "Tailscale sidecar '$tailscaleContainer' cannot reach its preview application."
+  }
+}
+
+function Remove-Preview([string]$Project) {
+  foreach ($container in @("$Project-tailscale", "$Project-app")) {
+    if (Test-Podman -Arguments @('container', 'exists', $container)) {
+      Invoke-Podman -Arguments @('rm', '--force', $container) | Out-Null
+    }
+  }
+  if (Test-Podman -Arguments @('network', 'exists', $Project)) {
+    Invoke-Podman -Arguments @('network', 'rm', $Project) | Out-Null
+  }
+  $volume = "$Project-tailscale-state"
+  if (Test-Podman -Arguments @('volume', 'exists', $volume)) {
+    Invoke-Podman -Arguments @('volume', 'rm', $volume) | Out-Null
+  }
 }
 
 $headers = @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'tabloid-preview-deployer' }
-$branches = @(Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$Repository/branches?per_page=100") |
-  Where-Object { $_.name -ne 'main' }
+$branchResponse = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$Repository/branches?per_page=100"
+$branches = @()
+foreach ($branchRecord in $branchResponse) {
+  if ($branchRecord.name -ne 'main') { $branches += $branchRecord }
+}
 
 $previous = @{}
 if (Test-Path $statePath) {
@@ -68,18 +193,13 @@ foreach ($branch in $branches) {
   $hostname = "tabloid-$id"
   $image = "ghcr.io/dioscarr/tabloid:preview-$id"
 
-  & $podman pull $image | Out-Host
-  if ($LASTEXITCODE -ne 0) {
+  if (-not (Invoke-Podman -Arguments @('pull', $image) -AllowFailure)) {
     Write-Warning "Preview image is not ready for branch '$($branch.name)'; leaving any current preview untouched."
     if ($previous.ContainsKey($project)) { $desired[$project] = $previous[$project] }
     continue
   }
 
-  $env:PREVIEW_BRANCH = $branch.name
-  $env:PREVIEW_HOSTNAME = $hostname
-  $env:PREVIEW_IMAGE = $image
-  $env:TS_OAUTH_SECRET = $oauthSecret
-  Invoke-Compose @('--project-name', $project, 'up', '-d', '--pull', 'always', '--remove-orphans')
+  Deploy-Preview -Project $project -Branch $branch.name -Hostname $hostname -Image $image
 
   $desired[$project] = [ordered]@{
     branch = $branch.name
@@ -93,11 +213,7 @@ foreach ($branch in $branches) {
 foreach ($project in @($previous.Keys)) {
   if (-not $desired.ContainsKey($project)) {
     $record = $previous[$project]
-    $env:PREVIEW_BRANCH = [string]$record.branch
-    $env:PREVIEW_HOSTNAME = [string]$record.hostname
-    $env:PREVIEW_IMAGE = [string]$record.image
-    $env:TS_OAUTH_SECRET = $oauthSecret
-    Invoke-Compose @('--project-name', $project, 'down', '--volumes', '--remove-orphans')
+    Remove-Preview -Project $project
     Write-Host "Removed preview for deleted branch '$($record.branch)'."
   }
 }

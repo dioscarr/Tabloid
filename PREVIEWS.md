@@ -8,7 +8,7 @@ The preview identifier is a normalized branch name plus the first six characters
 https://tabloid-feature-new-header-xxxxxx.tail70b7f1.ts.net/
 ```
 
-GitHub Actions publishes `ghcr.io/dioscarr/tabloid:preview-<id>`. A constrained Windows task runs `scripts/sync-previews.ps1` every five minutes. It deploys available branch images as isolated Podman Compose projects and removes projects recorded for branches that no longer exist. Production remains the `main` branch at `https://tabloid.tail70b7f1.ts.net/`.
+GitHub Actions publishes `ghcr.io/dioscarr/tabloid:preview-<id>`. A constrained Windows task runs `scripts/sync-previews.ps1` every five minutes. It deploys each available branch image with a dedicated Podman network, application container, Tailscale sidecar, and state volume. It removes only resources recorded for branches that no longer exist. Production remains the `main` branch at `https://tabloid.tail70b7f1.ts.net/`.
 
 ## One-time setup
 
@@ -24,4 +24,3 @@ GitHub Actions publishes `ghcr.io/dioscarr/tabloid:preview-<id>`. A constrained 
 4. Paste the OAuth client secret only into the secure PowerShell prompt. The script protects it with Windows DPAPI and registers the five-minute scheduled task.
 
 Do not commit OAuth credentials or place them in GitHub Actions. The GitHub workflow only builds images; deployment credentials stay on the Podman host.
-
