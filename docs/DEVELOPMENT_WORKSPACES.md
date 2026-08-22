@@ -34,6 +34,26 @@ Preferred: a GitHub App issues a short-lived installation token scoped to reposi
 
 Never bake a personal access token into the image, environment committed to Git, shell history, `.git/config`, or a reusable volume.
 
+## Branch environments
+
+After checkout, provisioning runs:
+
+```text
+npm run env:branch -- --branch <selected-branch>
+```
+
+This writes `.env.local` with public branch identity, application URL, API path, and shared authentication URL. `.env.local` is ignored through the repository's `*.local` rule.
+
+Environment values come from three layers, with later layers overriding earlier ones:
+
+1. repository-safe defaults from `.env.example`
+2. generated branch values
+3. allowlisted workspace overrides from the Admin request
+
+Secrets use a separate path. The request contains opaque secret-reference IDs; the worker resolves them after authorization and injects values into the smallest possible process scope or read-only secret file. Secret values are never written to `.env.local`, returned through the Admin API, or exposed as `VITE_*` variables.
+
+Unknown environment keys, reserved runtime keys, and all client-supplied secret values are rejected. The audit event records key names and secret-reference IDs but never values.
+
 ## Lifecycle
 
 ```text
