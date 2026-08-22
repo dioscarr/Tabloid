@@ -2,6 +2,8 @@
 
 This repository builds several branch-based web applications from one Vite and Tailwind CSS codebase. `main` is The Daily Echo; long-lived product branches include `big-news`, `tech`, and `admin`. GitHub Actions publishes one container image per branch and a Windows scheduled task reconciles private Podman/Tailscale previews.
 
+The brand-independent `src/shared-nav.js` shell is mandatory on every branch. Rebrands may change the product header and page navigation, but must preserve the `mountSharedNav()` import and call. `npm run check:shared-nav` and preview publishing enforce this contract so every live or newly created branch remains reachable from the repository app switcher.
+
 ## Commands
 
 - Install exactly: `npm ci`
