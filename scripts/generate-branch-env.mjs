@@ -28,7 +28,6 @@ const products = {
   'big-news': ['big-news', 'Big News'],
   tech: ['tech', 'Tech'],
   admin: ['admin', 'Admin'],
-  dashboard: ['dashboard', 'Dashboard'],
 }
 
 const [appSlug, appName] = products[branch] || [previewId(branch), branch]
