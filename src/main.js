@@ -4,46 +4,46 @@ const arrowIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-4" fi
 const appsIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-5" fill="currentColor"><circle cx="4" cy="4" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="16" cy="4" r="1.5"/><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/><circle cx="4" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg>`
 
 const navigation = [
-  ['news', 'AI Radar', 'news.html'],
-  ['city', 'GitHub Pulse', 'city.html'],
-  ['politics', 'Career Moves', 'politics.html'],
-  ['culture', 'Pay & Demand', 'culture.html'],
-  ['business', 'Build This', 'business.html'],
-  ['sports', 'For You', 'sports.html'],
+  ['news', 'Briefing', 'news.html'],
+  ['city', 'GitHub Radar', 'city.html'],
+  ['politics', 'Architecture', 'politics.html'],
+  ['culture', 'AI Engineering', 'culture.html'],
+  ['business', 'Dev Tools', 'business.html'],
+  ['sports', 'Showcase', 'sports.html'],
 ]
 
 const frontStories = [
-  ['news.html', 'AI Radar', 'A new open model makes private, local AI dramatically easier to run.', '4 min'],
-  ['city.html', 'GitHub Pulse', 'Five fast-growing repositories that could improve your workflow this week.', '3 min'],
-  ['politics.html', 'Career Moves', 'AI infrastructure roles are rising—and these are the skills employers want.', '4 min'],
+  ['city.html', 'GitHub Radar', 'Five repositories gaining contributors—not just stars—this week.', '4 min'],
+  ['politics.html', 'Architecture', 'Why small teams are returning to boring infrastructure that scales.', '3 min'],
+  ['sports.html', 'Showcase', 'An open-source local agent built by one developer solves a real daily problem.', '4 min'],
 ]
 
 const features = [
-  ['business.html', 'Build This', 'Turn your saved articles into a searchable personal knowledge assistant.', 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=85', 'lg:col-span-2'],
-  ['culture.html', 'Pay & Demand', 'The technology skills gaining value faster than job titles can keep up.', 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=85', ''],
-  ['sports.html', 'For You', 'A focused 30-day learning path built around your next career move.', 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=85', ''],
+  ['sports.html', 'Project Showcase', 'How a solo developer designed a fast, local-first knowledge engine.', 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=85', 'lg:col-span-2'],
+  ['culture.html', 'AI Engineering', 'The practical evaluation stack behind dependable AI features.', 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=85', ''],
+  ['business.html', 'Developer Tools', 'A focused toolkit for shipping faster without adding platform sprawl.', 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=85', ''],
 ]
 
 const sectionPages = {
   news: {
-    title: 'AI Radar',
-    kicker: 'What changed',
-    headline: 'Smaller open models are making useful private AI possible on everyday hardware.',
-    deck: 'The newest releases prioritize efficiency, local inference, and practical agent workflows—creating opportunities without another expensive cloud subscription.',
-    byline: 'Big News Intelligence · Updated 11:05 AM',
+    title: 'Developer Briefing',
+    kicker: 'What changed in engineering',
+    headline: 'The tools, releases, and engineering decisions worth understanding today.',
+    deck: 'A concise technical briefing filters announcements and hype into architecture, implementation details, tradeoffs, and ideas you can use in your next build.',
+    byline: 'Tech Engineering Desk · Updated 11:05 AM',
     image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['Models', 'A compact release now handles common coding and document tasks locally.'],
-      ['Agents', 'Tool-use reliability is improving faster than raw benchmark scores.'],
-      ['Your move', 'Test one private workflow before moving more data into the cloud.'],
+      ['Release', 'A compact runtime cuts local development startup time significantly.'],
+      ['Pattern', 'Typed boundaries are replacing fragile prompt-only agent workflows.'],
+      ['Try it', 'Benchmark one new tool against a real repository before adopting it.'],
     ],
   },
   city: {
-    title: 'GitHub Pulse',
+    title: 'GitHub Radar',
     kicker: 'Open source signal',
     headline: 'Developer tools are converging around local agents, structured context, and faster feedback.',
     deck: 'We filtered today’s repository activity for projects with real documentation, active maintainers, and a clear benefit to the way you build.',
-    byline: 'Big News Intelligence · Updated 10:22 AM',
+    byline: 'Tech Open Source Desk · Updated 10:22 AM',
     image: 'https://images.unsplash.com/photo-1556075798-4825dfaaf498?auto=format&fit=crop&w=1500&q=88',
     updates: [
       ['Trending', 'Local-first agent frameworks are attracting sustained contributor growth.'],
@@ -52,55 +52,55 @@ const sectionPages = {
     ],
   },
   politics: {
-    title: 'Career Moves',
-    kicker: 'Opportunity radar',
-    headline: 'Companies need people who can connect AI prototypes to reliable production systems.',
-    deck: 'The durable opportunity is shifting from prompt experimentation toward evaluation, infrastructure, security, data quality, and measurable business outcomes.',
-    byline: 'Big News Intelligence · Updated 9:48 AM',
+    title: 'Architecture',
+    kicker: 'Systems that hold up',
+    headline: 'Small teams are choosing simpler infrastructure—and shipping more reliably.',
+    deck: 'The strongest engineering decisions balance operational cost, failure modes, observability, team experience, and the option to change direction later.',
+    byline: 'Tech Architecture Desk · Updated 9:48 AM',
     image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['Hiring', 'Platform and AI operations roles increasingly overlap.'],
-      ['Skills', 'Evaluation and observability now separate demos from dependable products.'],
-      ['Your move', 'Document one production-grade AI project as a concise case study.'],
+      ['Design', 'Clear service boundaries matter more than the number of services.'],
+      ['Operations', 'Observability and recovery paths belong in the initial design.'],
+      ['Your move', 'Write the failure modes before selecting another dependency.'],
     ],
   },
   culture: {
-    title: 'Pay & Demand',
-    kicker: 'Know your value',
-    headline: 'The market is rewarding adaptable technical depth more than fashionable titles.',
-    deck: 'Salary data becomes useful when paired with location, experience, industry demand, and the specific technologies appearing in real job descriptions.',
-    byline: 'Big News Intelligence · Updated 8:57 AM',
+    title: 'AI Engineering',
+    kicker: 'Beyond the demo',
+    headline: 'Evaluation, context design, and observability are becoming the real AI stack.',
+    deck: 'Production AI work is moving beyond prompt experimentation toward repeatable tests, source-aware context, cost controls, security, and visible failure handling.',
+    byline: 'Tech AI Engineering Desk · Updated 8:57 AM',
     image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['Baseline', 'Government labor data provides a defensible compensation benchmark.'],
-      ['Demand', 'Cloud, security, data, and AI integration skills continue to intersect.'],
-      ['Your move', 'Compare responsibilities and outcomes—not title alone—before negotiating.'],
+      ['Evaluate', 'Test representative tasks and failure cases, not a polished example.'],
+      ['Observe', 'Record latency, cost, retrieval quality, and user corrections.'],
+      ['Your move', 'Create a small regression set before changing models or prompts.'],
     ],
   },
   business: {
-    title: 'Build This',
-    kicker: 'From signal to project',
-    headline: 'Build a personal research assistant that remembers what you decide—not everything you read.',
-    deck: 'A focused weekend project can combine feeds, source-aware summaries, semantic search, and a small decision journal without becoming another information inbox.',
-    byline: 'Big News Intelligence · Updated 10:41 AM',
+    title: 'Developer Tools',
+    kicker: 'Sharper workflows',
+    headline: 'The best new tools remove feedback delay without hiding how your system works.',
+    deck: 'We examine editors, runtimes, debuggers, databases, deployment tools, and automation through practical workflows instead of launch-day claims.',
+    byline: 'Tech Tools Desk · Updated 10:41 AM',
     image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['Scope', 'Start with three trusted feeds and one searchable collection.'],
-      ['Stack', 'Use a small API, Postgres, and source-linked summaries.'],
-      ['Your move', 'Ship the smallest useful loop before adding autonomous agents.'],
+      ['Workflow', 'Shorter feedback loops beat elaborate code-generation demos.'],
+      ['Adoption', 'Prefer tools with clear export paths and active maintainers.'],
+      ['Your move', 'Replace one recurring manual check with a visible automation.'],
     ],
   },
   sports: {
-    title: 'For You',
-    kicker: 'Your five minutes',
-    headline: 'Three useful signals, one opportunity, and one next step—then you are caught up.',
-    deck: 'Your briefing prioritizes the technologies, roles, projects, and ideas most likely to improve your work and protect your time outside it.',
-    byline: 'Personalized by Big News · Updated 11:16 AM',
+    title: 'Project Showcase',
+    kicker: 'Built by developers',
+    headline: 'See how other engineers turn small ideas into useful, maintainable projects.',
+    deck: 'Project showcases focus on the problem, architecture, difficult tradeoffs, source code, lessons learned, and the people who did the work.',
+    byline: 'Tech Community Desk · Updated 11:16 AM',
     image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['Know', 'Local AI tools are becoming practical for private daily workflows.'],
-      ['Try', 'Evaluate one trending repository against a problem you already have.'],
-      ['Done', 'You have enough signal for today. Go spend the saved time well.'],
+      ['Problem', 'The maintainer began with a repetitive workflow worth eliminating.'],
+      ['Build', 'A small local-first architecture kept hosting and privacy simple.'],
+      ['Learn', 'The project’s clearest lesson is documented alongside the source.'],
     ],
   },
 }
@@ -115,7 +115,7 @@ const mobileNavMarkup = () => navigation.map(([, label, href]) => `<a href="${hr
 const header = (active) => `
   <header class="sticky top-0 z-50 border-b border-emerald-800 bg-emerald-950/95 text-white shadow-lg shadow-emerald-950/10 backdrop-blur-xl">
     <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-      <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="Big News home">Big News<span class="text-emerald-300">.</span></a>
+      <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="Tech home">Tech<span class="text-emerald-300">.</span></a>
       <nav class="hidden items-center gap-7 md:flex" aria-label="Main navigation">${navMarkup(active)}</nav>
       <div class="flex items-center gap-2">
         <div class="relative">
@@ -126,7 +126,7 @@ const header = (active) => `
             <a href="https://github.com/dioscarr/Tabloid/branches" class="flex items-center justify-between border-t border-emerald-800 px-5 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-900 hover:text-white">View repository branches ${arrowIcon}</a>
           </div>
         </div>
-        <a href="subscribe.html" class="hidden rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-white sm:inline-flex">Your Briefing</a>
+        <a href="subscribe.html" class="hidden rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-white sm:inline-flex">My Stack</a>
         <button id="menu-button" class="inline-grid size-10 place-items-center rounded-full text-emerald-50 transition hover:bg-emerald-800 md:hidden" type="button" aria-label="Open navigation" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
       </div>
     </div>
@@ -138,13 +138,13 @@ const footer = `
   <footer class="border-t border-stone-200 bg-white">
     <div class="mx-auto flex max-w-7xl flex-col gap-8 px-5 py-10 sm:px-8 md:flex-row md:items-center md:justify-between">
       <div>
-        <p class="font-display text-2xl font-black">Big News<span class="text-red-600">.</span></p>
-        <p class="mt-1 text-sm text-stone-500">Spend less time searching. Spend more time living.</p>
+        <p class="font-display text-2xl font-black">Tech<span class="text-red-600">.</span></p>
+        <p class="mt-1 text-sm text-stone-500">Know what changed. Understand how it works. Build what matters.</p>
       </div>
       <form class="flex w-full max-w-md gap-2" aria-label="Newsletter subscription">
         <label class="sr-only" for="email">Email address</label>
         <input id="email" type="email" placeholder="you@example.com" class="min-w-0 flex-1 rounded-full border border-stone-300 bg-stone-50 px-5 py-3 text-sm outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-100" />
-        <button type="submit" class="rounded-full bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700">Get the briefing</button>
+        <button type="submit" class="rounded-full bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700">Join the briefing</button>
       </form>
     </div>
   </footer>
@@ -156,33 +156,33 @@ const homePage = `
       <div class="mx-auto max-w-7xl px-5 pb-10 pt-8 sm:px-8 sm:pb-14">
         <div class="flex items-center justify-between border-y border-stone-700 py-3 text-[0.65rem] font-black uppercase tracking-[0.22em] text-stone-300"><span>Thursday Edition</span><span>August 21, 2026</span></div>
         <div class="border-b border-stone-700 py-5 sm:py-7">
-          <p class="text-center text-[clamp(4.3rem,15vw,11rem)] font-black leading-[0.72] tracking-[-0.085em] text-red-500">BIG NEWS</p>
+          <p class="text-center text-[clamp(4.3rem,18vw,13rem)] font-black leading-[0.72] tracking-[-0.085em] text-red-500">TECH</p>
         </div>
         <div class="grid gap-8 pt-8 lg:grid-cols-[1.05fr_1.45fr] lg:items-stretch">
           <article class="flex flex-col justify-between">
             <div>
-              <p class="inline-flex rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-white">Your five-minute tech briefing</p>
-              <h1 class="mt-6 max-w-2xl font-display text-[clamp(3.2rem,7vw,6.6rem)] font-black leading-[0.86] tracking-[-0.065em]">Know what matters. Then get back to life.</h1>
-              <p class="mt-6 max-w-xl text-lg leading-8 text-stone-300">AI, open source, careers, pay, and useful ideas—filtered into the few signals that can genuinely improve your work and your life.</p>
+              <p class="inline-flex rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-white">Engineering intelligence</p>
+              <h1 class="mt-6 max-w-2xl font-display text-[clamp(3.2rem,7vw,6.6rem)] font-black leading-[0.86] tracking-[-0.065em]">Everything worth knowing before your next build.</h1>
+              <p class="mt-6 max-w-xl text-lg leading-8 text-stone-300">New technology, open-source projects, architecture, AI engineering, and the people building exciting things—explained for working developers.</p>
             </div>
-            <div class="mt-8 flex flex-wrap items-center gap-4 border-t border-stone-700 pt-5 text-sm"><span class="font-bold text-white">Personalized for you</span><span class="text-stone-400">5 minutes</span><a href="sports.html" class="ml-auto inline-flex items-center gap-2 font-bold text-red-400">Start your briefing ${arrowIcon}</a></div>
+            <div class="mt-8 flex flex-wrap items-center gap-4 border-t border-stone-700 pt-5 text-sm"><span class="font-bold text-white">Curated for developers</span><span class="text-stone-400">8 minutes</span><a href="news.html" class="ml-auto inline-flex items-center gap-2 font-bold text-red-400">Open the briefing ${arrowIcon}</a></div>
           </article>
           <figure class="relative min-h-[420px] overflow-hidden rounded-[2rem] bg-stone-900 sm:min-h-[560px]">
             <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1800&q=90" alt="Detailed technology circuit board" class="absolute inset-0 h-full w-full object-cover" />
             <div class="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-stone-950/5 to-transparent"></div>
-            <figcaption class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-5 p-6 sm:p-8"><p class="max-w-lg text-sm leading-6 text-stone-100">Signal over noise, with every recommendation connected to a source and a useful next step.</p><span class="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.17em] text-stone-300">Big News Intelligence</span></figcaption>
+            <figcaption class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-5 p-6 sm:p-8"><p class="max-w-lg text-sm leading-6 text-stone-100">Every project is linked to its source, maintainers, implementation details, and the problem it solves.</p><span class="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.17em] text-stone-300">Tech Engineering Desk</span></figcaption>
           </figure>
         </div>
       </div>
     </section>
 
-    <section class="border-y border-red-200 bg-red-50 text-stone-950" aria-label="Breaking news"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white">AI Radar</span><p class="font-display text-lg font-black leading-tight sm:text-xl">New local models promise better privacy and useful performance on hardware you already own.</p><a href="news.html" class="ml-auto inline-flex shrink-0 items-center gap-2 text-sm font-black text-red-700">Why it matters ${arrowIcon}</a></div></section>
+    <section class="border-y border-red-200 bg-red-50 text-stone-950" aria-label="Engineering update"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white">Just shipped</span><p class="font-display text-lg font-black leading-tight sm:text-xl">A new open-source runtime makes local agent workflows faster and easier to inspect.</p><a href="city.html" class="ml-auto inline-flex shrink-0 items-center gap-2 text-sm font-black text-red-700">Inspect the project ${arrowIcon}</a></div></section>
 
     <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
       <div class="grid gap-8 lg:grid-cols-[.72fr_1.28fr]">
         <div class="flex flex-col justify-between rounded-[2rem] bg-red-600 p-7 text-white sm:p-9">
-          <div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-100">Today, in five</p><h2 class="mt-4 font-display text-5xl font-black leading-[0.9] tracking-[-0.055em]">Three signals. One clear next step.</h2></div>
-          <p class="mt-12 max-w-sm leading-7 text-red-50">Enough context to move forward—without losing your morning to the feed.</p>
+          <div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-100">Today’s engineering brief</p><h2 class="mt-4 font-display text-5xl font-black leading-[0.9] tracking-[-0.055em]">Three signals worth opening your editor for.</h2></div>
+          <p class="mt-12 max-w-sm leading-7 text-red-50">Implementation details, real tradeoffs, and projects you can inspect yourself.</p>
         </div>
         <div class="divide-y divide-stone-300 border-y border-stone-400">
           ${frontStories.map(([href, category, title, time], index) => `<a href="${href}" class="group grid grid-cols-[2.5rem_1fr] gap-4 py-6 sm:grid-cols-[4rem_1fr_auto] sm:items-center"><span class="font-display text-3xl font-black text-stone-400">0${index + 1}</span><span><span class="mb-2 block text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</span><span class="font-display text-2xl font-black leading-tight tracking-[-0.03em] transition group-hover:text-red-600 sm:text-3xl">${title}</span></span><span class="hidden text-sm font-bold text-stone-500 sm:block">${time}</span></a>`).join('')}
@@ -192,14 +192,14 @@ const homePage = `
 
     <section class="border-y border-stone-300 bg-white">
       <div class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
-        <div class="mb-8 flex items-end justify-between"><div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-600">Chosen for usefulness</p><h2 class="mt-2 font-display text-5xl font-black tracking-[-0.055em] sm:text-6xl">Useful, not endless.</h2></div><a href="sports.html" class="hidden items-center gap-2 text-sm font-black text-red-700 sm:flex">See your briefing ${arrowIcon}</a></div>
+        <div class="mb-8 flex items-end justify-between"><div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-600">Built in public</p><h2 class="mt-2 font-display text-5xl font-black tracking-[-0.055em] sm:text-6xl">Projects worth studying.</h2></div><a href="sports.html" class="hidden items-center gap-2 text-sm font-black text-red-700 sm:flex">Explore the showcase ${arrowIcon}</a></div>
         <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           ${features.map(([href, category, title, image, size], index) => `<a href="${href}" class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8] ${size}"><div class="overflow-hidden ${index === 0 ? 'aspect-[16/8]' : 'aspect-[4/3]'}"><img src="${image}" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" /></div><div class="p-6"><p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</p><h3 class="mt-3 font-display font-black leading-[0.95] tracking-[-0.04em] transition group-hover:text-red-600 ${index === 0 ? 'text-4xl sm:text-5xl' : 'text-3xl'}">${title}</h3></div></a>`).join('')}
         </div>
       </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20"><div class="grid overflow-hidden rounded-[2rem] bg-amber-100 lg:grid-cols-[1.2fr_.8fr]"><blockquote class="p-8 sm:p-12 lg:p-16"><p class="text-xs font-black uppercase tracking-[0.2em] text-red-700">Time well spent</p><p class="mt-5 font-display text-4xl font-black leading-[0.95] tracking-[-0.05em] text-stone-950 sm:text-6xl">“Spend less time searching. Spend more time living.”</p><footer class="mt-7 max-w-xl leading-7 text-stone-600">Big News has a real stopping point. When the useful signals are covered, you are caught up—and free to focus on the people and work that matter.</footer></blockquote><div class="flex min-h-72 items-end bg-red-700 p-8 text-white sm:p-12"><div><p class="text-sm font-bold text-red-200">Your daily promise</p><a href="subscribe.html" class="mt-3 inline-flex items-center gap-2 font-display text-3xl font-black">Shape your briefing ${arrowIcon}</a></div></div></div></section>
+    <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20"><div class="grid overflow-hidden rounded-[2rem] bg-amber-100 lg:grid-cols-[1.2fr_.8fr]"><blockquote class="p-8 sm:p-12 lg:p-16"><p class="text-xs font-black uppercase tracking-[0.2em] text-red-700">The engineering standard</p><p class="mt-5 font-display text-4xl font-black leading-[0.95] tracking-[-0.05em] text-stone-950 sm:text-6xl">“Show the code. Explain the tradeoff. Credit the builder.”</p><footer class="mt-7 max-w-xl leading-7 text-stone-600">Tech showcases work from other developers with direct source links, maintainer attribution, architecture notes, and honest lessons—not copied launch announcements.</footer></blockquote><div class="flex min-h-72 items-end bg-red-700 p-8 text-white sm:p-12"><div><p class="text-sm font-bold text-red-200">Share your work</p><a href="sports.html" class="mt-3 inline-flex items-center gap-2 font-display text-3xl font-black">Submit a project ${arrowIcon}</a></div></div></div></section>
   </main>
 `
 
@@ -210,7 +210,7 @@ const sectionTemplate = (key) => {
       <main class="mx-auto max-w-4xl px-5 py-24 text-center sm:px-8">
         <p class="eyebrow">Not found</p>
         <h1 class="mt-4 font-display text-5xl font-black tracking-[-0.05em]">This page is missing.</h1>
-        <p class="mt-5 text-stone-600">Go back to the Big News briefing.</p>
+        <p class="mt-5 text-stone-600">Go back to the Tech briefing.</p>
         <a href="index.html" class="mt-8 inline-flex rounded-full bg-stone-950 px-6 py-3 text-sm font-bold text-white hover:bg-red-600">Back home</a>
       </main>
     `
@@ -241,7 +241,7 @@ const sectionTemplate = (key) => {
         <article class="rounded-3xl border border-stone-200 bg-white p-6 lg:col-span-2">
           <p class="eyebrow">Analysis</p>
           <h2 class="mt-3 font-display text-4xl font-black leading-[0.95] tracking-[-0.04em]">Why this story matters right now.</h2>
-          <p class="mt-4 leading-7 text-stone-600">Big News connects each development to the tools you use, the skills you are building, and the opportunities you care about. Popularity alone is not enough; the signal must be useful.</p>
+          <p class="mt-4 leading-7 text-stone-600">Tech connects each development to implementation details, architecture choices, and working source code. Popularity alone is not enough; the project must teach or solve something useful.</p>
           <p class="mt-4 leading-7 text-stone-600">Every briefing is designed to end with a practical next step and a clear stopping point, so staying informed does not consume the time you are trying to protect.</p>
         </article>
         <aside class="rounded-3xl border border-stone-200 bg-stone-950 p-6 text-white">
@@ -259,26 +259,26 @@ const subscribePage = `
     <div class="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
       <section>
         <p class="eyebrow">Make the signal yours</p>
-        <h1 class="mt-4 font-display text-[clamp(2.8rem,6vw,5.8rem)] font-black leading-[0.9] tracking-[-0.055em]">Build your Big News briefing.</h1>
-        <p class="mt-6 max-w-2xl text-lg leading-8 text-stone-600">Tell us what you build, what you want to learn, and where you want your career to go. Big News will prioritize the developments that can help you get there.</p>
+        <h1 class="mt-4 font-display text-[clamp(2.8rem,6vw,5.8rem)] font-black leading-[0.9] tracking-[-0.055em]">Build your Tech briefing.</h1>
+        <p class="mt-6 max-w-2xl text-lg leading-8 text-stone-600">Tell us what you build, the languages and platforms in your stack, and which engineering problems you want to understand better.</p>
         <ul class="mt-8 space-y-3 text-sm text-stone-700">
-          <li>One focused five-minute daily briefing</li>
-          <li>AI, open source, career, and compensation signals</li>
-          <li>Clear next steps with links to every original source</li>
+          <li>One focused daily engineering briefing</li>
+          <li>Open source, architecture, AI, and developer-tool signals</li>
+          <li>Source code, implementation notes, and maintainer credit</li>
         </ul>
       </section>
       <section class="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">
         <h2 class="font-display text-3xl font-black tracking-[-0.04em]">Choose your focus</h2>
         <div class="mt-6 grid gap-4 sm:grid-cols-2">
           <article class="rounded-2xl border border-stone-200 p-4">
-            <p class="text-sm font-bold">Build better</p>
-            <p class="mt-2 font-display text-3xl font-black">Tools</p>
-            <p class="text-xs text-stone-500">AI, GitHub, and projects</p>
+            <p class="text-sm font-bold">Explore what’s new</p>
+            <p class="mt-2 font-display text-3xl font-black">Radar</p>
+            <p class="text-xs text-stone-500">releases, tools, and projects</p>
           </article>
           <article class="rounded-2xl border-2 border-red-500 bg-red-50 p-4">
-            <p class="text-sm font-bold text-red-700">Grow your career</p>
-            <p class="mt-2 font-display text-3xl font-black text-red-700">Moves</p>
-            <p class="text-xs text-red-700">jobs, skills, and pay</p>
+            <p class="text-sm font-bold text-red-700">Go deeper</p>
+            <p class="mt-2 font-display text-3xl font-black text-red-700">Systems</p>
+            <p class="text-xs text-red-700">architecture and AI engineering</p>
           </article>
         </div>
         <form class="mt-6 space-y-3" aria-label="Subscription form">
@@ -303,17 +303,17 @@ if (pageKey === 'subscribe') {
 }
 
 const titleMap = {
-  index: 'Big News | Your personal technology briefing',
-  subscribe: 'Your Briefing | Big News',
-  news: 'AI Radar | Big News',
-  city: 'GitHub Pulse | Big News',
-  politics: 'Career Moves | Big News',
-  culture: 'Pay & Demand | Big News',
-  business: 'Build This | Big News',
-  sports: 'For You | Big News',
+  index: 'Tech | Engineering intelligence for developers',
+  subscribe: 'My Stack | Tech',
+  news: 'Developer Briefing | Tech',
+  city: 'GitHub Radar | Tech',
+  politics: 'Architecture | Tech',
+  culture: 'AI Engineering | Tech',
+  business: 'Developer Tools | Tech',
+  sports: 'Project Showcase | Tech',
 }
 
-document.title = titleMap[pageKey] || 'Big News'
+document.title = titleMap[pageKey] || 'Tech'
 
 document.querySelector('#app').innerHTML = `
   <div class="min-h-screen bg-stone-50 text-stone-950 selection:bg-red-200">
