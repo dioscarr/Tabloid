@@ -100,6 +100,11 @@ if (!customElements.get('tabloid-shared-nav')) customElements.define('tabloid-sh
 export const mountSharedNav = () => {
   if (document.querySelector('tabloid-shared-nav')) return
   const sharedNav = document.createElement('tabloid-shared-nav')
+  const explicitSlot = document.querySelector('[data-shared-nav-slot]')
+  if (explicitSlot) {
+    explicitSlot.append(sharedNav)
+    return
+  }
   const legacyLauncher = document.querySelector('#apps-button')?.parentElement
   if (legacyLauncher) {
     legacyLauncher.replaceWith(sharedNav)
