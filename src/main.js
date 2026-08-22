@@ -4,103 +4,103 @@ const arrowIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-4" fi
 const appsIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-5" fill="currentColor"><circle cx="4" cy="4" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="16" cy="4" r="1.5"/><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/><circle cx="4" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg>`
 
 const navigation = [
-  ['news', 'News', 'news.html'],
-  ['city', 'City', 'city.html'],
-  ['politics', 'Politics', 'politics.html'],
-  ['culture', 'Culture', 'culture.html'],
-  ['business', 'Business', 'business.html'],
-  ['sports', 'Sports', 'sports.html'],
+  ['news', 'AI Radar', 'news.html'],
+  ['city', 'GitHub Pulse', 'city.html'],
+  ['politics', 'Career Moves', 'politics.html'],
+  ['culture', 'Pay & Demand', 'culture.html'],
+  ['business', 'Build This', 'business.html'],
+  ['sports', 'For You', 'sports.html'],
 ]
 
 const frontStories = [
-  ['politics.html', 'Politics', 'Senate vote sparks a late-night showdown over the transit bill.', '18 min ago'],
-  ['culture.html', 'Culture', 'Neighborhood theaters stage a comeback with midnight screenings and live jazz.', '32 min ago'],
-  ['business.html', 'Business', 'Startup founders chase a new wave of green manufacturing jobs.', '1 hr ago'],
+  ['news.html', 'AI Radar', 'A new open model makes private, local AI dramatically easier to run.', '4 min'],
+  ['city.html', 'GitHub Pulse', 'Five fast-growing repositories that could improve your workflow this week.', '3 min'],
+  ['politics.html', 'Career Moves', 'AI infrastructure roles are rising—and these are the skills employers want.', '4 min'],
 ]
 
 const features = [
-  ['culture.html', 'Lifestyle', 'Inside the rooftop gardens turning empty lots into community hubs.', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=85', 'lg:col-span-2'],
-  ['city.html', 'Science', 'Researchers track a surprising rebound in urban bird populations.', 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=900&q=85', ''],
-  ['sports.html', 'Travel', 'Weekend escapes worth the train ride, from coastal towns to mountain inns.', 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=85', ''],
+  ['business.html', 'Build This', 'Turn your saved articles into a searchable personal knowledge assistant.', 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=85', 'lg:col-span-2'],
+  ['culture.html', 'Pay & Demand', 'The technology skills gaining value faster than job titles can keep up.', 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=85', ''],
+  ['sports.html', 'For You', 'A focused 30-day learning path built around your next career move.', 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=85', ''],
 ]
 
 const sectionPages = {
   news: {
-    title: 'Latest News',
-    kicker: 'Top Stories',
-    headline: 'Major transit expansion approved after six-hour council debate.',
-    deck: 'The vote unlocks the first phase of crosstown stations, new protected bike corridors, and a seven-year budget plan tied to ridership goals.',
-    byline: 'By Omar Levin · Updated 11:05 AM',
-    image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1500&q=88',
+    title: 'AI Radar',
+    kicker: 'What changed',
+    headline: 'Smaller open models are making useful private AI possible on everyday hardware.',
+    deck: 'The newest releases prioritize efficiency, local inference, and practical agent workflows—creating opportunities without another expensive cloud subscription.',
+    byline: 'Big News Intelligence · Updated 11:05 AM',
+    image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['City Hall', 'Public comment opens Monday for station naming and accessibility design reviews.'],
-      ['Transit', 'Night service frequency will increase by 23% by next spring.'],
-      ['Neighborhoods', 'Construction mitigation grants announced for small storefronts.'],
+      ['Models', 'A compact release now handles common coding and document tasks locally.'],
+      ['Agents', 'Tool-use reliability is improving faster than raw benchmark scores.'],
+      ['Your move', 'Test one private workflow before moving more data into the cloud.'],
     ],
   },
   city: {
-    title: 'City Desk',
-    kicker: 'Metro Briefing',
-    headline: 'Waterfront redesign moves into permits with expanded public housing set-asides.',
-    deck: 'Planning officials introduced revised zoning language that reserves 28% of new units for affordable housing and adds two new school sites.',
-    byline: 'By Hannah Wu · Updated 10:22 AM',
-    image: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1500&q=88',
+    title: 'GitHub Pulse',
+    kicker: 'Open source signal',
+    headline: 'Developer tools are converging around local agents, structured context, and faster feedback.',
+    deck: 'We filtered today’s repository activity for projects with real documentation, active maintainers, and a clear benefit to the way you build.',
+    byline: 'Big News Intelligence · Updated 10:22 AM',
+    image: 'https://images.unsplash.com/photo-1556075798-4825dfaaf498?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['Housing', 'Three nonprofit developers selected for mixed-income parcels.'],
-      ['Public Works', 'Stormwater tunnels to be completed before high-rise construction starts.'],
-      ['Community', 'Residents request tree canopy guarantees in final approvals.'],
+      ['Trending', 'Local-first agent frameworks are attracting sustained contributor growth.'],
+      ['Maintainers', 'The strongest projects pair frequent releases with clear migration notes.'],
+      ['Your move', 'Star less. Trial one tool against a real task for thirty minutes.'],
     ],
   },
   politics: {
-    title: 'Politics',
-    kicker: 'State & Local',
-    headline: 'Coalition leaders negotiate education package as budget deadline closes in.',
-    deck: 'Talks continue over teacher retention bonuses, school modernization, and district transparency requirements before Friday midnight.',
-    byline: 'By Iris Patel · Updated 9:48 AM',
+    title: 'Career Moves',
+    kicker: 'Opportunity radar',
+    headline: 'Companies need people who can connect AI prototypes to reliable production systems.',
+    deck: 'The durable opportunity is shifting from prompt experimentation toward evaluation, infrastructure, security, data quality, and measurable business outcomes.',
+    byline: 'Big News Intelligence · Updated 9:48 AM',
     image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['Legislature', 'Compromise language on class-size targets expected this afternoon.'],
-      ['Campaigns', 'Mayor and council blocs clash over infrastructure earmarks.'],
-      ['Policy', 'Independent fiscal office projects 4.2% revenue growth next year.'],
+      ['Hiring', 'Platform and AI operations roles increasingly overlap.'],
+      ['Skills', 'Evaluation and observability now separate demos from dependable products.'],
+      ['Your move', 'Document one production-grade AI project as a concise case study.'],
     ],
   },
   culture: {
-    title: 'Culture',
-    kicker: 'Arts & Ideas',
-    headline: 'Midtown theaters return with sold-out late shows and neighborhood pop-ups.',
-    deck: 'A coalition of performers, venue owners, and schools is turning dormant stages into year-round programming for students and night audiences.',
-    byline: 'By Leo Grant · Updated 8:57 AM',
-    image: 'https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?auto=format&fit=crop&w=1500&q=88',
+    title: 'Pay & Demand',
+    kicker: 'Know your value',
+    headline: 'The market is rewarding adaptable technical depth more than fashionable titles.',
+    deck: 'Salary data becomes useful when paired with location, experience, industry demand, and the specific technologies appearing in real job descriptions.',
+    byline: 'Big News Intelligence · Updated 8:57 AM',
+    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['Theater', 'Five venues announce discounted weekday passes.'],
-      ['Music', 'Jazz residencies expand to riverfront parks through October.'],
-      ['Film', 'Restored cinema reopens with documentary festival lineup.'],
+      ['Baseline', 'Government labor data provides a defensible compensation benchmark.'],
+      ['Demand', 'Cloud, security, data, and AI integration skills continue to intersect.'],
+      ['Your move', 'Compare responsibilities and outcomes—not title alone—before negotiating.'],
     ],
   },
   business: {
-    title: 'Business',
-    kicker: 'Markets & Work',
-    headline: 'Green manufacturing startups secure fresh capital and warehouse space.',
-    deck: 'Founders say demand for battery components and heat-pump parts is accelerating hiring, with three industrial corridors now near full occupancy.',
-    byline: 'By Renata Cole · Updated 10:41 AM',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1500&q=88',
+    title: 'Build This',
+    kicker: 'From signal to project',
+    headline: 'Build a personal research assistant that remembers what you decide—not everything you read.',
+    deck: 'A focused weekend project can combine feeds, source-aware summaries, semantic search, and a small decision journal without becoming another information inbox.',
+    byline: 'Big News Intelligence · Updated 10:41 AM',
+    image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['Labor', 'Technical apprenticeship program adds 1,200 seats this year.'],
-      ['Finance', 'Community banks launch low-interest climate equipment loans.'],
-      ['Retail', 'Independent shops report strongest summer foot traffic since 2019.'],
+      ['Scope', 'Start with three trusted feeds and one searchable collection.'],
+      ['Stack', 'Use a small API, Postgres, and source-linked summaries.'],
+      ['Your move', 'Ship the smallest useful loop before adding autonomous agents.'],
     ],
   },
   sports: {
-    title: 'Sports',
-    kicker: 'Game Day',
-    headline: 'River City FC extends unbeaten run as academy players spark late comeback.',
-    deck: 'A 92nd-minute winner capped a second-half rally, putting the club atop the table and deepening calls for stadium transit upgrades.',
-    byline: 'By Max Rivera · Updated 11:16 AM',
-    image: 'https://images.unsplash.com/photo-1471295253337-3ceaaedca402?auto=format&fit=crop&w=1500&q=88',
+    title: 'For You',
+    kicker: 'Your five minutes',
+    headline: 'Three useful signals, one opportunity, and one next step—then you are caught up.',
+    deck: 'Your briefing prioritizes the technologies, roles, projects, and ideas most likely to improve your work and protect your time outside it.',
+    byline: 'Personalized by Big News · Updated 11:16 AM',
+    image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1500&q=88',
     updates: [
-      ['Football', 'Coach confirms captain fit for weekend derby fixture.'],
-      ['Basketball', 'City Hoops signs veteran point guard on one-year deal.'],
-      ['Youth', 'Public school track finals draw record attendance.'],
+      ['Know', 'Local AI tools are becoming practical for private daily workflows.'],
+      ['Try', 'Evaluate one trending repository against a problem you already have.'],
+      ['Done', 'You have enough signal for today. Go spend the saved time well.'],
     ],
   },
 }
@@ -115,7 +115,7 @@ const mobileNavMarkup = () => navigation.map(([, label, href]) => `<a href="${hr
 const header = (active) => `
   <header class="sticky top-0 z-50 border-b border-emerald-800 bg-emerald-950/95 text-white shadow-lg shadow-emerald-950/10 backdrop-blur-xl">
     <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-      <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="The Daily Echo home">The Daily Echo<span class="text-emerald-300">.</span></a>
+      <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="Big News home">Big News<span class="text-emerald-300">.</span></a>
       <nav class="hidden items-center gap-7 md:flex" aria-label="Main navigation">${navMarkup(active)}</nav>
       <div class="flex items-center gap-2">
         <div class="relative">
@@ -126,7 +126,7 @@ const header = (active) => `
             <a href="https://github.com/dioscarr/Tabloid/branches" class="flex items-center justify-between border-t border-emerald-800 px-5 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-900 hover:text-white">View repository branches ${arrowIcon}</a>
           </div>
         </div>
-        <a href="subscribe.html" class="hidden rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-white sm:inline-flex">Subscribe</a>
+        <a href="subscribe.html" class="hidden rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-white sm:inline-flex">Your Briefing</a>
         <button id="menu-button" class="inline-grid size-10 place-items-center rounded-full text-emerald-50 transition hover:bg-emerald-800 md:hidden" type="button" aria-label="Open navigation" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
       </div>
     </div>
@@ -138,13 +138,13 @@ const footer = `
   <footer class="border-t border-stone-200 bg-white">
     <div class="mx-auto flex max-w-7xl flex-col gap-8 px-5 py-10 sm:px-8 md:flex-row md:items-center md:justify-between">
       <div>
-        <p class="font-display text-2xl font-black">The Daily Echo<span class="text-red-600">.</span></p>
-        <p class="mt-1 text-sm text-stone-500">Truth in a noisy world.</p>
+        <p class="font-display text-2xl font-black">Big News<span class="text-red-600">.</span></p>
+        <p class="mt-1 text-sm text-stone-500">Spend less time searching. Spend more time living.</p>
       </div>
       <form class="flex w-full max-w-md gap-2" aria-label="Newsletter subscription">
         <label class="sr-only" for="email">Email address</label>
         <input id="email" type="email" placeholder="you@example.com" class="min-w-0 flex-1 rounded-full border border-stone-300 bg-stone-50 px-5 py-3 text-sm outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-100" />
-        <button type="submit" class="rounded-full bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700">Join free</button>
+        <button type="submit" class="rounded-full bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700">Get the briefing</button>
       </form>
     </div>
   </footer>
@@ -161,28 +161,28 @@ const homePage = `
         <div class="grid gap-8 pt-8 lg:grid-cols-[1.05fr_1.45fr] lg:items-stretch">
           <article class="flex flex-col justify-between">
             <div>
-              <p class="inline-flex rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-white">The city changes today</p>
-              <h1 class="mt-6 max-w-2xl font-display text-[clamp(3.2rem,7vw,6.6rem)] font-black leading-[0.86] tracking-[-0.065em]">The waterfront belongs to everyone.</h1>
-              <p class="mt-6 max-w-xl text-lg leading-8 text-stone-300">A once-in-a-generation rebuild promises parks, homes, and a new transit line. The question now: who gets to shape it?</p>
+              <p class="inline-flex rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-white">Your five-minute tech briefing</p>
+              <h1 class="mt-6 max-w-2xl font-display text-[clamp(3.2rem,7vw,6.6rem)] font-black leading-[0.86] tracking-[-0.065em]">Know what matters. Then get back to life.</h1>
+              <p class="mt-6 max-w-xl text-lg leading-8 text-stone-300">AI, open source, careers, pay, and useful ideas—filtered into the few signals that can genuinely improve your work and your life.</p>
             </div>
-            <div class="mt-8 flex flex-wrap items-center gap-4 border-t border-stone-700 pt-5 text-sm"><span class="font-bold text-white">Mara Delgado</span><span class="text-stone-400">8 min read</span><a href="city.html" class="ml-auto inline-flex items-center gap-2 font-bold text-red-400">Read the investigation ${arrowIcon}</a></div>
+            <div class="mt-8 flex flex-wrap items-center gap-4 border-t border-stone-700 pt-5 text-sm"><span class="font-bold text-white">Personalized for you</span><span class="text-stone-400">5 minutes</span><a href="sports.html" class="ml-auto inline-flex items-center gap-2 font-bold text-red-400">Start your briefing ${arrowIcon}</a></div>
           </article>
           <figure class="relative min-h-[420px] overflow-hidden rounded-[2rem] bg-stone-900 sm:min-h-[560px]">
-            <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1800&q=90" alt="Modern city skyline beside the waterfront" class="absolute inset-0 h-full w-full object-cover" />
+            <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1800&q=90" alt="Detailed technology circuit board" class="absolute inset-0 h-full w-full object-cover" />
             <div class="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-stone-950/5 to-transparent"></div>
-            <figcaption class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-5 p-6 sm:p-8"><p class="max-w-lg text-sm leading-6 text-stone-100">Nine acres of public space could reconnect three neighborhoods with the river.</p><span class="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.17em] text-stone-300">Elias Chen</span></figcaption>
+            <figcaption class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-5 p-6 sm:p-8"><p class="max-w-lg text-sm leading-6 text-stone-100">Signal over noise, with every recommendation connected to a source and a useful next step.</p><span class="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.17em] text-stone-300">Big News Intelligence</span></figcaption>
           </figure>
         </div>
       </div>
     </section>
 
-    <section class="border-y border-red-200 bg-red-50 text-stone-950" aria-label="Breaking news"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white">Live</span><p class="font-display text-lg font-black leading-tight sm:text-xl">Power grid upgrades announced as heat wave threatens record demand.</p><a href="news.html" class="ml-auto inline-flex shrink-0 items-center gap-2 text-sm font-black text-red-700">Follow updates ${arrowIcon}</a></div></section>
+    <section class="border-y border-red-200 bg-red-50 text-stone-950" aria-label="Breaking news"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white">AI Radar</span><p class="font-display text-lg font-black leading-tight sm:text-xl">New local models promise better privacy and useful performance on hardware you already own.</p><a href="news.html" class="ml-auto inline-flex shrink-0 items-center gap-2 text-sm font-black text-red-700">Why it matters ${arrowIcon}</a></div></section>
 
     <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
       <div class="grid gap-8 lg:grid-cols-[.72fr_1.28fr]">
         <div class="flex flex-col justify-between rounded-[2rem] bg-red-600 p-7 text-white sm:p-9">
-          <div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-100">Morning briefing</p><h2 class="mt-4 font-display text-5xl font-black leading-[0.9] tracking-[-0.055em]">Three stories. Five minutes. Go.</h2></div>
-          <p class="mt-12 max-w-sm leading-7 text-red-50">Everything worth knowing before the city gets moving.</p>
+          <div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-100">Today, in five</p><h2 class="mt-4 font-display text-5xl font-black leading-[0.9] tracking-[-0.055em]">Three signals. One clear next step.</h2></div>
+          <p class="mt-12 max-w-sm leading-7 text-red-50">Enough context to move forward—without losing your morning to the feed.</p>
         </div>
         <div class="divide-y divide-stone-300 border-y border-stone-400">
           ${frontStories.map(([href, category, title, time], index) => `<a href="${href}" class="group grid grid-cols-[2.5rem_1fr] gap-4 py-6 sm:grid-cols-[4rem_1fr_auto] sm:items-center"><span class="font-display text-3xl font-black text-stone-400">0${index + 1}</span><span><span class="mb-2 block text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</span><span class="font-display text-2xl font-black leading-tight tracking-[-0.03em] transition group-hover:text-red-600 sm:text-3xl">${title}</span></span><span class="hidden text-sm font-bold text-stone-500 sm:block">${time}</span></a>`).join('')}
@@ -192,14 +192,14 @@ const homePage = `
 
     <section class="border-y border-stone-300 bg-white">
       <div class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
-        <div class="mb-8 flex items-end justify-between"><div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-600">Worth your time</p><h2 class="mt-2 font-display text-5xl font-black tracking-[-0.055em] sm:text-6xl">The big picture.</h2></div><a href="culture.html" class="hidden items-center gap-2 text-sm font-black text-red-700 sm:flex">See everything ${arrowIcon}</a></div>
+        <div class="mb-8 flex items-end justify-between"><div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-600">Chosen for usefulness</p><h2 class="mt-2 font-display text-5xl font-black tracking-[-0.055em] sm:text-6xl">Useful, not endless.</h2></div><a href="sports.html" class="hidden items-center gap-2 text-sm font-black text-red-700 sm:flex">See your briefing ${arrowIcon}</a></div>
         <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           ${features.map(([href, category, title, image, size], index) => `<a href="${href}" class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8] ${size}"><div class="overflow-hidden ${index === 0 ? 'aspect-[16/8]' : 'aspect-[4/3]'}"><img src="${image}" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" /></div><div class="p-6"><p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</p><h3 class="mt-3 font-display font-black leading-[0.95] tracking-[-0.04em] transition group-hover:text-red-600 ${index === 0 ? 'text-4xl sm:text-5xl' : 'text-3xl'}">${title}</h3></div></a>`).join('')}
         </div>
       </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20"><div class="grid overflow-hidden rounded-[2rem] bg-amber-100 lg:grid-cols-[1.2fr_.8fr]"><blockquote class="p-8 sm:p-12 lg:p-16"><p class="text-xs font-black uppercase tracking-[0.2em] text-red-700">A bigger opinion</p><p class="mt-5 font-display text-4xl font-black leading-[0.95] tracking-[-0.05em] text-stone-950 sm:text-6xl">“Build a city people can actually live in.”</p><footer class="mt-7 max-w-xl leading-7 text-stone-600">The Editorial Board on why the next chapter must be measured in homes, commutes, and public space—not renderings.</footer></blockquote><div class="flex min-h-72 items-end bg-red-700 p-8 text-white sm:p-12"><div><p class="text-sm font-bold text-red-200">Today’s argument</p><a href="politics.html" class="mt-3 inline-flex items-center gap-2 font-display text-3xl font-black">Read the full case ${arrowIcon}</a></div></div></div></section>
+    <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20"><div class="grid overflow-hidden rounded-[2rem] bg-amber-100 lg:grid-cols-[1.2fr_.8fr]"><blockquote class="p-8 sm:p-12 lg:p-16"><p class="text-xs font-black uppercase tracking-[0.2em] text-red-700">Time well spent</p><p class="mt-5 font-display text-4xl font-black leading-[0.95] tracking-[-0.05em] text-stone-950 sm:text-6xl">“Spend less time searching. Spend more time living.”</p><footer class="mt-7 max-w-xl leading-7 text-stone-600">Big News has a real stopping point. When the useful signals are covered, you are caught up—and free to focus on the people and work that matter.</footer></blockquote><div class="flex min-h-72 items-end bg-red-700 p-8 text-white sm:p-12"><div><p class="text-sm font-bold text-red-200">Your daily promise</p><a href="subscribe.html" class="mt-3 inline-flex items-center gap-2 font-display text-3xl font-black">Shape your briefing ${arrowIcon}</a></div></div></div></section>
   </main>
 `
 
@@ -210,7 +210,7 @@ const sectionTemplate = (key) => {
       <main class="mx-auto max-w-4xl px-5 py-24 text-center sm:px-8">
         <p class="eyebrow">Not found</p>
         <h1 class="mt-4 font-display text-5xl font-black tracking-[-0.05em]">This page is missing.</h1>
-        <p class="mt-5 text-stone-600">Go back to the home page for the full Daily Echo edition.</p>
+        <p class="mt-5 text-stone-600">Go back to the Big News briefing.</p>
         <a href="index.html" class="mt-8 inline-flex rounded-full bg-stone-950 px-6 py-3 text-sm font-bold text-white hover:bg-red-600">Back home</a>
       </main>
     `
@@ -219,7 +219,7 @@ const sectionTemplate = (key) => {
   return `
     <main>
       <section class="mx-auto max-w-7xl px-5 pb-14 pt-10 sm:px-8 sm:pt-14">
-        <div class="mb-7 flex flex-wrap items-center justify-between gap-3 border-y border-stone-300 py-3 text-[0.68rem] font-bold uppercase tracking-[0.2em] text-stone-500"><span>${page.title}</span><span>Updated newsroom report</span></div>
+        <div class="mb-7 flex flex-wrap items-center justify-between gap-3 border-y border-stone-300 py-3 text-[0.68rem] font-bold uppercase tracking-[0.2em] text-stone-500"><span>${page.title}</span><span>Source-linked intelligence</span></div>
         <div class="grid gap-9 lg:grid-cols-[1.5fr_minmax(280px,.8fr)] lg:gap-10">
           <article>
             <p class="eyebrow">${page.kicker}</p>
@@ -231,7 +231,7 @@ const sectionTemplate = (key) => {
             </figure>
           </article>
           <aside class="rounded-3xl border border-stone-200 bg-white p-6">
-            <h2 class="font-display text-3xl font-black tracking-[-0.04em]">Live Updates</h2>
+            <h2 class="font-display text-3xl font-black tracking-[-0.04em]">What to know</h2>
             <div class="mt-6 divide-y divide-stone-200">${page.updates.map(([tag, story]) => `<article class="py-4 first:pt-0"><p class="text-[0.68rem] font-black uppercase tracking-[0.18em] text-red-600">${tag}</p><p class="mt-2 text-sm leading-6 text-stone-700">${story}</p></article>`).join('')}</div>
           </aside>
         </div>
@@ -241,8 +241,8 @@ const sectionTemplate = (key) => {
         <article class="rounded-3xl border border-stone-200 bg-white p-6 lg:col-span-2">
           <p class="eyebrow">Analysis</p>
           <h2 class="mt-3 font-display text-4xl font-black leading-[0.95] tracking-[-0.04em]">Why this story matters right now.</h2>
-          <p class="mt-4 leading-7 text-stone-600">Citywide decisions around housing, mobility, and culture are converging at once. Leaders are trading speed for consultation, while residents push for clearer timelines and measurable outcomes.</p>
-          <p class="mt-4 leading-7 text-stone-600">Our reporters are tracking milestones, budget shifts, and public comments so each update is tied to decisions that affect streets, schools, and jobs.</p>
+          <p class="mt-4 leading-7 text-stone-600">Big News connects each development to the tools you use, the skills you are building, and the opportunities you care about. Popularity alone is not enough; the signal must be useful.</p>
+          <p class="mt-4 leading-7 text-stone-600">Every briefing is designed to end with a practical next step and a clear stopping point, so staying informed does not consume the time you are trying to protect.</p>
         </article>
         <aside class="rounded-3xl border border-stone-200 bg-stone-950 p-6 text-white">
           <p class="text-[0.68rem] font-black uppercase tracking-[0.18em] text-red-300">Read Next</p>
@@ -258,33 +258,33 @@ const subscribePage = `
     <div class="mb-8 border-y border-stone-300 py-4 text-[0.68rem] font-bold uppercase tracking-[0.2em] text-stone-500">Membership</div>
     <div class="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
       <section>
-        <p class="eyebrow">Support independent reporting</p>
-        <h1 class="mt-4 font-display text-[clamp(2.8rem,6vw,5.8rem)] font-black leading-[0.9] tracking-[-0.055em]">Subscribe to The Daily Echo.</h1>
-        <p class="mt-6 max-w-2xl text-lg leading-8 text-stone-600">Members fund accountability journalism, neighborhood coverage, and accessible public-interest reporting across the city.</p>
+        <p class="eyebrow">Make the signal yours</p>
+        <h1 class="mt-4 font-display text-[clamp(2.8rem,6vw,5.8rem)] font-black leading-[0.9] tracking-[-0.055em]">Build your Big News briefing.</h1>
+        <p class="mt-6 max-w-2xl text-lg leading-8 text-stone-600">Tell us what you build, what you want to learn, and where you want your career to go. Big News will prioritize the developments that can help you get there.</p>
         <ul class="mt-8 space-y-3 text-sm text-stone-700">
-          <li>Daily AM and PM briefings</li>
-          <li>Weekend investigations and explainers</li>
-          <li>Member-only Q&A with our reporting team</li>
+          <li>One focused five-minute daily briefing</li>
+          <li>AI, open source, career, and compensation signals</li>
+          <li>Clear next steps with links to every original source</li>
         </ul>
       </section>
       <section class="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">
-        <h2 class="font-display text-3xl font-black tracking-[-0.04em]">Choose your plan</h2>
+        <h2 class="font-display text-3xl font-black tracking-[-0.04em]">Choose your focus</h2>
         <div class="mt-6 grid gap-4 sm:grid-cols-2">
           <article class="rounded-2xl border border-stone-200 p-4">
-            <p class="text-sm font-bold">Monthly</p>
-            <p class="mt-2 font-display text-3xl font-black">$6</p>
-            <p class="text-xs text-stone-500">per month</p>
+            <p class="text-sm font-bold">Build better</p>
+            <p class="mt-2 font-display text-3xl font-black">Tools</p>
+            <p class="text-xs text-stone-500">AI, GitHub, and projects</p>
           </article>
           <article class="rounded-2xl border-2 border-red-500 bg-red-50 p-4">
-            <p class="text-sm font-bold text-red-700">Annual</p>
-            <p class="mt-2 font-display text-3xl font-black text-red-700">$60</p>
-            <p class="text-xs text-red-700">save 16%</p>
+            <p class="text-sm font-bold text-red-700">Grow your career</p>
+            <p class="mt-2 font-display text-3xl font-black text-red-700">Moves</p>
+            <p class="text-xs text-red-700">jobs, skills, and pay</p>
           </article>
         </div>
         <form class="mt-6 space-y-3" aria-label="Subscription form">
           <label class="block text-sm font-semibold" for="subscriber-email">Email address</label>
           <input id="subscriber-email" type="email" placeholder="you@example.com" class="w-full rounded-xl border border-stone-300 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100" />
-          <button type="submit" class="w-full rounded-xl bg-stone-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-600">Continue to checkout</button>
+          <button type="submit" class="w-full rounded-xl bg-stone-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-600">Create my briefing</button>
         </form>
       </section>
     </div>
@@ -303,17 +303,17 @@ if (pageKey === 'subscribe') {
 }
 
 const titleMap = {
-  index: 'The Daily Echo',
-  subscribe: 'Subscribe | The Daily Echo',
-  news: 'News | The Daily Echo',
-  city: 'City | The Daily Echo',
-  politics: 'Politics | The Daily Echo',
-  culture: 'Culture | The Daily Echo',
-  business: 'Business | The Daily Echo',
-  sports: 'Sports | The Daily Echo',
+  index: 'Big News | Your personal technology briefing',
+  subscribe: 'Your Briefing | Big News',
+  news: 'AI Radar | Big News',
+  city: 'GitHub Pulse | Big News',
+  politics: 'Career Moves | Big News',
+  culture: 'Pay & Demand | Big News',
+  business: 'Build This | Big News',
+  sports: 'For You | Big News',
 }
 
-document.title = titleMap[pageKey] || 'The Daily Echo'
+document.title = titleMap[pageKey] || 'Big News'
 
 document.querySelector('#app').innerHTML = `
   <div class="min-h-screen bg-stone-50 text-stone-950 selection:bg-red-200">
