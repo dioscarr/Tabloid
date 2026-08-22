@@ -107,21 +107,21 @@ const sectionPages = {
 const fileName = window.location.pathname.split('/').pop() || 'index.html'
 const pageKey = fileName.replace('.html', '')
 
-const navMarkup = (active) => navigation.map(([key, label, href]) => `<a href="${href}" class="text-sm font-semibold transition hover:text-red-600 ${key === active ? 'text-red-600' : 'text-stone-600'}">${label}</a>`).join('')
+const navMarkup = (active) => navigation.map(([key, label, href]) => `<a href="${href}" class="text-sm font-semibold transition hover:text-emerald-200 ${key === active ? 'text-emerald-300' : 'text-emerald-50/80'}">${label}</a>`).join('')
 
-const mobileNavMarkup = () => navigation.map(([, label, href]) => `<a href="${href}" class="rounded-xl px-4 py-3 text-sm font-semibold hover:bg-stone-100">${label}</a>`).join('')
+const mobileNavMarkup = () => navigation.map(([, label, href]) => `<a href="${href}" class="rounded-xl px-4 py-3 text-sm font-semibold text-emerald-50 hover:bg-emerald-800">${label}</a>`).join('')
 
 const header = (active) => `
-  <header class="sticky top-0 z-50 border-b border-stone-200/90 bg-stone-50/90 backdrop-blur-xl">
+  <header class="sticky top-0 z-50 border-b border-emerald-800 bg-emerald-950/95 text-white shadow-lg shadow-emerald-950/10 backdrop-blur-xl">
     <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-      <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="The Daily Echo home">The Daily Echo<span class="text-red-600">.</span></a>
+      <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="The Daily Echo home">The Daily Echo<span class="text-emerald-300">.</span></a>
       <nav class="hidden items-center gap-7 md:flex" aria-label="Main navigation">${navMarkup(active)}</nav>
       <div class="flex items-center gap-2">
-        <a href="subscribe.html" class="hidden rounded-full bg-stone-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-red-600 sm:inline-flex">Subscribe</a>
-        <button id="menu-button" class="icon-button md:hidden" type="button" aria-label="Open navigation" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+        <a href="subscribe.html" class="hidden rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-white sm:inline-flex">Subscribe</a>
+        <button id="menu-button" class="inline-grid size-10 place-items-center rounded-full text-emerald-50 transition hover:bg-emerald-800 md:hidden" type="button" aria-label="Open navigation" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
       </div>
     </div>
-    <nav id="mobile-nav" class="hidden border-t border-stone-200 px-5 py-4 md:hidden" aria-label="Mobile navigation"><div class="mx-auto grid max-w-7xl grid-cols-2 gap-2">${mobileNavMarkup()}</div></nav>
+    <nav id="mobile-nav" class="hidden border-t border-emerald-800 px-5 py-4 md:hidden" aria-label="Mobile navigation"><div class="mx-auto grid max-w-7xl grid-cols-2 gap-2">${mobileNavMarkup()}</div></nav>
   </header>
 `
 
