@@ -26,6 +26,16 @@ Create one issue per bounded outcome. Include affected page/API, user story, acc
 
 Build a pinned image derived from LinuxServer code-server. Add only reviewed tools: Git, GitHub CLI, Node, project package managers, Podman remote client if required by a constrained backend workflow, and approved VS Code extensions. Do not install extensions by mutable `latest` identifiers during every startup.
 
+## Local Admin branch worker
+
+The current single-owner deployment uses `scripts/admin-branch-worker.ps1`, listening only on `127.0.0.1:8790`. Tailscale Serve publishes it privately at `https://dio.tail70b7f1.ts.net:9443` and supplies the authenticated `Tailscale-User-Login` header. The worker also requires the exact Admin origin. Configure it once with:
+
+```powershell
+.\scripts\configure-admin-branch-worker.ps1 -AdminLogin 'dioscarr@github'
+```
+
+The worker exposes only branch inventory, worktree preparation, and exact labeled preview cleanup. It never accepts arbitrary Podman or shell commands. Removing a preview first records a tombstone so the scheduled reconciler cannot recreate it; state-volume purge requires a second explicit action.
+
 The workspace runs as a non-root user. Persist `/config` and the repository workspace in named volumes. Apply CPU/memory/process limits and an expiry. Attach it only to a dedicated DNS-enabled network and a private Tailscale sidecar.
 
 ## Git credentials
