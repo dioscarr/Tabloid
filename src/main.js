@@ -1,4 +1,5 @@
 import './style.css'
+import { mountSharedNav } from './shared-nav.js'
 
 const icon = (name, className = 'size-5') => {
   const paths = {
@@ -72,6 +73,7 @@ document.querySelector('#app').innerHTML = `
 `
 
 const profileButton = document.querySelector('#profile-button')
+mountSharedNav()
 const profileMenu = document.querySelector('#profile-menu')
 profileButton?.addEventListener('click', () => {
   const open = profileButton.getAttribute('aria-expanded') === 'true'
