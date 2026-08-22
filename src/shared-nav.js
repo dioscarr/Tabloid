@@ -23,38 +23,44 @@ class TabloidSharedNav extends HTMLElement {
     const root = this.attachShadow({ mode: 'open' })
     root.innerHTML = `
       <style>
-        :host { display:block; position:fixed; inset:0 0 auto; z-index:2147483647; height:52px; color:#ecfdf5; font:500 14px/1.2 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+        :host { display:block; position:fixed; inset:0 0 auto; z-index:2147483647; height:44px; color:#e2e8f0; font:500 14px/1.2 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
         * { box-sizing:border-box; }
-        .bar { height:52px; display:flex; align-items:center; gap:16px; padding:0 clamp(14px,3vw,32px); background:rgba(2,44,34,.97); border-bottom:1px solid #166534; box-shadow:0 8px 24px rgba(2,44,34,.18); backdrop-filter:blur(14px); }
-        .brand { display:flex; align-items:center; gap:9px; color:white; text-decoration:none; font-weight:850; letter-spacing:-.02em; white-space:nowrap; }
-        .mark { display:grid; place-items:center; width:28px; height:28px; border-radius:9px; background:#bef264; color:#052e16; font-weight:950; }
-        .context { color:#86efac; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+        .bar { height:44px; display:flex; align-items:center; gap:10px; padding:0 clamp(10px,2vw,22px); background:rgba(9,14,24,.96); border-bottom:1px solid rgba(148,163,184,.18); box-shadow:0 5px 18px rgba(2,6,23,.22); backdrop-filter:blur(18px); }
+        .launcher { display:grid; place-items:center; width:32px; height:32px; border:0; border-radius:9px; padding:0; background:transparent; color:#cbd5e1; }
+        .launcher:hover,.launcher:focus-visible { background:#1e293b; color:white; }
+        .brand { display:flex; align-items:center; gap:8px; color:#f8fafc; text-decoration:none; font-weight:780; letter-spacing:-.015em; white-space:nowrap; }
+        .divider { width:1px; height:18px; background:#334155; }
+        .current-label { color:#94a3b8; font-size:12px; font-weight:650; }
         .spacer { flex:1; }
-        button { display:flex; align-items:center; gap:9px; min-height:36px; border:1px solid #15803d; border-radius:11px; padding:0 12px; background:#14532d; color:white; cursor:pointer; font:inherit; font-weight:750; }
-        button:hover, button:focus-visible { background:#166534; outline:2px solid #bef264; outline-offset:2px; }
+        button { cursor:pointer; font:inherit; }
+        button:focus-visible,.app:focus-visible { outline:2px solid #a3e635; outline-offset:2px; }
         .grid { width:17px; height:17px; }
-        .menu { position:absolute; top:46px; right:clamp(14px,3vw,32px); width:min(360px,calc(100vw - 28px)); max-height:min(520px,calc(100vh - 70px)); overflow:auto; border:1px solid #166534; border-radius:16px; padding:8px; background:#052e16; box-shadow:0 22px 60px rgba(0,0,0,.45); }
+        .menu { position:absolute; top:50px; left:clamp(10px,2vw,22px); width:min(420px,calc(100vw - 20px)); max-height:min(560px,calc(100vh - 66px)); overflow:auto; border:1px solid #334155; border-radius:20px; padding:10px; background:#0f172a; box-shadow:0 24px 70px rgba(2,6,23,.62); }
         .menu[hidden] { display:none; }
-        .heading { padding:10px 11px 12px; color:#86efac; font-size:11px; font-weight:850; letter-spacing:.12em; text-transform:uppercase; }
-        .app { display:flex; align-items:center; gap:11px; padding:10px 11px; border-radius:11px; color:#dcfce7; text-decoration:none; }
-        .app:hover, .app:focus-visible, .app.current { background:#14532d; outline:none; }
-        .app.current { box-shadow:inset 3px 0 #bef264; }
-        .icon { display:grid; flex:0 0 auto; place-items:center; width:36px; height:36px; border-radius:10px; background:#166534; color:#bbf7d0; font-weight:900; }
-        .current .icon { background:#bef264; color:#052e16; }
+        .menu-head { display:flex; align-items:center; justify-content:space-between; padding:9px 10px 14px; }
+        .heading { color:#f8fafc; font-size:15px; font-weight:850; letter-spacing:-.01em; }
+        .subheading { margin-top:4px; color:#64748b; font-size:11px; }
+        .repo { color:#94a3b8; font-size:11px; text-decoration:none; }
+        .repo:hover { color:#bef264; }
+        .apps { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+        .app { position:relative; display:flex; align-items:center; gap:11px; min-width:0; padding:12px; border:1px solid transparent; border-radius:14px; color:#e2e8f0; text-decoration:none; transition:background .15s,border-color .15s,transform .15s; }
+        .app:hover { transform:translateY(-1px); border-color:#334155; background:#1e293b; }
+        .app.current { border-color:#4d7c0f; background:linear-gradient(145deg,rgba(77,124,15,.27),rgba(30,41,59,.76)); }
+        .icon { display:grid; flex:0 0 auto; place-items:center; width:42px; height:42px; border-radius:13px; background:linear-gradient(145deg,#334155,#1e293b); color:#cbd5e1; font-size:15px; font-weight:900; box-shadow:inset 0 1px rgba(255,255,255,.06); }
+        .current .icon { background:linear-gradient(145deg,#bef264,#84cc16); color:#1a2e05; }
         .name,.branch { display:block; }
-        .name { color:white; font-weight:800; }
-        .branch { margin-top:3px; color:#86efac; font-size:11px; }
-        .status { padding:14px 11px; color:#86efac; font-size:12px; line-height:1.5; }
-        @media (max-width:520px) { .context { display:none; } button span { display:none; } }
+        .name { overflow:hidden; color:#f8fafc; font-size:13px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+        .branch { overflow:hidden; margin-top:4px; color:#64748b; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+        .dot { position:absolute; top:10px; right:10px; width:7px; height:7px; border-radius:50%; background:#a3e635; box-shadow:0 0 0 3px rgba(163,230,53,.12); }
+        .status { padding:16px 11px; color:#94a3b8; font-size:12px; line-height:1.5; }
+        @media (max-width:520px) { .current-label,.divider { display:none; } .apps { grid-template-columns:1fr; } }
       </style>
       <nav class="bar" aria-label="Shared application navigation">
-        <a class="brand" href="https://tabloid.${TAILNET}/"><span class="mark">T</span><span>Tabloid</span></a>
-        <span class="context">Shared apps</span><span class="spacer"></span>
-        <button type="button" aria-expanded="false" aria-controls="shared-app-menu">
+        <button class="launcher" type="button" aria-label="Open app switcher" aria-expanded="false" aria-controls="shared-app-menu">
           <svg class="grid" viewBox="0 0 18 18" aria-hidden="true" fill="currentColor"><circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="3" r="1.5"/><circle cx="15" cy="3" r="1.5"/><circle cx="3" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="15" cy="9" r="1.5"/><circle cx="3" cy="15" r="1.5"/><circle cx="9" cy="15" r="1.5"/><circle cx="15" cy="15" r="1.5"/></svg>
-          <span>Switch app</span>
         </button>
-        <div id="shared-app-menu" class="menu" hidden><div class="heading">Live repository branches</div><div class="status">Open the menu to load branches…</div></div>
+        <a class="brand" href="https://tabloid.${TAILNET}/">Tabloid</a><span class="divider"></span><span class="current-label">Applications</span><span class="spacer"></span>
+        <div id="shared-app-menu" class="menu" hidden><div class="status">Loading applications…</div></div>
       </nav>`
 
     this.button = root.querySelector('button')
@@ -63,6 +69,7 @@ class TabloidSharedNav extends HTMLElement {
     document.addEventListener('click', (event) => {
       if (!this.contains(event.target) && !event.composedPath().includes(this)) this.close()
     })
+    this.loadBranches()
   }
 
   async toggle() {
@@ -85,10 +92,12 @@ class TabloidSharedNav extends HTMLElement {
       if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
       const branches = (await response.json()).map(({ name }) => name).sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
-      this.menu.innerHTML = `<div class="heading">Live repository branches</div>${apps.map((app) => {
+      const currentApp = apps.find((app) => new URL(app.url).hostname === window.location.hostname)
+      rootLabel(this.shadowRoot, currentApp?.name || 'Applications')
+      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><a class="repo" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage branches ↗</a></div><div class="apps">${apps.map((app) => {
         const current = new URL(app.url).hostname === window.location.hostname
-        return `<a class="app${current ? ' current' : ''}" href="${app.url}"><span class="icon">${app.name[0]}</span><span><span class="name">${app.name}</span><span class="branch">${app.branch}${current ? ' · Current' : ''}</span></span></a>`
-      }).join('')}`
+        return `<a class="app${current ? ' current' : ''}" href="${app.url}"><span class="icon">${app.name[0]}</span><span><span class="name">${app.name}</span><span class="branch">${app.branch}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
+      }).join('')}</div>`
     } catch {
       this.loaded = false
       this.menu.innerHTML = `<div class="heading">Live repository branches</div><a class="app" href="https://tabloid.${TAILNET}/"><span class="icon">P</span><span><span class="name">Production</span><span class="branch">main</span></span></a><div class="status">New branches could not be loaded. Try again shortly.</div>`
@@ -96,12 +105,17 @@ class TabloidSharedNav extends HTMLElement {
   }
 }
 
+const rootLabel = (root, label) => {
+  const element = root?.querySelector('.current-label')
+  if (element) element.textContent = label
+}
+
 if (!customElements.get('tabloid-shared-nav')) customElements.define('tabloid-shared-nav', TabloidSharedNav)
 
 export const mountSharedNav = () => {
   if (document.querySelector('tabloid-shared-nav')) return
   document.body.prepend(document.createElement('tabloid-shared-nav'))
-  document.body.style.paddingTop = '52px'
+  document.body.style.paddingTop = '44px'
   const fixedSidebar = document.querySelector('#sidebar')
-  if (fixedSidebar) fixedSidebar.style.top = '52px'
+  if (fixedSidebar) fixedSidebar.style.top = '44px'
 }
