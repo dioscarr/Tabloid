@@ -57,6 +57,12 @@ GET    /workspaces/:id/events
   "repository": "dioscarr/Tabloid",
   "ref": "refs/heads/admin",
   "name": "admin-backend",
+  "environmentProfile": "branch-default",
+  "environment": {
+    "LOG_LEVEL": "info",
+    "FEATURE_AUDIT_EXPORT": "false"
+  },
+  "secretRefs": ["github-app-installation"],
   "ttlHours": 24,
   "resources": { "cpus": 2, "memoryMb": 4096, "diskGb": 20 },
   "extensions": ["github.copilot", "github.copilot-chat"]
@@ -64,6 +70,8 @@ GET    /workspaces/:id/events
 ```
 
 The server returns `202 Accepted` with a workspace ID and provisioning status. Provisioning runs asynchronously and records ordered lifecycle events.
+
+`environment` accepts only keys present in the selected profile's allowlist. `secretRefs` contains opaque server-side identifiers; secret values are never accepted from or returned to the browser.
 
 ## Data model
 
@@ -82,11 +90,13 @@ authentik remains the source of truth for identities, groups, sessions, and fede
 3. Create a dedicated Podman network and persistent workspace volume.
 4. Start a purpose-built code-server image as a non-root user with CPU, memory, process, and disk quotas.
 5. Clone the repository into the persistent workspace and check out the requested branch.
-6. Configure Git identity without persisting a reusable personal access token in `.git/config`.
-7. Start a dedicated Tailscale sidecar and expose code-server privately; never enable Funnel.
-8. Verify code-server internally and through its private HTTPS URL before marking the workspace ready.
-9. Revoke bootstrap credentials after clone and use short-lived credentials for future Git operations.
-10. Stop expired workspaces automatically; require an explicit retention choice before deleting storage.
+6. Run `npm run env:branch -- --branch <branch>` to generate public branch configuration in `.env.local`.
+7. Resolve approved secret references into process-scoped environment variables or mounted secret files. Do not write them to `.env.local`.
+8. Configure Git identity without persisting a reusable personal access token in `.git/config`.
+9. Start a dedicated Tailscale sidecar and expose code-server privately; never enable Funnel.
+10. Verify code-server internally and through its private HTTPS URL before marking the workspace ready.
+11. Revoke bootstrap credentials after clone and use short-lived credentials for future Git operations.
+12. Stop expired workspaces automatically; require an explicit retention choice before deleting storage.
 
 ## Security requirements
 
