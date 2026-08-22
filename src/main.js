@@ -1,6 +1,7 @@
 import './style.css'
 
 const arrowIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-4" fill="none"><path d="M4 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>`
+const appsIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-5" fill="currentColor"><circle cx="4" cy="4" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="16" cy="4" r="1.5"/><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/><circle cx="4" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg>`
 
 const navigation = [
   ['news', 'News', 'news.html'],
@@ -117,6 +118,14 @@ const header = (active) => `
       <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="The Daily Echo home">The Daily Echo<span class="text-emerald-300">.</span></a>
       <nav class="hidden items-center gap-7 md:flex" aria-label="Main navigation">${navMarkup(active)}</nav>
       <div class="flex items-center gap-2">
+        <div class="relative">
+          <button id="apps-button" class="inline-grid size-10 place-items-center rounded-full text-emerald-50 transition hover:bg-emerald-800" type="button" aria-label="Open app switcher" aria-expanded="false" aria-controls="apps-menu">${appsIcon}</button>
+          <div id="apps-menu" class="absolute right-0 top-12 hidden w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-emerald-800 bg-emerald-950 text-white shadow-2xl shadow-black/30">
+            <div class="border-b border-emerald-800 px-5 py-4"><p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-emerald-300">Tabloid apps</p><p class="mt-1 text-sm text-emerald-100/70">Switch between live editions</p></div>
+            <div id="apps-list" class="max-h-80 overflow-y-auto p-2" role="menu"><p class="px-3 py-4 text-sm text-emerald-100/60">Loading live branches…</p></div>
+            <a href="https://github.com/dioscarr/Tabloid/branches" class="flex items-center justify-between border-t border-emerald-800 px-5 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-900 hover:text-white">View repository branches ${arrowIcon}</a>
+          </div>
+        </div>
         <a href="subscribe.html" class="hidden rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-white sm:inline-flex">Subscribe</a>
         <button id="menu-button" class="inline-grid size-10 place-items-center rounded-full text-emerald-50 transition hover:bg-emerald-800 md:hidden" type="button" aria-label="Open navigation" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
       </div>
@@ -300,6 +309,9 @@ document.querySelector('#app').innerHTML = `
 
 const menuButton = document.querySelector('#menu-button')
 const mobileNav = document.querySelector('#mobile-nav')
+const appsButton = document.querySelector('#apps-button')
+const appsMenu = document.querySelector('#apps-menu')
+const appsList = document.querySelector('#apps-list')
 
 if (menuButton && mobileNav) {
   menuButton.addEventListener('click', () => {
@@ -307,6 +319,51 @@ if (menuButton && mobileNav) {
     menuButton.setAttribute('aria-expanded', String(!isOpen))
     menuButton.setAttribute('aria-label', isOpen ? 'Open navigation' : 'Close navigation')
     mobileNav.classList.toggle('hidden', isOpen)
+  })
+}
+
+const previewId = async (branch) => {
+  let slug = branch.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'branch'
+  slug = slug.slice(0, 38).replace(/-$/, '')
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(branch))
+  const hash = Array.from(new Uint8Array(digest)).slice(0, 3).map((byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `${slug}-${hash}`
+}
+
+const displayBranch = (branch) => branch.split(/[\/_-]+/).filter(Boolean).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+
+const renderApps = async () => {
+  if (!appsList) return
+  const production = { name: 'Production', branch: 'main', url: 'https://tabloid.tail70b7f1.ts.net/' }
+  try {
+    const response = await fetch('https://api.github.com/repos/dioscarr/Tabloid/branches?per_page=100', { headers: { Accept: 'application/vnd.github+json' } })
+    if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
+    const records = await response.json()
+    const previews = await Promise.all(records.filter(({ name }) => name !== 'main').map(async ({ name }) => ({ name: displayBranch(name), branch: name, url: `https://tabloid-${await previewId(name)}.tail70b7f1.ts.net/` })))
+    const currentHost = window.location.hostname
+    appsList.innerHTML = [production, ...previews].map((app) => {
+      const current = new URL(app.url).hostname === currentHost
+      return `<a href="${app.url}" role="menuitem" class="flex items-center gap-3 rounded-xl px-3 py-3 transition ${current ? 'bg-emerald-800' : 'hover:bg-emerald-900'}"><span class="grid size-10 shrink-0 place-items-center rounded-xl ${current ? 'bg-lime-300 text-emerald-950' : 'bg-emerald-800 text-emerald-200'}">${app.name.charAt(0)}</span><span class="min-w-0"><span class="block truncate text-sm font-bold">${app.name}</span><span class="block truncate text-xs text-emerald-200/60">${app.branch}${current ? ' · Current' : ''}</span></span></a>`
+    }).join('')
+  } catch (error) {
+    appsList.innerHTML = `<a href="${production.url}" class="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-emerald-900"><span class="grid size-10 place-items-center rounded-xl bg-emerald-800 text-emerald-200">P</span><span><span class="block text-sm font-bold">Production</span><span class="block text-xs text-emerald-200/60">main</span></span></a><p class="px-3 py-3 text-xs leading-5 text-amber-200">Branch apps could not be loaded. Try again shortly.</p>`
+  }
+}
+
+if (appsButton && appsMenu) {
+  appsButton.addEventListener('click', () => {
+    const isOpen = appsButton.getAttribute('aria-expanded') === 'true'
+    appsButton.setAttribute('aria-expanded', String(!isOpen))
+    appsButton.setAttribute('aria-label', isOpen ? 'Open app switcher' : 'Close app switcher')
+    appsMenu.classList.toggle('hidden', isOpen)
+    if (!isOpen) renderApps()
+  })
+  document.addEventListener('click', (event) => {
+    if (!appsMenu.contains(event.target) && !appsButton.contains(event.target)) {
+      appsMenu.classList.add('hidden')
+      appsButton.setAttribute('aria-expanded', 'false')
+      appsButton.setAttribute('aria-label', 'Open app switcher')
+    }
   })
 }
 
