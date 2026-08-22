@@ -152,54 +152,54 @@ const footer = `
 
 const homePage = `
   <main class="bg-[#f3f1e8]">
-    <section class="overflow-hidden bg-emerald-950 text-white">
+    <section class="overflow-hidden bg-stone-950 text-white">
       <div class="mx-auto max-w-7xl px-5 pb-10 pt-8 sm:px-8 sm:pb-14">
-        <div class="flex items-center justify-between border-y border-emerald-700/70 py-3 text-[0.65rem] font-black uppercase tracking-[0.22em] text-emerald-200"><span>Thursday Edition</span><span>August 21, 2026</span></div>
-        <div class="border-b border-emerald-700/70 py-5 sm:py-7">
-          <p class="text-center text-[clamp(4.3rem,15vw,11rem)] font-black leading-[0.72] tracking-[-0.085em] text-emerald-300">BIG NEWS</p>
+        <div class="flex items-center justify-between border-y border-stone-700 py-3 text-[0.65rem] font-black uppercase tracking-[0.22em] text-stone-300"><span>Thursday Edition</span><span>August 21, 2026</span></div>
+        <div class="border-b border-stone-700 py-5 sm:py-7">
+          <p class="text-center text-[clamp(4.3rem,15vw,11rem)] font-black leading-[0.72] tracking-[-0.085em] text-red-500">BIG NEWS</p>
         </div>
         <div class="grid gap-8 pt-8 lg:grid-cols-[1.05fr_1.45fr] lg:items-stretch">
           <article class="flex flex-col justify-between">
             <div>
-              <p class="inline-flex rounded-full bg-lime-300 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-emerald-950">The city changes today</p>
+              <p class="inline-flex rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-white">The city changes today</p>
               <h1 class="mt-6 max-w-2xl font-display text-[clamp(3.2rem,7vw,6.6rem)] font-black leading-[0.86] tracking-[-0.065em]">The waterfront belongs to everyone.</h1>
-              <p class="mt-6 max-w-xl text-lg leading-8 text-emerald-100/80">A once-in-a-generation rebuild promises parks, homes, and a new transit line. The question now: who gets to shape it?</p>
+              <p class="mt-6 max-w-xl text-lg leading-8 text-stone-300">A once-in-a-generation rebuild promises parks, homes, and a new transit line. The question now: who gets to shape it?</p>
             </div>
-            <div class="mt-8 flex flex-wrap items-center gap-4 border-t border-emerald-700/70 pt-5 text-sm"><span class="font-bold text-white">Mara Delgado</span><span class="text-emerald-300">8 min read</span><a href="city.html" class="ml-auto inline-flex items-center gap-2 font-bold text-lime-300">Read the investigation ${arrowIcon}</a></div>
+            <div class="mt-8 flex flex-wrap items-center gap-4 border-t border-stone-700 pt-5 text-sm"><span class="font-bold text-white">Mara Delgado</span><span class="text-stone-400">8 min read</span><a href="city.html" class="ml-auto inline-flex items-center gap-2 font-bold text-red-400">Read the investigation ${arrowIcon}</a></div>
           </article>
-          <figure class="relative min-h-[420px] overflow-hidden rounded-[2rem] bg-emerald-900 sm:min-h-[560px]">
+          <figure class="relative min-h-[420px] overflow-hidden rounded-[2rem] bg-stone-900 sm:min-h-[560px]">
             <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1800&q=90" alt="Modern city skyline beside the waterfront" class="absolute inset-0 h-full w-full object-cover" />
-            <div class="absolute inset-0 bg-gradient-to-t from-emerald-950/90 via-emerald-950/5 to-transparent"></div>
-            <figcaption class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-5 p-6 sm:p-8"><p class="max-w-lg text-sm leading-6 text-emerald-50">Nine acres of public space could reconnect three neighborhoods with the river.</p><span class="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.17em] text-emerald-200">Elias Chen</span></figcaption>
+            <div class="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-stone-950/5 to-transparent"></div>
+            <figcaption class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-5 p-6 sm:p-8"><p class="max-w-lg text-sm leading-6 text-stone-100">Nine acres of public space could reconnect three neighborhoods with the river.</p><span class="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.17em] text-stone-300">Elias Chen</span></figcaption>
           </figure>
         </div>
       </div>
     </section>
 
-    <section class="bg-lime-300 text-emerald-950" aria-label="Breaking news"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-emerald-950 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-lime-300">Live</span><p class="font-display text-lg font-black leading-tight sm:text-xl">Power grid upgrades announced as heat wave threatens record demand.</p><a href="news.html" class="ml-auto inline-flex shrink-0 items-center gap-2 text-sm font-black">Follow updates ${arrowIcon}</a></div></section>
+    <section class="border-y border-red-200 bg-red-50 text-stone-950" aria-label="Breaking news"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white">Live</span><p class="font-display text-lg font-black leading-tight sm:text-xl">Power grid upgrades announced as heat wave threatens record demand.</p><a href="news.html" class="ml-auto inline-flex shrink-0 items-center gap-2 text-sm font-black text-red-700">Follow updates ${arrowIcon}</a></div></section>
 
     <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
       <div class="grid gap-8 lg:grid-cols-[.72fr_1.28fr]">
-        <div class="flex flex-col justify-between rounded-[2rem] bg-orange-500 p-7 text-white sm:p-9">
-          <div><p class="text-xs font-black uppercase tracking-[0.2em] text-orange-100">Morning briefing</p><h2 class="mt-4 font-display text-5xl font-black leading-[0.9] tracking-[-0.055em]">Three stories. Five minutes. Go.</h2></div>
-          <p class="mt-12 max-w-sm leading-7 text-orange-50">Everything worth knowing before the city gets moving.</p>
+        <div class="flex flex-col justify-between rounded-[2rem] bg-red-600 p-7 text-white sm:p-9">
+          <div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-100">Morning briefing</p><h2 class="mt-4 font-display text-5xl font-black leading-[0.9] tracking-[-0.055em]">Three stories. Five minutes. Go.</h2></div>
+          <p class="mt-12 max-w-sm leading-7 text-red-50">Everything worth knowing before the city gets moving.</p>
         </div>
         <div class="divide-y divide-stone-300 border-y border-stone-400">
-          ${frontStories.map(([href, category, title, time], index) => `<a href="${href}" class="group grid grid-cols-[2.5rem_1fr] gap-4 py-6 sm:grid-cols-[4rem_1fr_auto] sm:items-center"><span class="font-display text-3xl font-black text-emerald-800/30">0${index + 1}</span><span><span class="mb-2 block text-[0.65rem] font-black uppercase tracking-[0.18em] text-orange-600">${category}</span><span class="font-display text-2xl font-black leading-tight tracking-[-0.03em] transition group-hover:text-emerald-800 sm:text-3xl">${title}</span></span><span class="hidden text-sm font-bold text-stone-500 sm:block">${time}</span></a>`).join('')}
+          ${frontStories.map(([href, category, title, time], index) => `<a href="${href}" class="group grid grid-cols-[2.5rem_1fr] gap-4 py-6 sm:grid-cols-[4rem_1fr_auto] sm:items-center"><span class="font-display text-3xl font-black text-stone-400">0${index + 1}</span><span><span class="mb-2 block text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</span><span class="font-display text-2xl font-black leading-tight tracking-[-0.03em] transition group-hover:text-red-600 sm:text-3xl">${title}</span></span><span class="hidden text-sm font-bold text-stone-500 sm:block">${time}</span></a>`).join('')}
         </div>
       </div>
     </section>
 
     <section class="border-y border-stone-300 bg-white">
       <div class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
-        <div class="mb-8 flex items-end justify-between"><div><p class="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">Worth your time</p><h2 class="mt-2 font-display text-5xl font-black tracking-[-0.055em] sm:text-6xl">The big picture.</h2></div><a href="culture.html" class="hidden items-center gap-2 text-sm font-black text-emerald-800 sm:flex">See everything ${arrowIcon}</a></div>
+        <div class="mb-8 flex items-end justify-between"><div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-600">Worth your time</p><h2 class="mt-2 font-display text-5xl font-black tracking-[-0.055em] sm:text-6xl">The big picture.</h2></div><a href="culture.html" class="hidden items-center gap-2 text-sm font-black text-red-700 sm:flex">See everything ${arrowIcon}</a></div>
         <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          ${features.map(([href, category, title, image, size], index) => `<a href="${href}" class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8] ${size}"><div class="overflow-hidden ${index === 0 ? 'aspect-[16/8]' : 'aspect-[4/3]'}"><img src="${image}" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" /></div><div class="p-6"><p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-orange-600">${category}</p><h3 class="mt-3 font-display font-black leading-[0.95] tracking-[-0.04em] transition group-hover:text-emerald-800 ${index === 0 ? 'text-4xl sm:text-5xl' : 'text-3xl'}">${title}</h3></div></a>`).join('')}
+          ${features.map(([href, category, title, image, size], index) => `<a href="${href}" class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8] ${size}"><div class="overflow-hidden ${index === 0 ? 'aspect-[16/8]' : 'aspect-[4/3]'}"><img src="${image}" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" /></div><div class="p-6"><p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</p><h3 class="mt-3 font-display font-black leading-[0.95] tracking-[-0.04em] transition group-hover:text-red-600 ${index === 0 ? 'text-4xl sm:text-5xl' : 'text-3xl'}">${title}</h3></div></a>`).join('')}
         </div>
       </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20"><div class="grid overflow-hidden rounded-[2rem] bg-emerald-300 lg:grid-cols-[1.2fr_.8fr]"><blockquote class="p-8 sm:p-12 lg:p-16"><p class="text-xs font-black uppercase tracking-[0.2em] text-emerald-900">A bigger opinion</p><p class="mt-5 font-display text-4xl font-black leading-[0.95] tracking-[-0.05em] text-emerald-950 sm:text-6xl">“Build a city people can actually live in.”</p><footer class="mt-7 max-w-xl leading-7 text-emerald-900">The Editorial Board on why the next chapter must be measured in homes, commutes, and public space—not renderings.</footer></blockquote><div class="flex min-h-72 items-end bg-emerald-950 p-8 text-white sm:p-12"><div><p class="text-sm font-bold text-emerald-300">Today’s argument</p><a href="politics.html" class="mt-3 inline-flex items-center gap-2 font-display text-3xl font-black">Read the full case ${arrowIcon}</a></div></div></div></section>
+    <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20"><div class="grid overflow-hidden rounded-[2rem] bg-amber-100 lg:grid-cols-[1.2fr_.8fr]"><blockquote class="p-8 sm:p-12 lg:p-16"><p class="text-xs font-black uppercase tracking-[0.2em] text-red-700">A bigger opinion</p><p class="mt-5 font-display text-4xl font-black leading-[0.95] tracking-[-0.05em] text-stone-950 sm:text-6xl">“Build a city people can actually live in.”</p><footer class="mt-7 max-w-xl leading-7 text-stone-600">The Editorial Board on why the next chapter must be measured in homes, commutes, and public space—not renderings.</footer></blockquote><div class="flex min-h-72 items-end bg-red-700 p-8 text-white sm:p-12"><div><p class="text-sm font-bold text-red-200">Today’s argument</p><a href="politics.html" class="mt-3 inline-flex items-center gap-2 font-display text-3xl font-black">Read the full case ${arrowIcon}</a></div></div></div></section>
   </main>
 `
 
