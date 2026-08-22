@@ -1,0 +1,11 @@
+services:
+  tabloid:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: localhost/tabloid:latest
+    pull_policy: build
+    container_name: tabloid
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${TABLOID_PORT:-8088}:8080"
