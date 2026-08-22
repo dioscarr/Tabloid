@@ -1,4 +1,5 @@
 import './style.css'
+import { mountSharedNav } from './shared-nav.js'
 
 const arrowIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-4" fill="none"><path d="M4 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>`
 
@@ -298,6 +299,7 @@ document.querySelector('#app').innerHTML = `
   </div>
 `
 
+mountSharedNav()
 const menuButton = document.querySelector('#menu-button')
 const mobileNav = document.querySelector('#mobile-nav')
 
