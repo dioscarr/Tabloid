@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "env:branch": "node scripts/generate-branch-env.mjs",
+    "check:shared-nav": "node scripts/verify-shared-nav.mjs",
     "preview": "vite preview",
     "serve": "vite build && vite preview --host 0.0.0.0 --port 5173 --strictPort"
   },
