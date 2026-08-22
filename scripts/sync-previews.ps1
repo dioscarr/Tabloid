@@ -9,6 +9,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $stateDirectory = Join-Path $env:LOCALAPPDATA 'Tabloid'
 $statePath = Join-Path $stateDirectory 'preview-state.json'
+$tombstonePath = Join-Path $stateDirectory 'preview-tombstones.json'
 $podman = Join-Path $env:LOCALAPPDATA 'Programs\Podman\podman.exe'
 
 if (-not (Test-Path $podman)) { throw "Podman was not found at $podman" }
@@ -172,8 +173,14 @@ function Remove-Preview([string]$Project) {
 $headers = @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'tabloid-preview-deployer' }
 $branchResponse = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$Repository/branches?per_page=100"
 $branches = @()
+$archivedBranches = @{}
+if (Test-Path $tombstonePath) {
+  foreach ($record in @(Get-Content -Raw $tombstonePath | ConvertFrom-Json)) {
+    if ($record.branch) { $archivedBranches[[string]$record.branch] = $true }
+  }
+}
 foreach ($branchRecord in $branchResponse) {
-  if ($branchRecord.name -ne 'main') { $branches += $branchRecord }
+  if ($branchRecord.name -ne 'main' -and -not $archivedBranches.ContainsKey([string]$branchRecord.name)) { $branches += $branchRecord }
 }
 
 $previous = @{}
