@@ -1,0 +1,44 @@
+services:
+  app:
+    image: ${PREVIEW_IMAGE:?Set PREVIEW_IMAGE}
+    pull_policy: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 15s
+      timeout: 3s
+      start_period: 5s
+      retries: 4
+    networks:
+      default:
+        aliases:
+          - tabloid-app
+    labels:
+      io.dioscarr.tabloid.preview: "true"
+      io.dioscarr.tabloid.branch: ${PREVIEW_BRANCH:?Set PREVIEW_BRANCH}
+
+  tailscale:
+    image: ghcr.io/dioscarr/tabloid-tailscale:main
+    pull_policy: always
+    hostname: ${PREVIEW_HOSTNAME:?Set PREVIEW_HOSTNAME}
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      TS_AUTHKEY: ${TS_OAUTH_SECRET:?Set TS_OAUTH_SECRET}?ephemeral=true&preauthorized=true
+      TS_AUTH_ONCE: "true"
+      TS_EXTRA_ARGS: --advertise-tags=tag:preview
+      TS_HOSTNAME: ${PREVIEW_HOSTNAME}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+      TS_USERSPACE: "true"
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+    labels:
+      io.dioscarr.tabloid.preview: "true"
+      io.dioscarr.tabloid.branch: ${PREVIEW_BRANCH}
+
+volumes:
+  tailscale-state:
+
