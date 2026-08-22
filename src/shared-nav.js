@@ -105,3 +105,4 @@ export const mountSharedNav = () => {
   const fixedSidebar = document.querySelector('#sidebar')
   if (fixedSidebar) fixedSidebar.style.top = '52px'
 }
+
