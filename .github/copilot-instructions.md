@@ -7,6 +7,7 @@ This repository builds several branch-based web applications from one Vite and T
 - Install exactly: `npm ci`
 - Production build: `npm run build`
 - Development server: `npm run dev`
+- Generate branch environment: `npm run env:branch -- --branch <branch>`
 - Before finishing: run `npm run build` and `git diff --check`
 
 ## Frontend conventions
@@ -16,6 +17,7 @@ This repository builds several branch-based web applications from one Vite and T
 - Preserve responsive behavior, semantic HTML, keyboard access, visible focus, and reduced motion.
 - Implement loading, empty, permission-denied, stale, and failure states for API-backed UI.
 - Never hardcode a real user identity, access decision, health claim, OAuth credential, or privileged API token.
+- Only variables prefixed with `VITE_` are browser-visible. Never place secrets in a `VITE_*` variable or generated `.env.local` file.
 
 ## Admin architecture
 
