@@ -148,7 +148,7 @@ function Deploy-Preview {
 
   if (-not (Test-Podman -Arguments @(
     'exec', $tailscaleContainer,
-    'wget', '-qO-', 'http://tabloid-app:8080/'
+    'wget', '-qO', '/dev/null', 'http://tabloid-app:8080/'
   ))) {
     throw "Tailscale sidecar '$tailscaleContainer' cannot reach its preview application."
   }
@@ -192,6 +192,13 @@ foreach ($branch in $branches) {
   $project = "tabloid-preview-$id"
   $hostname = "tabloid-$id"
   $image = "ghcr.io/dioscarr/tabloid:preview-$id"
+  $branchSha = [string]$branch.commit.sha
+
+  if ($previous.ContainsKey($project) -and [string]$previous[$project].sha -eq $branchSha) {
+    $desired[$project] = $previous[$project]
+    Write-Host "$($branch.name) is unchanged at $($desired[$project].url)"
+    continue
+  }
 
   if (-not (Invoke-Podman -Arguments @('pull', $image) -AllowFailure)) {
     Write-Warning "Preview image is not ready for branch '$($branch.name)'; leaving any current preview untouched."
@@ -206,6 +213,7 @@ foreach ($branch in $branches) {
     hostname = $hostname
     url = "https://$hostname.$TailnetDomain/"
     image = $image
+    sha = $branchSha
   }
   Write-Host "$($branch.name) -> $($desired[$project].url)"
 }
