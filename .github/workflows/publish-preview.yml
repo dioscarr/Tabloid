@@ -47,6 +47,15 @@ jobs:
             echo "Shared navigation verifier is not present on this legacy branch; continuing bootstrap."
           fi
 
+      - name: Verify Brain application contract
+        shell: bash
+        run: |
+          if [[ -f scripts/verify-brain-contract.mjs ]]; then
+            node scripts/verify-brain-contract.mjs
+          else
+            echo "Brain contract verifier is not present on this legacy branch; continuing bootstrap."
+          fi
+
       - name: Generate preview identifier
         id: preview
         shell: bash
