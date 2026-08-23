@@ -1,0 +1,32 @@
+{
+  "contractVersion": "1.0",
+  "app": {
+    "id": "production",
+    "name": "The Daily Echo",
+    "branch": "main",
+    "description": "Production news and publishing experience."
+  },
+  "routes": [
+    {
+      "id": "brain-content",
+      "direction": "outbound",
+      "protocol": "https",
+      "path": "/api/v1/content",
+      "purpose": "Discover, generate, preview, approve, and publish managed page content through Brain."
+    },
+    {
+      "id": "brain-tools",
+      "direction": "outbound",
+      "protocol": "mcp",
+      "path": "/mcp",
+      "purpose": "Expose Brain productivity tools to an authenticated server-side agent host."
+    }
+  ],
+  "content": {
+    "editable": true,
+    "surfaces": [
+      { "id": "home-hero", "label": "Homepage hero", "fields": ["eyebrow", "headline", "summary", "callToAction"] },
+      { "id": "top-stories", "label": "Top stories", "fields": ["title", "summary", "category", "imagePrompt"] }
+    ]
+  }
+}
