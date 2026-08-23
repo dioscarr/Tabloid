@@ -1,7 +1,8 @@
 import './style.css'
 import { mountSharedNav } from './shared-nav.js'
 
-const apiBaseUrl = String(import.meta.env.VITE_ADMIN_API_URL || '').trim().replace(/\/+$/, '')
+const defaultAdminApiUrl = 'https://tabloid-copilot-admin-production-foundation-24deb8.tail70b7f1.ts.net'
+const apiBaseUrl = String(import.meta.env.VITE_ADMIN_API_URL || defaultAdminApiUrl).trim().replace(/\/+$/, '')
 const apiRoutes = Object.freeze({
   session: '/api/v1/session',
   applications: '/api/v1/applications',
