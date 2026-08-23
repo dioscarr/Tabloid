@@ -1,3 +1,4 @@
+const REPOSITORY = 'dioscarr/Tabloid'
 const TAILNET = 'tail70b7f1.ts.net'
 const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
 const AUTHZ_API = `https://tabloid-authorization.${TAILNET}`
@@ -81,7 +82,38 @@ class TabloidSharedNav extends HTMLElement {
 
   async loadBranches() {
     this.loaded = true
-    this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">App Gallery</div><div class="subheading">Application navigation is managed by the deployment gateway.</div></div></div><div class="apps"><span class="app current" aria-current="page"><span class="icon">AG</span><span><span class="name">App Gallery</span><span class="branch">app-gallery</span></span><span class="dot" title="Current application"></span></span></div><div class="status">The App Gallery does not discover, create, or manage repository branches from the browser.</div>`
+    try {
+      const sources = await Promise.allSettled([
+        fetch(`${AUTHZ_API}/api/v1/applications`).then(async (response) => {
+          if (!response.ok) throw new Error(`Authorization returned ${response.status}`)
+          return (await response.json()).applications.map(({ branch }) => branch).filter(Boolean)
+        }),
+        fetch(`${BRAIN_API}/api/v1/apps`).then(async (response) => {
+          if (!response.ok) throw new Error(`Brain returned ${response.status}`)
+          return (await response.json()).apps.map(({ branch }) => branch)
+        }),
+        fetch(`https://api.github.com/repos/${REPOSITORY}/branches?per_page=100`, { headers: { Accept: 'application/vnd.github+json' } }).then(async (response) => {
+          if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
+          return (await response.json()).map(({ name }) => name)
+        })
+      ])
+      const authorized = sources[0].status === 'fulfilled'
+      const branches = [...new Set((authorized ? sources.slice(0, 1) : sources).flatMap((source) => source.status === 'fulfilled' ? source.value : []))]
+      if (!branches.length) throw new Error('No application source is available.')
+      branches.sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
+      const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
+      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><button class="repo studio-launch" type="button">Brain Studio ✦</button></div><div class="apps">${apps.map((app) => {
+        const current = new URL(app.url).hostname === window.location.hostname
+        return `<a class="app${current ? ' current' : ''}" href="${app.url}"><span class="icon">${escapeHtml(app.name[0])}</span><span><span class="name">${escapeHtml(app.name)}</span><span class="branch">${escapeHtml(app.branch)}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
+      }).join('')}</div><a class="status" style="display:block;text-decoration:none" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage repository branches ↗</a>`
+      this.menu.querySelector('.studio-launch')?.addEventListener('click', () => {
+        this.close()
+        document.querySelector('tabloid-brain-studio')?.open()
+      })
+    } catch {
+      this.loaded = false
+      this.menu.innerHTML = `<div class="heading">Live repository branches</div><a class="app" href="https://tabloid.${TAILNET}/"><span class="icon">P</span><span><span class="name">Production</span><span class="branch">main</span></span></a><div class="status">New branches could not be loaded. Try again shortly.</div>`
+    }
   }
 }
 
@@ -206,6 +238,7 @@ if (!customElements.get('tabloid-shared-nav')) customElements.define('tabloid-sh
 if (!customElements.get('tabloid-brain-studio')) customElements.define('tabloid-brain-studio', TabloidBrainStudio)
 
 export const mountSharedNav = () => {
+  if (!document.querySelector('tabloid-brain-studio')) document.body.append(document.createElement('tabloid-brain-studio'))
   if (document.querySelector('tabloid-shared-nav')) return
   const sharedNav = document.createElement('tabloid-shared-nav')
   const explicitSlot = document.querySelector('[data-shared-nav-slot]')
