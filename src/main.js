@@ -1,5 +1,6 @@
 import './style.css'
 import { mountSharedNav } from './shared-nav.js'
+import { initializeContentAdapter } from './content-adapter.js'
 
 const apps = [
   ['brain','Brain','Topology intelligence',50,48,'#a78bfa','healthy','Static gateway'],
@@ -33,6 +34,7 @@ document.querySelector('#app').innerHTML=`<div class="shell"><header class="topb
 <section class="workspace"><div class="section-head"><div><p class="kicker">Neural topology</p><h2>Connection map</h2><p>Select a node to trace every route in and out.</p></div><div class="filters" role="group"><button data-filter="all" class="active">All</button><button data-filter="healthy">Healthy</button><button data-filter="warning">Attention</button></div></div><div class="map-grid"><div class="graph"><div class="graph-toolbar"><span><i class="legend healthy"></i> Healthy</span><span><i class="legend warning"></i> Attention</span><span class="prototype">Prototype telemetry</span></div><svg id="lines" class="lines" viewBox="0 0 1000 620" preserveAspectRatio="none"></svg><div id="nodes" class="nodes"></div></div><aside id="inspector" class="inspector" aria-live="polite"></aside></div></section>
 <section class="routes"><div class="section-head compact"><div><p class="kicker">Route registry</p><h2>How everything connects</h2></div><label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search app, path, or protocol" aria-label="Search routes"></label></div><div class="table-wrap"><table><thead><tr><th>Connection</th><th>Protocol & path</th><th>Dependency</th><th>Health</th><th>Latency</th><th>Traffic · 24h</th></tr></thead><tbody id="route-body"></tbody></table></div></section><footer><span>Brain / topology prototype</span><span>Static demo data · live collectors are not connected yet</span></footer></main></div>`
 mountSharedNav()
+initializeContentAdapter('brain')
 
 function renderGraph(){
   document.querySelector('#lines').innerHTML=routes.map((r,i)=>{const a=getApp(r.from),b=getApp(r.to),visible=filter==='all'||r.health===filter,related=selected===r.from||selected===r.to;return `<line x1="${a.x*10}" y1="${a.y*6.2}" x2="${b.x*10}" y2="${b.y*6.2}" class="edge ${r.health} ${related?'related':''} ${visible?'':'hidden'}"/><circle class="packet ${r.health} ${visible?'':'hidden'}" r="4"><animateMotion dur="${3+i%4}s" repeatCount="indefinite" path="M ${a.x*10} ${a.y*6.2} L ${b.x*10} ${b.y*6.2}"/></circle>`}).join('')
