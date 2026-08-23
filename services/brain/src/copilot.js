@@ -1,18 +1,24 @@
 import { CopilotClient } from '@github/copilot-sdk'
+import { readFileSync } from 'node:fs'
 
 let client
 
+const copilotToken = () => process.env.COPILOT_GITHUB_TOKEN || (process.env.COPILOT_GITHUB_TOKEN_FILE ? readFileSync(process.env.COPILOT_GITHUB_TOKEN_FILE, 'utf8').trim() : '')
+const brainToken = () => process.env.BRAIN_MCP_TOKEN || (process.env.BRAIN_MCP_TOKEN_FILE ? readFileSync(process.env.BRAIN_MCP_TOKEN_FILE, 'utf8').trim() : '')
+
 const requireConfiguration = () => {
-  if (!process.env.COPILOT_GITHUB_TOKEN) {
+  const token = copilotToken()
+  if (!token) {
     const error = new Error('Copilot is not configured. Set COPILOT_GITHUB_TOKEN on the Brain service; never expose it to a browser.')
     error.code = 'COPILOT_NOT_CONFIGURED'
     throw error
   }
+  return token
 }
 
 export async function generateWithCopilot({ appId, surface, intent, context }) {
-  requireConfiguration()
-  client ??= new CopilotClient({ useLoggedInUser: false })
+  const gitHubToken = requireConfiguration()
+  client ??= new CopilotClient({ gitHubToken, useLoggedInUser: false })
   await client.start()
   const session = await client.createSession({
     model: process.env.COPILOT_MODEL || 'gpt-5',
@@ -20,7 +26,7 @@ export async function generateWithCopilot({ appId, surface, intent, context }) {
       brain: {
         type: 'http',
         url: process.env.BRAIN_MCP_URL || 'http://127.0.0.1:8787/mcp',
-        headers: { Authorization: `Bearer ${process.env.BRAIN_MCP_TOKEN}` },
+        headers: { Authorization: `Bearer ${brainToken()}` },
         tools: ['apps_list', 'routes_list', 'content_surfaces_list', 'content_read']
       }
     },
