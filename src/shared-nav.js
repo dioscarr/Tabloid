@@ -116,52 +116,115 @@ class TabloidBrainStudio extends HTMLElement {
     if (this.shadowRoot) return
     const root = this.attachShadow({ mode: 'open' })
     root.innerHTML = `<style>
-      :host{position:fixed;z-index:100;inset:0;display:none;font:500 14px/1.45 ui-sans-serif,system-ui;color:#e2e8f0}:host([open]){display:block}.backdrop{position:absolute;inset:0;border:0;background:#020617c9;backdrop-filter:blur(8px)}.panel{position:absolute;top:12px;right:12px;bottom:12px;width:min(520px,calc(100vw - 24px));overflow:auto;border:1px solid #334155;border-radius:24px;background:#0f172a;box-shadow:0 30px 90px #020617;padding:24px}.head{display:flex;justify-content:space-between;gap:20px}.eyebrow{color:#a3e635;font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}h2{margin:5px 0 0;font-size:25px}.close{width:38px;height:38px;border:1px solid #334155;border-radius:11px;background:#1e293b;color:white;font-size:20px}.note{margin:18px 0;padding:12px;border:1px solid #a3e63530;border-radius:12px;background:#a3e6350b;color:#cbd5e1;font-size:12px}label{display:block;margin-top:16px;color:#94a3b8;font-size:11px;font-weight:800}select,textarea{width:100%;margin-top:7px;border:1px solid #334155;border-radius:12px;background:#020617;color:white;padding:12px;font:inherit}textarea{min-height:120px;resize:vertical}.generate{width:100%;margin-top:18px;border:0;border-radius:13px;background:#a3e635;color:#1a2e05;padding:13px;font-weight:900}.generate:disabled{opacity:.55}.result{margin-top:18px;border:1px solid #334155;border-radius:16px;background:#020617;padding:16px}.result[hidden]{display:none}.result h3{margin:0 0 12px}.field{padding:10px 0;border-top:1px solid #1e293b}.field:first-of-type{border:0}.field small,.field strong{display:block}.field small{color:#64748b;text-transform:uppercase;font-size:9px}.field strong{margin-top:5px;color:#f8fafc}.status{margin-top:12px;color:#94a3b8;font-size:11px}
-    </style><button class="backdrop" aria-label="Close Brain Studio"></button><section class="panel" role="dialog" aria-modal="true" aria-labelledby="brain-studio-title"><div class="head"><div><div class="eyebrow">Private AI workspace</div><h2 id="brain-studio-title">Brain Studio</h2></div><button class="close" aria-label="Close">×</button></div><div class="note">Generate a reviewable proposal for this application. Brain cannot publish without a separate human approval.</div><div class="status loading">Loading this app's content contract…</div><form hidden><label>Content surface<select name="surface"></select></label><label>What should Brain create or improve?<textarea name="intent" required placeholder="Make the homepage hero clearer, warmer, and focused on saving time…"></textarea></label><button class="generate">Generate proposal ✦</button></form><div class="result" hidden aria-live="polite"></div></section>`
+      :host{position:fixed;z-index:100;inset:0;display:none;font:500 14px/1.45 ui-sans-serif,system-ui;color:#e2e8f0}:host([open]){display:block}*{box-sizing:border-box}.backdrop{position:absolute;inset:0;border:0;background:#020617c9;backdrop-filter:blur(8px)}.panel{position:absolute;top:12px;right:12px;bottom:12px;width:min(640px,calc(100vw - 24px));overflow:auto;border:1px solid #334155;border-radius:24px;background:#0f172a;box-shadow:0 30px 90px #020617;padding:24px}.head,.toolbar,.history-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.eyebrow{color:#a3e635;font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}h2{margin:5px 0 0;font-size:25px}.close{width:38px;height:38px;border:1px solid #334155;border-radius:11px;background:#1e293b;color:white;font-size:20px}.note{margin:18px 0 10px;padding:12px;border:1px solid #a3e63530;border-radius:12px;background:#a3e6350b;color:#cbd5e1;font-size:12px}.status{color:#94a3b8;font-size:11px}.intent{display:flex;gap:8px;margin-top:16px}.intent input,.search,select,.copy-field textarea{width:100%;border:1px solid #334155;border-radius:11px;background:#020617;color:white;padding:10px 12px;font:inherit}.intent button,.toolbar button,.history-row button{border:0;border-radius:11px;padding:10px 13px;background:#a3e635;color:#1a2e05;font-weight:900;white-space:nowrap}.intent button:disabled,.toolbar button:disabled{opacity:.5}.search{margin-top:14px}.fields{display:grid;gap:9px;margin-top:12px}.copy-field{display:block;border:1px solid #1e293b;border-radius:14px;background:#020617;padding:12px}.copy-field small{display:block;overflow:hidden;color:#64748b;font-size:9px;text-overflow:ellipsis;white-space:nowrap}.copy-field textarea{min-height:66px;margin-top:7px;resize:vertical}.toolbar{position:sticky;bottom:-24px;margin:18px -24px -24px;padding:14px 24px;background:#0f172af2;border-top:1px solid #334155;backdrop-filter:blur(10px)}.toolbar .secondary,.history-row button{border:1px solid #334155;background:#1e293b;color:#e2e8f0}.toolbar .publish{background:#22c55e;color:#052e16}.history{margin-top:18px;padding:14px;border:1px solid #334155;border-radius:14px}.history-row{margin-top:9px}.history-row select{margin:0}.empty{margin-top:18px;padding:22px;border:1px dashed #334155;border-radius:14px;color:#94a3b8;text-align:center}@media(max-width:600px){.intent,.toolbar{align-items:stretch;flex-direction:column}.toolbar{position:static;margin:18px 0 0;padding:14px 0 0}.panel{padding:18px}}
+    </style><button class="backdrop" aria-label="Close Brain Studio"></button><section class="panel" role="dialog" aria-modal="true" aria-labelledby="brain-studio-title"><div class="head"><div><div class="eyebrow">App-specific content management</div><h2 id="brain-studio-title">Brain Studio</h2></div><button class="close" aria-label="Close">×</button></div><div class="note">Edit every registered text field on this page. Preview locally, save a draft, then explicitly approve publication.</div><div class="status loading">Discovering page content…</div><div class="editor" hidden><div class="intent"><input name="intent" placeholder="Ask Brain to polish this entire page…"><button class="rewrite" type="button">Rewrite with Brain ✦</button></div><input class="search" type="search" placeholder="Find text on this page…"><div class="fields"></div><div class="history"><div class="eyebrow">Revision history</div><div class="history-row"><select class="revisions"><option value="">No published revisions yet</option></select><button class="rollback" type="button" disabled>Roll back</button></div></div><div class="toolbar"><button class="secondary preview" type="button">Preview changes</button><button class="secondary save" type="button">Save draft</button><button class="publish" type="button">Approve & publish</button></div></div><div class="empty" hidden></div></section>`
     root.querySelectorAll('.close,.backdrop').forEach((button) => button.addEventListener('click', () => this.close()))
-    root.querySelector('form').addEventListener('submit', (event) => this.generate(event))
+    root.querySelector('.search').addEventListener('input', (event) => this.renderFields(event.target.value))
+    root.querySelector('.rewrite').addEventListener('click', () => this.rewrite())
+    root.querySelector('.preview').addEventListener('click', () => this.preview())
+    root.querySelector('.save').addEventListener('click', () => this.saveDraft())
+    root.querySelector('.publish').addEventListener('click', () => this.publish())
+    root.querySelector('.rollback').addEventListener('click', () => this.rollback())
+    root.querySelector('.revisions').addEventListener('change', (event) => { root.querySelector('.rollback').disabled = !event.target.value })
   }
 
   async open() {
     this.setAttribute('open', '')
     const root = this.shadowRoot
     const status = root.querySelector('.loading')
-    const form = root.querySelector('form')
-    const result = root.querySelector('.result')
-    result.hidden = true
-    form.hidden = true
-    status.textContent = 'Loading this app’s content contract…'
+    const editor = root.querySelector('.editor')
+    const empty = root.querySelector('.empty')
+    editor.hidden = true; empty.hidden = true
+    status.textContent = 'Discovering page content…'
     try {
-      const response = await fetch('/app.contract.json', { cache: 'no-store' })
-      if (!response.ok) throw new Error('This branch has not adopted the Brain contract yet.')
-      this.contract = await response.json()
-      const surfaces = this.contract.content?.surfaces || []
-      if (!surfaces.length) throw new Error('This app has no editable content surfaces.')
-      root.querySelector('[name=surface]').innerHTML = surfaces.map(({ id, label }) => `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`).join('')
-      status.textContent = `${this.contract.app.name} · ${surfaces.length} editable surface${surfaces.length === 1 ? '' : 's'}`
-      form.hidden = false
-    } catch (error) { status.textContent = error.message }
+      if (!window.TabloidCMS) await new Promise((resolve) => window.addEventListener('tabloid:cms-ready', resolve, { once: true }))
+      this.cms = window.TabloidCMS
+      if (!this.cms?.fields().length) throw new Error('This page has not installed the editable-content adapter yet.')
+      const response = await fetch(`${BRAIN_API}/api/v1/content/pages/${this.cms.appId}/${this.cms.pageId}`, { cache: 'no-store' })
+      if (!response.ok) throw new Error(`Brain returned ${response.status}`)
+      this.page = await response.json()
+      this.values = { ...this.cms.values(), ...(this.page.draft?.values || {}) }
+      this.draftId = this.page.draft?.id || null
+      status.textContent = `${this.cms.appId} · ${this.cms.pageId}.html · ${this.cms.fields().length} editable text fields${this.draftId ? ' · Draft restored' : ''}`
+      this.renderFields()
+      this.renderHistory()
+      editor.hidden = false
+    } catch (error) { empty.textContent = error.message; empty.hidden = false }
   }
 
-  close() { this.removeAttribute('open') }
+  close() { this.cms?.reset(); this.removeAttribute('open') }
 
-  async generate(event) {
-    event.preventDefault()
-    const root = this.shadowRoot
-    const button = root.querySelector('.generate')
-    const result = root.querySelector('.result')
-    button.disabled = true
-    button.textContent = 'Brain is working…'
-    result.hidden = false
-    result.innerHTML = '<div class="status">Discovering tools and generating a structured proposal…</div>'
+  renderFields(query = '') {
+    const normalized = query.trim().toLowerCase()
+    const fields = this.cms.fields().filter(({ key, label }) => !normalized || `${key} ${label}`.toLowerCase().includes(normalized))
+    this.shadowRoot.querySelector('.fields').innerHTML = fields.map(({ key, label }) => `<label class="copy-field"><small>${escapeHtml(key)} · ${escapeHtml(label)}</small><textarea data-key="${escapeHtml(key)}">${escapeHtml(this.values[key] ?? '')}</textarea></label>`).join('') || '<div class="empty">No matching text fields.</div>'
+    this.shadowRoot.querySelectorAll('[data-key]').forEach((input) => input.addEventListener('input', () => { this.values[input.dataset.key] = input.value; this.draftId = null }))
+  }
+
+  renderHistory() {
+    const select = this.shadowRoot.querySelector('.revisions')
+    select.innerHTML = '<option value="">Select a published revision…</option>' + (this.page.revisions || []).map((revision) => `<option value="${escapeHtml(revision.id)}">${escapeHtml(new Date(revision.createdAt).toLocaleString())} · ${escapeHtml(revision.message)}</option>`).join('')
+    this.shadowRoot.querySelector('.rollback').disabled = true
+  }
+
+  setBusy(busy, message) {
+    this.shadowRoot.querySelectorAll('.rewrite,.save,.publish,.preview').forEach((button) => { button.disabled = busy })
+    if (message) this.shadowRoot.querySelector('.loading').textContent = message
+  }
+
+  preview() { this.cms.apply(this.values); this.shadowRoot.querySelector('.loading').textContent = 'Preview applied behind this panel. Close Studio to restore the published version.' }
+
+  async saveDraft() {
+    this.setBusy(true, 'Saving draft…')
     try {
-      const response = await fetch(`${BRAIN_API}/api/v1/content/proposals`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ appId: this.contract.app.id, surfaceId: root.querySelector('[name=surface]').value, intent: root.querySelector('[name=intent]').value }) })
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || `Brain returned ${response.status}`)
-      const proposal = payload.content?.proposal || payload.content || {}
-      result.innerHTML = `<h3>Proposal ready</h3>${Object.entries(proposal).map(([field, value]) => `<div class="field"><small>${escapeHtml(field)}</small><strong>${escapeHtml(Array.isArray(value) ? value.join(', ') : value)}</strong></div>`).join('')}<div class="status">Proposal ${escapeHtml(payload.id)} · Not published</div>`
-    } catch (error) { result.innerHTML = `<h3>Generation unavailable</h3><div class="status">${escapeHtml(error.message)}</div>` }
-    finally { button.disabled = false; button.textContent = 'Generate proposal ✦' }
+      const response = await fetch(`${BRAIN_API}/api/v1/content/pages/${this.cms.appId}/${this.cms.pageId}/draft`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ values: this.values }) })
+      const page = await response.json(); if (!response.ok) throw new Error(page.error || `Brain returned ${response.status}`)
+      this.page = page; this.draftId = page.draft.id
+      this.shadowRoot.querySelector('.loading').textContent = `Draft saved · ${new Date(page.draft.createdAt).toLocaleTimeString()}`
+      return page.draft
+    } catch (error) { this.shadowRoot.querySelector('.loading').textContent = `Draft failed: ${error.message}`; throw error }
+    finally { this.setBusy(false) }
+  }
+
+  async rewrite() {
+    const intent = this.shadowRoot.querySelector('[name=intent]').value.trim()
+    if (!intent) { this.shadowRoot.querySelector('.loading').textContent = 'Describe what Brain should improve first.'; return }
+    this.setBusy(true, 'Brain is rewriting this page with app-specific context…')
+    try {
+      const response = await fetch(`${BRAIN_API}/api/v1/content/pages/${this.cms.appId}/${this.cms.pageId}/rewrite`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ values: this.values, intent }) })
+      const payload = await response.json(); if (!response.ok) throw new Error(payload.error || `Brain returned ${response.status}`)
+      const generated = payload.content?.values || payload.content?.proposal?.values
+      if (!generated || typeof generated !== 'object') throw new Error('Brain did not return editable page fields.')
+      this.values = { ...this.values, ...generated }; this.draftId = null; this.renderFields(this.shadowRoot.querySelector('.search').value)
+      this.shadowRoot.querySelector('.loading').textContent = 'AI rewrite ready for review · Not published'
+    } catch (error) { this.shadowRoot.querySelector('.loading').textContent = `Rewrite failed: ${error.message}` }
+    finally { this.setBusy(false) }
+  }
+
+  async publish() {
+    if (!window.confirm('Publish this draft to the live page? A revision will be saved for rollback.')) return
+    try {
+      if (!this.draftId) await this.saveDraft()
+      this.setBusy(true, 'Publishing approved revision…')
+      const response = await fetch(`${BRAIN_API}/api/v1/content/pages/${this.cms.appId}/${this.cms.pageId}/publish`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ draftId: this.draftId, confirmed: true, message: 'Published from Brain Studio' }) })
+      const page = await response.json(); if (!response.ok) throw new Error(page.error || `Brain returned ${response.status}`)
+      this.page = page; this.draftId = null; this.cms.setPublished(page.published.values); this.values = { ...page.published.values }; this.renderHistory()
+      this.shadowRoot.querySelector('.loading').textContent = `Published · ${new Date(page.published.createdAt).toLocaleString()}`
+    } catch (error) { this.shadowRoot.querySelector('.loading').textContent = `Publish failed: ${error.message}` }
+    finally { this.setBusy(false) }
+  }
+
+  async rollback() {
+    const revisionId = this.shadowRoot.querySelector('.revisions').value
+    if (!revisionId || !window.confirm('Roll the live page back to this revision?')) return
+    this.setBusy(true, 'Rolling back…')
+    try {
+      const response = await fetch(`${BRAIN_API}/api/v1/content/pages/${this.cms.appId}/${this.cms.pageId}/rollback`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ revisionId, confirmed: true }) })
+      const page = await response.json(); if (!response.ok) throw new Error(page.error || `Brain returned ${response.status}`)
+      this.page = page; this.values = { ...page.published.values }; this.cms.setPublished(this.values); this.renderFields(); this.renderHistory()
+      this.shadowRoot.querySelector('.loading').textContent = 'Rollback published successfully.'
+    } catch (error) { this.shadowRoot.querySelector('.loading').textContent = `Rollback failed: ${error.message}` }
+    finally { this.setBusy(false) }
   }
 }
 
