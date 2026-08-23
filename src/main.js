@@ -68,7 +68,7 @@ async function workerRequest(path, options = {}) {
   const timer = window.setTimeout(() => controller.abort(), 12_000)
   try {
     const response = await fetch(endpoint(path), {
-      credentials: 'include',
+      credentials: 'omit',
       cache: 'no-store',
       ...options,
       headers: { Accept: 'application/json', ...options.headers },
