@@ -7,6 +7,7 @@ import * as z from 'zod/v4'
 import { catalog } from './catalog.js'
 import { generateWithCopilot, stopCopilot } from './copilot.js'
 import { contentStore } from './content-store.js'
+import { controlStore } from './control-store.js'
 
 const port = Number(process.env.PORT || 8787)
 const host = process.env.HOST || '0.0.0.0'
@@ -19,17 +20,18 @@ const textResult = (value) => ({ content: [{ type: 'text', text: JSON.stringify(
 const buildMcpServer = () => {
   const server = new McpServer({ name: 'tabloid-brain', version: '0.1.0' })
   const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
-  server.registerTool('apps_list', { description: 'List applications connected to Brain.', annotations: readOnly }, async () => textResult({ apps: catalog.listApps() }))
-  server.registerTool('routes_list', { description: 'List routes and dependencies between Brain and applications.', inputSchema: z.object({ appId: z.string().optional() }), annotations: readOnly }, async ({ appId }) => textResult({ routes: catalog.listRoutes(appId) }))
-  server.registerTool('content_surfaces_list', { description: 'List admin-editable content surfaces for an application.', inputSchema: z.object({ appId: z.string() }), annotations: readOnly }, async ({ appId }) => textResult({ surfaces: catalog.listSurfaces(appId) }))
-  server.registerTool('content_read', { description: 'Read the current content adapter view for an application surface.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string() }), annotations: readOnly }, async ({ appId, surfaceId }) => textResult(catalog.readContent(appId, surfaceId)))
-  server.registerTool('content_propose', { description: 'Generate a reviewable content proposal. This tool does not publish.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string(), intent: z.string(), context: z.record(z.string(), z.unknown()).optional() }) }, async ({ appId, surfaceId, intent, context }) => {
+  const register = (id, definition, handler) => { if (controlStore.isToolEnabled(id)) server.registerTool(id, definition, handler) }
+  register('apps_list', { description: 'List applications connected to Brain.', annotations: readOnly }, async () => textResult({ apps: catalog.listApps() }))
+  register('routes_list', { description: 'List routes and dependencies between Brain and applications.', inputSchema: z.object({ appId: z.string().optional() }), annotations: readOnly }, async ({ appId }) => textResult({ routes: catalog.listRoutes(appId) }))
+  register('content_surfaces_list', { description: 'List admin-editable content surfaces for an application.', inputSchema: z.object({ appId: z.string() }), annotations: readOnly }, async ({ appId }) => textResult({ surfaces: catalog.listSurfaces(appId) }))
+  register('content_read', { description: 'Read the current content adapter view for an application surface.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string() }), annotations: readOnly }, async ({ appId, surfaceId }) => textResult(catalog.readContent(appId, surfaceId)))
+  register('content_propose', { description: 'Generate a reviewable content proposal. This tool does not publish.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string(), intent: z.string(), context: z.record(z.string(), z.unknown()).optional() }) }, async ({ appId, surfaceId, intent, context }) => {
     const surface = catalog.listSurfaces(appId).find(({ id }) => id === surfaceId)
     if (!surface) return { isError: true, content: [{ type: 'text', text: `Unknown surface ${appId}/${surfaceId}` }] }
     const content = await generateWithCopilot({ appId, surface, intent, context })
     return textResult(catalog.saveProposal({ id: randomUUID(), appId, surfaceId, intent, content, status: 'proposed', createdAt: new Date().toISOString() }))
   })
-  server.registerTool('content_publish', { description: 'Publish an approved proposal. Disabled until approval storage and GitHub write integration are configured.', inputSchema: z.object({ proposalId: z.string(), approvalId: z.string() }) }, async () => ({ isError: true, content: [{ type: 'text', text: 'Publishing is intentionally disabled. Configure approval storage and a narrowly scoped GitHub App before enabling mutations.' }] }))
+  register('content_publish', { description: 'Publish an approved proposal. Disabled until approval storage and GitHub write integration are configured.', inputSchema: z.object({ proposalId: z.string(), approvalId: z.string() }) }, async () => ({ isError: true, content: [{ type: 'text', text: 'Publishing is intentionally disabled. Configure approval storage and a narrowly scoped GitHub App before enabling mutations.' }] }))
   return server
 }
 
@@ -50,6 +52,19 @@ const apiHandler = async (request) => {
   if (url.pathname === '/api/v1/apps' && request.method === 'GET') return json({ apps: catalog.listApps() }, 200, cors)
   if (url.pathname === '/api/v1/routes' && request.method === 'GET') return json({ routes: catalog.listRoutes(url.searchParams.get('appId')) }, 200, cors)
   if (url.pathname === '/api/v1/content/surfaces' && request.method === 'GET') return json({ surfaces: catalog.listSurfaces(url.searchParams.get('appId')) }, 200, cors)
+  if (url.pathname === '/api/v1/tools' && request.method === 'GET') return json({ tools: controlStore.listTools() }, 200, cors)
+  if (url.pathname === '/api/v1/skills' && request.method === 'GET') return json({ skills: controlStore.listSkills() }, 200, cors)
+  if (url.pathname === '/api/v1/activity' && request.method === 'GET') return json({ activity: controlStore.activity() }, 200, cors)
+  const toolRoute = url.pathname.match(/^\/api\/v1\/tools\/([a-z0-9_-]+)$/i)
+  const skillRoute = url.pathname.match(/^\/api\/v1\/skills\/([a-z0-9_-]+)$/i)
+  if (toolRoute && request.method === 'POST') {
+    try { return json({ tool: controlStore.configureTool(toolRoute[1], await request.json()) }, 200, cors) }
+    catch (error) { return json({ error: error.message }, 400, cors) }
+  }
+  if (skillRoute && request.method === 'POST') {
+    try { return json({ skill: controlStore.configureSkill(skillRoute[1], await request.json()) }, 200, cors) }
+    catch (error) { return json({ error: error.message }, 400, cors) }
+  }
   const pageRoute = url.pathname.match(/^\/api\/v1\/content\/pages\/([a-z0-9-]+)\/([a-z0-9._-]+)(?:\/(draft|publish|rollback|rewrite))?$/i)
   if (pageRoute) {
     const [, appId, pageId, action] = pageRoute
