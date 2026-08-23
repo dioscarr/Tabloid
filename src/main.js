@@ -63,9 +63,7 @@ document.querySelector('#app').innerHTML = `
 
         <section class="mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60"><div class="flex items-center justify-between border-b border-slate-800 px-5 py-4"><div><h3 class="font-bold">Applications</h3><p class="mt-1 text-xs text-slate-500">Shared identity and access policies</p></div><button class="inline-flex items-center gap-1 text-xs font-bold text-indigo-400">${icon('plus', 'size-4')} Register app</button></div><div class="grid gap-px bg-slate-800 md:grid-cols-3">${applications.map(([name, description, branch, usersCount, status, initials]) => `<a href="#${branch}" class="group bg-slate-900 p-5 transition hover:bg-slate-800/80"><div class="flex items-start justify-between"><span class="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-indigo-500/25 to-violet-500/10 text-sm font-black text-indigo-300">${initials}</span><span class="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[0.65rem] font-bold text-emerald-400">${status}</span></div><h4 class="mt-5 font-bold">${name}</h4><p class="mt-1 text-xs text-slate-500">${description}</p><div class="mt-5 flex items-center justify-between border-t border-slate-800 pt-4 text-xs text-slate-500"><span>${usersCount}</span><span class="font-mono">${branch}</span></div></a>`).join('')}</div></section>
 
-        <section class="mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60"><div class="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 class="font-bold">Branches & workspaces</h3><p class="mt-1 text-xs text-slate-500">Open isolated VS Code worktrees and safely remove preview infrastructure.</p></div><button id="refresh-branches" class="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800">Refresh</button></div><div id="branch-manager" class="p-5"><p class="text-sm text-slate-500">Connecting to the private Admin worker…</p></div></section>
-
-        <section class="mt-6 rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/10 via-slate-900/70 to-violet-500/5 p-5 sm:p-7"><div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"><div class="max-w-2xl"><div class="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-indigo-300">${icon('apps', 'size-4')} Development workspace</div><h3 class="mt-3 text-2xl font-black tracking-tight">Continue from the team handoff in VS Code.</h3><p class="mt-2 text-sm leading-6 text-slate-400">The persistent private workspace is ready on the <span class="font-mono text-slate-300">admin</span> branch with its environment generated. Start with the handoff, then use the backend and UI/UX implementation guides to delegate the work.</p><div class="mt-4 flex flex-wrap gap-2 text-xs text-slate-400"><span class="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-emerald-300">Ready</span><span class="rounded-full border border-slate-700 px-3 py-1.5">Private Tailscale URL</span><span class="rounded-full border border-slate-700 px-3 py-1.5">Persistent workspace</span><span class="rounded-full border border-slate-700 px-3 py-1.5">Branch: admin</span></div></div><a href="https://dio.tail70b7f1.ts.net:8443/?folder=/config/workspace" target="_blank" rel="noreferrer" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400">${icon('apps')} Open handoff workspace</a></div></section>
+        <section id="branches-workspaces" class="mt-6 scroll-mt-24 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60"><div class="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 class="font-bold">Branches & workspaces</h3><p class="mt-1 text-xs text-slate-500">Open any branch in its own isolated VS Code worktree and safely remove preview infrastructure.</p></div><button id="refresh-branches" class="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800">Refresh</button></div><div id="branch-manager" class="p-5"><p class="text-sm text-slate-500">Connecting to the private Admin worker…</p></div></section>
       </main>
     </div>
 
@@ -89,6 +87,7 @@ document.querySelectorAll('.nav-item').forEach((item) => item.addEventListener('
   document.querySelectorAll('.nav-item').forEach((nav) => { nav.className = 'nav-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-white' })
   item.className = 'nav-item flex w-full items-center gap-3 rounded-xl bg-indigo-500/15 px-3 py-3 text-sm font-semibold text-indigo-300 transition'
   document.querySelector('#page-title').textContent = item.textContent.trim()
+  if (item.dataset.view === 'workspace') document.querySelector('#branches-workspaces')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }))
 
 const dialog = document.querySelector('#setup-dialog')
@@ -135,7 +134,7 @@ const renderBranches = (branches) => {
   branchManager.innerHTML = `<div class="grid gap-3">${branches.map((branch) => `
     <article class="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-950/50 p-4 lg:flex-row lg:items-center lg:justify-between">
       <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><h4 class="truncate font-mono text-sm font-bold">${escapeHtml(branch.branch)}</h4><span class="rounded-full px-2 py-1 text-[0.65rem] font-bold ${branch.appContainer ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'}">${branch.appContainer ? 'Preview running' : 'No preview'}</span><span class="rounded-full px-2 py-1 text-[0.65rem] font-bold ${branch.workspace ? 'bg-indigo-500/10 text-indigo-300' : 'bg-slate-800 text-slate-400'}">${branch.workspace ? 'Workspace ready' : 'Workspace not prepared'}</span></div><p class="mt-2 text-xs text-slate-500">${[branch.appContainer && 'app', branch.tailscaleContainer && 'Tailscale', branch.network && 'network', branch.volume && 'state volume'].filter(Boolean).join(' · ') || 'No Podman resources'}</p></div>
-      <div class="flex flex-wrap gap-2"><a href="${branch.appUrl}" target="_blank" rel="noreferrer" class="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800">Open app</a><button data-workspace="${encodeURIComponent(branch.branch)}" data-url="${branch.vscodeUrl}" class="rounded-xl bg-indigo-500 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-400">${branch.workspace ? 'Open VS Code' : 'Prepare VS Code'}</button>${branch.branch === 'main' ? '' : `<button data-remove="${encodeURIComponent(branch.branch)}" data-purge="${branch.volume && !branch.appContainer ? 'true' : 'false'}" class="rounded-xl border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/10">${branch.volume && !branch.appContainer ? 'Purge storage' : 'Remove preview'}</button>`}</div>
+      <div class="flex flex-wrap gap-2"><a href="${branch.appUrl}" target="_blank" rel="noreferrer" class="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800">Open app</a>${branch.workspace ? `<a href="${branch.vscodeUrl}" target="_blank" rel="noreferrer" class="rounded-xl bg-indigo-500 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-400">Open VS Code</a>` : `<button data-workspace="${encodeURIComponent(branch.branch)}" class="rounded-xl bg-indigo-500 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-400">Prepare VS Code</button>`}${branch.branch === 'main' ? '' : `<button data-remove="${encodeURIComponent(branch.branch)}" data-purge="${branch.volume && !branch.appContainer ? 'true' : 'false'}" class="rounded-xl border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/10">${branch.volume && !branch.appContainer ? 'Purge storage' : 'Remove preview'}</button>`}</div>
     </article>`).join('')}</div>`
 }
 
@@ -149,14 +148,17 @@ document.querySelector('#refresh-branches')?.addEventListener('click', loadBranc
 branchManager?.addEventListener('click', async (event) => {
   const workspaceButton = event.target.closest('[data-workspace]')
   if (workspaceButton) {
+    const editorWindow = window.open('about:blank', '_blank')
+    if (editorWindow) editorWindow.opener = null
     workspaceButton.disabled = true
     workspaceButton.textContent = 'Preparing…'
     try {
       const result = await workerRequest(`/branches/${workspaceButton.dataset.workspace}/workspace`, { method: 'POST' })
-      window.open(result.vscodeUrl, '_blank', 'noopener,noreferrer')
+      if (editorWindow) editorWindow.location.replace(result.vscodeUrl)
+      else announce('Workspace ready. Click Open VS Code to launch it.')
       announce(`VS Code workspace is ready for ${result.branch}.`, 'success')
       await loadBranches()
-    } catch (error) { announce(error.message); workspaceButton.disabled = false; workspaceButton.textContent = 'Retry workspace' }
+    } catch (error) { editorWindow?.close(); announce(error.message); workspaceButton.disabled = false; workspaceButton.textContent = 'Retry workspace' }
     return
   }
   const removeButton = event.target.closest('[data-remove]')
