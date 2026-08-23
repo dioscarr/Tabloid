@@ -1,7 +1,7 @@
 const REPOSITORY = 'dioscarr/Tabloid'
 const TAILNET = 'tail70b7f1.ts.net'
 const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
-const AUTHZ_API = `https://tabloid-authorization.${TAILNET}`
+const AUTHZ_API = `https://tabloid-authorization-ca5839.${TAILNET}`
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
 
 const previewId = async (branch) => {
