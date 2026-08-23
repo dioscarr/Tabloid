@@ -45,7 +45,10 @@ export async function generateWithCopilot({ appId, surface, intent, context }) {
     }
   })
   try {
-    const response = await session.sendAndWait({ prompt: `Create a content proposal for app "${appId}", surface "${surface.id}". Fields: ${surface.fields.join(', ')}. Intent: ${intent}. Context: ${JSON.stringify(context ?? {})}` })
+    const outputRule = surface.dynamic
+      ? `Return exactly one JSON object shaped as {"values": {"field-key": "replacement text"}}. Preserve every supplied field key and return only string values.`
+      : 'Return a concise structured proposal using the requested surface fields.'
+    const response = await session.sendAndWait({ prompt: `Create a content proposal for app "${appId}", surface "${surface.id}". Fields: ${surface.fields.join(', ')}. Intent: ${intent}. Context: ${JSON.stringify(context ?? {})}. ${outputRule}` })
     return JSON.parse(response?.data?.content ?? response?.content ?? '{}')
   } finally {
     await session.disconnect()
