@@ -269,9 +269,13 @@ foreach ($branch in $branches) {
     continue
   }
 
-  if ($previous.ContainsKey($project) -and [string]$previous[$project].sha -eq $branchSha -and [string]$previous[$project].mode -eq 'static') {
+  if ($previous.ContainsKey($project) -and [string]$previous[$project].sha -eq $branchSha) {
     $desired[$project] = $previous[$project]
-    Write-Host "$($branch.name) is unchanged at $($desired[$project].url)"
+    if ([string]$desired[$project].mode -eq 'static') {
+      Write-Host "$($branch.name) is unchanged at $($desired[$project].url)"
+    } else {
+      Write-Host "$($branch.name) is unchanged and does not use a static preview."
+    }
     continue
   }
 
@@ -282,7 +286,12 @@ foreach ($branch in $branches) {
   }
   if (-not (Test-StaticPreviewImage $image)) {
     Write-Warning "Preview image for branch '$($branch.name)' is not a static site; leaving any current preview untouched."
-    if ($previous.ContainsKey($project)) { $desired[$project] = $previous[$project] }
+    $desired[$project] = [ordered]@{
+      branch = $branch.name
+      image = $image
+      sha = $branchSha
+      mode = 'unsupported'
+    }
     continue
   }
 
