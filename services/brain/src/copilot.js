@@ -5,6 +5,15 @@ let client
 
 const copilotToken = () => process.env.COPILOT_GITHUB_TOKEN || (process.env.COPILOT_GITHUB_TOKEN_FILE ? readFileSync(process.env.COPILOT_GITHUB_TOKEN_FILE, 'utf8').trim() : '')
 const brainToken = () => process.env.BRAIN_MCP_TOKEN || (process.env.BRAIN_MCP_TOKEN_FILE ? readFileSync(process.env.BRAIN_MCP_TOKEN_FILE, 'utf8').trim() : '')
+const allowedContextTools = new Set(['apps_list', 'routes_list', 'content_surfaces_list', 'content_read'])
+
+const approveBrainContextTools = (request) => {
+  if (request.managedApprovalRequired) return { kind: 'no-result' }
+  if (request.kind === 'mcp' && request.serverName === 'brain' && allowedContextTools.has(request.toolName)) {
+    return { kind: 'approve-once' }
+  }
+  return { kind: 'reject', feedback: 'Brain only permits its allow-listed, read-only context tools during content generation.' }
+}
 
 const requireConfiguration = () => {
   const token = copilotToken()
@@ -22,6 +31,7 @@ export async function generateWithCopilot({ appId, surface, intent, context }) {
   await client.start()
   const session = await client.createSession({
     model: process.env.COPILOT_MODEL || 'gpt-5.4',
+    onPermissionRequest: approveBrainContextTools,
     mcpServers: {
       brain: {
         type: 'http',
