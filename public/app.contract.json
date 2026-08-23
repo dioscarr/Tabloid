@@ -1,0 +1,40 @@
+{
+  "contractVersion": "1.0",
+  "app": {
+    "id": "admin",
+    "name": "Admin",
+    "branch": "admin",
+    "description": "Application operations, users, workspaces, and lifecycle management."
+  },
+  "routes": [
+    {
+      "id": "brain-content",
+      "direction": "outbound",
+      "protocol": "https",
+      "path": "/api/v1/content",
+      "purpose": "Discover, generate, preview, approve, and publish managed page content through Brain."
+    },
+    {
+      "id": "brain-tools",
+      "direction": "outbound",
+      "protocol": "mcp",
+      "path": "/mcp",
+      "purpose": "Expose Brain productivity tools to an authenticated server-side agent host."
+    }
+  ],
+  "content": {
+    "editable": true,
+    "surfaces": [
+      {
+        "id": "operator-notice",
+        "label": "Operator notice",
+        "fields": [
+          "title",
+          "message",
+          "severity",
+          "action"
+        ]
+      }
+    ]
+  }
+}
