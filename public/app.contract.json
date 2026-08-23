@@ -8,18 +8,18 @@
   },
   "routes": [
     {
-      "id": "brain-content",
-      "direction": "outbound",
+      "id": "authorization-api",
+      "direction": "inbound",
       "protocol": "https",
-      "path": "/api/v1/content",
-      "purpose": "Discover, generate, preview, approve, and publish managed page content through Brain."
+      "path": "/api/v1",
+      "purpose": "Identity, application registration, policy decisions, access requests, and audit."
     },
     {
-      "id": "brain-tools",
+      "id": "brain-client",
       "direction": "outbound",
-      "protocol": "mcp",
-      "path": "/mcp",
-      "purpose": "Expose Brain productivity tools to an authenticated server-side agent host."
+      "protocol": "https",
+      "path": "https://tabloid-brain-api.tail70b7f1.ts.net/api/v1",
+      "purpose": "Brain consumes authorization decisions for tools and skills."
     }
   ],
   "content": {
