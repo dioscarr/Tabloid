@@ -84,17 +84,12 @@ class TabloidSharedNav extends HTMLElement {
     this.loaded = true
     try {
       const sources = await Promise.allSettled([
-        fetch(`${AUTHZ_API}/api/v1/applications`).then(async (response) => {
-          if (!response.ok) throw new Error(`Authorization returned ${response.status}`)
-          return (await response.json()).applications.map(({ branch }) => branch).filter(Boolean)
-        }),
         fetch(`${BRAIN_API}/api/v1/apps`).then(async (response) => {
           if (!response.ok) throw new Error(`Brain returned ${response.status}`)
           return (await response.json()).apps.map(({ branch }) => branch)
         })
       ])
-      const authorized = sources[0].status === 'fulfilled'
-      const branches = [...new Set((authorized ? sources.slice(0, 1) : sources).flatMap((source) => source.status === 'fulfilled' ? source.value : []))]
+      const branches = [...new Set(sources.flatMap((source) => source.status === 'fulfilled' ? source.value : []))]
       if (!branches.length) throw new Error('No application source is available.')
       branches.sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
