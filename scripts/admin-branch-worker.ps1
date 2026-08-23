@@ -28,9 +28,15 @@ function Assert-Branch([string]$Branch) {
 }
 
 function Invoke-Podman([string[]]$Arguments, [switch]$AllowFailure) {
-  & $podman @Arguments | Out-Null
-  if ($LASTEXITCODE -ne 0 -and -not $AllowFailure) { throw "Podman command failed: $($Arguments[0])" }
-  $LASTEXITCODE -eq 0
+  $output = @(& $podman @Arguments 2>&1)
+  $exitCode = $LASTEXITCODE
+  if ($exitCode -ne 0 -and -not $AllowFailure) {
+    $detail = (($output | Select-Object -Last 8) -join ' ').Trim()
+    if ($detail.Length -gt 1200) { $detail = $detail.Substring(0, 1200) }
+    if ($detail) { throw "Podman command failed: $($Arguments[0]): $detail" }
+    throw "Podman command failed: $($Arguments[0])"
+  }
+  $exitCode -eq 0
 }
 
 function Test-Resource([string]$Kind, [string]$Name) { Invoke-Podman @($Kind, 'exists', $Name) -AllowFailure }
@@ -95,7 +101,8 @@ function New-Workspace([string]$Branch) {
   if (-not (Test-Workspace $id)) {
     Invoke-Podman @('exec', '--user', 'abc', 'code-server', 'git', '-C', '/config/workspace', 'worktree', 'add', '-B', "workspace/$id", "/config/workspaces/$id", "origin/$Branch") | Out-Null
   }
-  Invoke-Podman @('exec', '--user', 'abc', 'code-server', 'sh', '-lc', "cd /config/workspaces/$id && npm run env:branch -- --branch $Branch") | Out-Null
+  $environmentCommand = "cd /config/workspaces/$id && if [ -f scripts/generate-branch-env.mjs ]; then npm run env:branch -- --branch '$Branch'; else node /config/workspace/scripts/generate-branch-env.mjs --branch '$Branch'; fi"
+  Invoke-Podman @('exec', '--user', 'abc', 'code-server', 'sh', '-lc', $environmentCommand) | Out-Null
   Get-Inventory $Branch
 }
 
