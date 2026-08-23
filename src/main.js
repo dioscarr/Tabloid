@@ -1,63 +1,54 @@
 import './style.css'
 import { mountSharedNav } from './shared-nav.js'
 
-const glyph = (name) => ({ overview: '▦', apps: '◈', resources: '≡', activity: '∿', settings: '⚙' }[name])
-const nav = [['overview', 'Overview'], ['apps', 'Applications'], ['resources', 'Resources'], ['activity', 'Activity'], ['settings', 'Settings']]
-const metrics = [
-  ['Running containers', '12', 'Across 6 previews', '+2 today'],
-  ['Memory in use', '4.9 GB', '3.1 GB from WSL', '61% of budget'],
-  ['Healthy routes', '6 / 6', 'Tailscale HTTPS', '100% available'],
-  ['Build success', '96%', 'Last 30 builds', '+4.2% this week'],
-]
-const services = [
-  ['The Daily Echo', 'main', 'Healthy', 'Dedicated runtime', 'Private URL'],
-  ['Admin', 'admin', 'Healthy', 'Static gateway', 'Private URL'],
-  ['Big News', 'big-news', 'Healthy', 'Static gateway', 'Private URL'],
-  ['Tech', 'tech', 'Healthy', 'Static gateway', 'Private URL'],
-  ['Dashboard', 'dashboard', 'Healthy', 'Static gateway', 'Private URL'],
-]
-const events = [
-  ['Preview reconciled', 'admin', 'Image pulled and containers restarted', '2 min ago', 'bg-emerald-300'],
-  ['Workflow completed', 'dashboard', 'Branch preview image published', '6 min ago', 'bg-emerald-300'],
-  ['Workspace prepared', 'admin', 'Worktree and environment generated', '18 min ago', 'bg-cyan-300'],
-  ['Memory threshold', 'host', 'WSL usage crossed 3 GB', '1 hr ago', 'bg-amber-300'],
-]
-const appProfiles = {
-  main: { name: 'The Daily Echo', requests: '1.8k', latency: '42 ms', availability: '99.98%', memory: '8.7 MB', deployment: 'Production · main', note: 'Dedicated Nginx runtime; production migration remains separate.' },
-  admin: { name: 'Admin', requests: '486', latency: '58 ms', availability: '99.95%', memory: 'Shared', deployment: 'Static · admin', note: 'Uses the shared static gateway and private Admin worker API.' },
-  'big-news': { name: 'Big News', requests: '732', latency: '46 ms', availability: '99.97%', memory: 'Shared', deployment: 'Static · big-news', note: 'Static branch deployment served from the shared Podman volume.' },
-  tech: { name: 'Tech', requests: '614', latency: '44 ms', availability: '99.99%', memory: 'Shared', deployment: 'Static · tech', note: 'Static branch deployment with its existing Tailscale hostname.' },
-  dashboard: { name: 'System Dashboard', requests: '298', latency: '51 ms', availability: '99.96%', memory: 'Shared', deployment: 'Static · dashboard', note: 'Current values are prototype measurements until live adapters land.' },
-}
-const requestedApp = new URLSearchParams(window.location.search).get('app')
-const selectedAppKey = Object.hasOwn(appProfiles, requestedApp) ? requestedApp : 'dashboard'
-const selectedApp = appProfiles[selectedAppKey]
+const apps = [
+  ['brain','Brain','Topology intelligence',50,48,'#a78bfa','healthy','Static gateway'],
+  ['admin','Admin','Identity & control',19,23,'#38bdf8','healthy','Static gateway'],
+  ['auth','Auth','Authentication provider',50,13,'#f472b6','healthy','Static gateway'],
+  ['dashboard','Dashboard','System telemetry',81,23,'#2dd4bf','healthy','Static gateway'],
+  ['main','Daily Echo','Production experience',87,65,'#fbbf24','healthy','Dedicated runtime'],
+  ['big-news','Big News','Personal intelligence',67,86,'#fb7185','healthy','Static gateway'],
+  ['tech','Tech','Developer intelligence',33,86,'#a3e635','healthy','Static gateway'],
+  ['logging','Logging','Event pipeline',13,65,'#fb923c','warning','Static gateway'],
+].map(([id,name,role,x,y,color,status,runtime])=>({id,name,role,x,y,color,status,runtime}))
+const routes = [
+  ['brain','admin','HTTPS','/api/v1/branches','healthy',34,'1.2k','Branch inventory'],
+  ['brain','auth','OIDC','/oauth/session','healthy',48,'386','Shared identity'],
+  ['brain','dashboard','HTTPS','/?app=:branch','healthy',27,'842','Application telemetry'],
+  ['brain','main','HTTPS','/','healthy',41,'2.8k','Production surface'],
+  ['brain','big-news','HTTPS','/feed','healthy',56,'1.7k','Intelligence feed'],
+  ['brain','tech','HTTPS','/discover','healthy',38,'2.1k','Project discovery'],
+  ['brain','logging','OTLP','/v1/logs','warning',94,'9.4k','Event observability'],
+  ['admin','auth','OIDC','/oauth/callback','healthy',51,'214','Admin access'],
+  ['dashboard','logging','HTTPS','/api/events','warning',107,'4.6k','Runtime events'],
+  ['big-news','tech','JSON','/api/signals','healthy',45,'721','Shared tech signals'],
+].map(([from,to,protocol,path,health,latency,traffic,dependency])=>({from,to,protocol,path,health,latency,traffic,dependency}))
+const getApp=id=>apps.find(x=>x.id===id)
+let selected='brain', filter='all'
 
-document.title = 'System Dashboard | Tabloid'
-document.querySelector('#app').innerHTML = `
-  <div class="min-h-screen bg-[#071019] text-slate-100 selection:bg-cyan-300/30">
-    <aside class="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-white/10 bg-[#09131e] xl:block">
-      <div class="flex h-20 items-center gap-3 border-b border-white/10 px-6"><span class="grid size-10 place-items-center rounded-xl bg-cyan-300 font-black text-slate-950">S</span><div><p class="font-black">System</p><p class="text-xs text-slate-500">Operations dashboard</p></div></div>
-      <nav class="space-y-1 p-4" aria-label="Dashboard sections">${nav.map(([key, label], index) => `<a href="#${key}" class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${index ? 'text-slate-500 hover:bg-white/5 hover:text-white' : 'bg-cyan-300/10 text-cyan-200'}"><span class="w-5 text-center">${glyph(key)}</span>${label}</a>`).join('')}</nav>
-      <div class="absolute inset-x-4 bottom-4 rounded-2xl border border-white/10 bg-white/[.025] p-4"><div class="flex items-center gap-2 text-xs font-bold text-emerald-300"><span class="size-2 rounded-full bg-emerald-300 shadow-[0_0_12px_#6ee7b7]"></span>Private control plane</div><p class="mt-2 text-xs text-slate-500">Tailscale access · local execution</p></div>
-    </aside>
-    <div class="xl:pl-64">
-      <header class="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-white/10 bg-[#071019]/90 px-5 backdrop-blur-xl sm:px-8"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-cyan-300">Control plane</p><h1 class="mt-1 text-lg font-black">Environment overview</h1></div><div class="flex items-center gap-3"><span data-shared-nav-slot class="inline-flex"></span><button class="hidden rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-bold text-slate-300 sm:block">Last 24 hours</button><span class="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-cyan-300 to-blue-500 text-xs font-black text-slate-950">DR</span></div></header>
-      <main class="mx-auto max-w-[1500px] px-5 py-8 sm:px-8">
-        <section id="overview" class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><p class="text-sm font-bold text-emerald-300">All critical systems operational</p><h2 class="mt-2 max-w-3xl text-4xl font-black tracking-[-.045em] sm:text-5xl">See the whole system.<br/><span class="text-slate-500">Act before it slows you down.</span></h2><p class="mt-4 max-w-2xl text-sm leading-6 text-slate-400">One private view of branch deployments, Podman resources, GitHub delivery, Tailscale routing, and development workspaces.</p></div><button class="w-fit rounded-xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950">Refresh live data</button></section>
-        <section class="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">${metrics.map(([label, value, detail, trend]) => `<article class="rounded-2xl border border-white/10 bg-white/[.035] p-5"><p class="text-sm font-semibold text-slate-500">${label}</p><p class="mt-5 text-3xl font-black">${value}</p><div class="mt-3 flex justify-between text-xs"><span class="text-slate-500">${detail}</span><span class="text-slate-300">${trend}</span></div></article>`).join('')}</section>
-        <section class="mt-6 grid gap-6 xl:grid-cols-[1.5fr_.8fr]">
-          <article id="resources" class="rounded-2xl border border-white/10 bg-white/[.035] p-5 sm:p-6"><div class="flex justify-between"><div><h3 class="font-black">Resource pressure</h3><p class="mt-1 text-xs text-slate-500">Observed usage with a seven-day projection</p></div><span class="h-fit rounded-full bg-emerald-300/10 px-3 py-1 text-xs font-bold text-emerald-300">Within budget</span></div><div class="mt-8 grid h-56 grid-cols-12 items-end gap-2 border-b border-l border-white/10 px-3 pt-4">${[35,42,39,47,44,53,58,55,62,67,64,72].map((height, index) => `<div class="rounded-t-md ${index > 8 ? 'bg-cyan-300/30' : 'bg-cyan-300'}" style="height:${height}%" title="${height}%"></div>`).join('')}</div><div class="mt-3 flex justify-between text-[.65rem] font-bold uppercase tracking-widest text-slate-600"><span>12 hours ago</span><span>Now</span><span>Projection</span></div><div class="mt-6 grid gap-3 sm:grid-cols-3">${[['CPU', '18%', 'Low'], ['Memory', '61%', 'Moderate'], ['Disk', '34%', 'Low']].map(([name, value, status]) => `<div class="rounded-xl bg-black/20 p-4"><div class="flex justify-between text-xs"><strong>${name}</strong><span class="text-slate-500">${status}</span></div><div class="mt-3 h-1.5 rounded-full bg-white/10"><div class="h-full rounded-full bg-cyan-300" style="width:${value}"></div></div><p class="mt-2 text-right text-xs font-bold">${value}</p></div>`).join('')}</div></article>
-          <aside class="rounded-2xl border border-white/10 bg-white/[.035] p-5 sm:p-6"><h3 class="font-black">Capacity forecast</h3><p class="mt-1 text-xs text-slate-500">Planning signal, not a guarantee</p><div class="mt-7 grid place-items-center"><div class="grid size-40 place-items-center rounded-full bg-[conic-gradient(#67e8f9_0_61%,#172334_61%)]"><div class="grid size-32 place-items-center rounded-full bg-[#0c1722] text-center"><span><strong class="block text-3xl">9 days</strong><small class="text-slate-500">to 75% memory</small></span></div></div></div><div class="mt-7 space-y-3 text-xs">${[['Projected previews','9'],['Estimated memory','6.1 GB'],['Confidence','Medium']].map(([a,b]) => `<div class="flex justify-between rounded-xl bg-black/20 p-3"><span class="text-slate-500">${a}</span><strong>${b}</strong></div>`).join('')}</div></aside>
-        </section>
-        <section id="apps" class="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/[.035]"><div class="flex items-center justify-between border-b border-white/10 px-5 py-4"><div><h3 class="font-black">Applications & branches</h3><p class="mt-1 text-xs text-slate-500">Runtime, delivery, and private routing status</p></div><a href="https://tabloid-admin-8c6976.tail70b7f1.ts.net/#apps" class="text-xs font-bold text-cyan-300">Manage in Admin →</a></div><div class="overflow-x-auto"><table class="w-full min-w-[820px] text-left text-sm"><thead class="text-[.65rem] uppercase tracking-[.15em] text-slate-600"><tr><th class="px-5 py-3">Application</th><th class="px-4 py-3">Branch</th><th class="px-4 py-3">Health</th><th class="px-4 py-3">Runtime</th><th class="px-4 py-3">Route</th><th class="px-5 py-3"></th></tr></thead><tbody class="divide-y divide-white/10">${services.map(([name, branch, status, runtime, route]) => `<tr class="${branch === selectedAppKey ? 'bg-cyan-300/[.06]' : ''}"><td class="px-5 py-4 font-bold">${name}</td><td class="px-4 py-4 font-mono text-xs text-slate-400">${branch}</td><td class="px-4 py-4 text-xs font-bold ${status === 'Healthy' ? 'text-emerald-300' : 'text-amber-300'}">● ${status}</td><td class="px-4 py-4 text-xs text-slate-400">${runtime}</td><td class="px-4 py-4 text-xs text-slate-400">${route}</td><td class="px-5 py-4 text-right"><a href="?app=${encodeURIComponent(branch)}#app-detail" class="text-xs font-bold text-cyan-300 hover:text-cyan-100">View stats →</a></td></tr>`).join('')}</tbody></table></div></section>
-        <section id="app-detail" class="mt-6 scroll-mt-24 rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-cyan-300/[.07] to-white/[.025] p-5 sm:p-7"><div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p class="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Application detail</p><h3 class="mt-2 text-3xl font-black tracking-[-.04em]">${selectedApp.name}</h3><p class="mt-2 font-mono text-xs text-slate-500">branch: ${selectedAppKey}</p></div><span class="w-fit rounded-full bg-emerald-300/10 px-3 py-1.5 text-xs font-bold text-emerald-300">● Healthy</span></div><div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">${[['Requests · 24h', selectedApp.requests], ['Median latency', selectedApp.latency], ['Availability · 30d', selectedApp.availability], ['Runtime memory', selectedApp.memory]].map(([label, value]) => `<article class="rounded-xl border border-white/10 bg-black/20 p-4"><p class="text-xs font-semibold text-slate-500">${label}</p><p class="mt-3 text-2xl font-black">${value}</p></article>`).join('')}</div><div class="mt-5 grid gap-4 lg:grid-cols-[1.25fr_.75fr]"><div class="rounded-xl border border-white/10 bg-black/20 p-5"><div class="flex items-center justify-between"><div><p class="text-sm font-bold">Request trend</p><p class="mt-1 text-xs text-slate-500">Observed requests, last 12 hours</p></div><span class="text-xs font-bold text-emerald-300">+8.4%</span></div><div class="mt-6 flex h-28 items-end gap-2">${[28,42,36,52,48,63,57,74,69,82,77,91].map((height) => `<span class="flex-1 rounded-t bg-cyan-300/70" style="height:${height}%"></span>`).join('')}</div></div><aside class="rounded-xl border border-white/10 bg-black/20 p-5"><p class="text-sm font-bold">Deployment</p><p class="mt-3 text-lg font-black">${selectedApp.deployment}</p><p class="mt-3 text-xs leading-5 text-slate-500">${selectedApp.note}</p><p class="mt-4 text-[.65rem] font-bold uppercase tracking-widest text-amber-300">Prototype data</p></aside></div></section>
-        <section id="activity" class="mt-6 rounded-2xl border border-white/10 bg-white/[.035] p-5 sm:p-6"><h3 class="font-black">System activity</h3><p class="mt-1 text-xs text-slate-500">Build, deploy, routing, and workspace events</p><div class="mt-5 divide-y divide-white/10">${events.map(([title, source, detail, time, tone]) => `<article class="grid gap-3 py-4 sm:grid-cols-[12rem_1fr_auto] sm:items-center"><div class="flex items-center gap-3"><span class="size-2 rounded-full ${tone}"></span><strong class="text-sm">${title}</strong></div><p class="text-xs text-slate-500"><span class="mr-2 rounded bg-white/5 px-2 py-1 font-mono">${source}</span>${detail}</p><time class="text-xs text-slate-600">${time}</time></article>`).join('')}</div></section>
-        <p class="mt-6 text-center text-xs text-slate-600">Prototype data · Live adapters and retention are specified in the implementation handoff.</p>
-      </main>
-    </div>
-  </div>`
-
+document.title='Brain | Tabloid'
+document.querySelector('#app').innerHTML=`<div class="shell"><header class="topbar"><a class="brand" href="#top"><span class="brand-mark">B</span><span><b>Brain</b><small>System intelligence</small></span></a><div class="top-actions"><span class="live"><i></i> Neural map live</span><span data-shared-nav-slot></span><button class="avatar">DR</button></div></header><main id="top">
+<section class="hero"><div><p class="kicker">Your system, understood</p><h1>Every connection.<br><span>One living brain.</span></h1><p class="intro">Explore how your applications talk, depend on one another, and behave as a single organism.</p></div><div class="pulse-card"><span class="pulse-orb"><i></i></span><div><small>System pulse</small><strong>98.7</strong><p>Strong · 1 route needs attention</p></div></div></section>
+<section class="metrics" aria-label="Topology summary">${[['Connected apps','8','All discovered'],['Active routes','10','9 healthy'],['Flow · 24h','23.9k','↑ 12.4%'],['Median latency','47 ms','Across all routes']].map(x=>`<article><span>${x[0]}</span><strong>${x[1]}</strong><small>${x[2]}</small></article>`).join('')}</section>
+<section class="workspace"><div class="section-head"><div><p class="kicker">Neural topology</p><h2>Connection map</h2><p>Select a node to trace every route in and out.</p></div><div class="filters" role="group"><button data-filter="all" class="active">All</button><button data-filter="healthy">Healthy</button><button data-filter="warning">Attention</button></div></div><div class="map-grid"><div class="graph"><div class="graph-toolbar"><span><i class="legend healthy"></i> Healthy</span><span><i class="legend warning"></i> Attention</span><span class="prototype">Prototype telemetry</span></div><svg id="lines" class="lines" viewBox="0 0 1000 620" preserveAspectRatio="none"></svg><div id="nodes" class="nodes"></div></div><aside id="inspector" class="inspector" aria-live="polite"></aside></div></section>
+<section class="routes"><div class="section-head compact"><div><p class="kicker">Route registry</p><h2>How everything connects</h2></div><label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search app, path, or protocol" aria-label="Search routes"></label></div><div class="table-wrap"><table><thead><tr><th>Connection</th><th>Protocol & path</th><th>Dependency</th><th>Health</th><th>Latency</th><th>Traffic · 24h</th></tr></thead><tbody id="route-body"></tbody></table></div></section><footer><span>Brain / topology prototype</span><span>Static demo data · live collectors are not connected yet</span></footer></main></div>`
 mountSharedNav()
 
-if (requestedApp) window.requestAnimationFrame(() => document.querySelector('#app-detail')?.scrollIntoView({ block: 'start' }))
+function renderGraph(){
+  document.querySelector('#lines').innerHTML=routes.map((r,i)=>{const a=getApp(r.from),b=getApp(r.to),visible=filter==='all'||r.health===filter,related=selected===r.from||selected===r.to;return `<line x1="${a.x*10}" y1="${a.y*6.2}" x2="${b.x*10}" y2="${b.y*6.2}" class="edge ${r.health} ${related?'related':''} ${visible?'':'hidden'}"/><circle class="packet ${r.health} ${visible?'':'hidden'}" r="4"><animateMotion dur="${3+i%4}s" repeatCount="indefinite" path="M ${a.x*10} ${a.y*6.2} L ${b.x*10} ${b.y*6.2}"/></circle>`}).join('')
+  document.querySelector('#nodes').innerHTML=apps.map(a=>{const related=routes.some(r=>(r.from===selected&&r.to===a.id)||(r.to===selected&&r.from===a.id));return `<button class="node ${a.id===selected?'selected':''} ${a.id!==selected&&!related?'dim':''}" style="--x:${a.x}%;--y:${a.y}%;--node:${a.color}" data-node="${a.id}" aria-pressed="${a.id===selected}"><span class="node-core">${a.name.slice(0,2).toUpperCase()}</span><span class="node-copy"><b>${a.name}</b><small>${a.role}</small></span></button>`}).join('')
+  document.querySelectorAll('[data-node]').forEach(b=>b.onclick=()=>select(b.dataset.node))
+}
+function renderInspector(){
+  const a=getApp(selected), connected=routes.filter(r=>r.from===selected||r.to===selected),avg=Math.round(connected.reduce((s,r)=>s+r.latency,0)/(connected.length||1))
+  document.querySelector('#inspector').innerHTML=`<div class="inspector-top"><span class="detail-icon" style="--node:${a.color}">${a.name.slice(0,2).toUpperCase()}</span><div><small>Selected node</small><h3>${a.name}</h3><p>${a.role}</p></div><span class="status ${a.status}">${a.status==='healthy'?'Healthy':'Attention'}</span></div><div class="detail-stats"><div><span>Connections</span><strong>${connected.length}</strong></div><div><span>Avg latency</span><strong>${avg} ms</strong></div><div><span>Runtime</span><strong>${a.runtime}</strong></div></div><h4>Connected routes</h4><div class="connected-list">${connected.map(r=>{const incoming=r.to===selected,p=getApp(incoming?r.from:r.to);return `<button data-peer="${p.id}"><span class="peer-icon" style="--node:${p.color}">${p.name[0]}</span><span><b>${incoming?'←':'→'} ${p.name}</b><small>${r.protocol} · ${r.path}</small></span><i class="route-dot ${r.health}"></i></button>`}).join('')||'<p>No registered routes.</p>'}</div><div class="insight"><span>✦</span><div><b>Topology insight</b><p>${selected==='brain'?'Brain reaches every core product directly. Logging is the only degraded path and adds 47 ms above median.':`${a.name} has ${connected.length} registered connection${connected.length===1?'':'s'}. Select a peer to continue tracing the graph.`}</p></div></div>`
+  document.querySelectorAll('[data-peer]').forEach(b=>b.onclick=()=>select(b.dataset.peer))
+}
+function renderRoutes(q=''){
+  const needle=q.toLowerCase(),list=routes.filter(r=>filter==='all'||r.health===filter).filter(r=>`${getApp(r.from).name} ${getApp(r.to).name} ${r.protocol} ${r.path} ${r.dependency}`.toLowerCase().includes(needle))
+  document.querySelector('#route-body').innerHTML=list.map(r=>`<tr class="${r.from===selected||r.to===selected?'selected-row':''}"><td><div class="connection"><span style="--node:${getApp(r.from).color}">${getApp(r.from).name[0]}</span><b>${getApp(r.from).name}</b><i>→</i><span style="--node:${getApp(r.to).color}">${getApp(r.to).name[0]}</span><b>${getApp(r.to).name}</b></div></td><td><strong class="protocol">${r.protocol}</strong><code>${r.path}</code></td><td>${r.dependency}</td><td><span class="status ${r.health}">${r.health==='healthy'?'Healthy':'Attention'}</span></td><td><b>${r.latency} ms</b></td><td>${r.traffic}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No routes match this view.</td></tr>'
+}
+function select(id){selected=id;renderGraph();renderInspector();renderRoutes(document.querySelector('#search').value)}
+document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));renderGraph();renderRoutes(document.querySelector('#search').value)})
+document.querySelector('#search').oninput=e=>renderRoutes(e.target.value)
+renderGraph();renderInspector();renderRoutes()
