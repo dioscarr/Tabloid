@@ -21,7 +21,7 @@ export async function generateWithCopilot({ appId, surface, intent, context }) {
   client ??= new CopilotClient({ gitHubToken, useLoggedInUser: false })
   await client.start()
   const session = await client.createSession({
-    model: process.env.COPILOT_MODEL || 'gpt-5',
+    model: process.env.COPILOT_MODEL || 'gpt-5.4',
     mcpServers: {
       brain: {
         type: 'http',
