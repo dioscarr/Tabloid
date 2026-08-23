@@ -1,10 +1,10 @@
 {
-  "contractVersion": "1.0",
+  "contractVersion": "1.1",
   "app": {
     "id": "app-gallery",
     "name": "App Gallery",
     "branch": "app-gallery",
-    "description": "Approved application template selection and server-authorized provisioning requests."
+    "description": "Server-generated application-intent review followed by approved template selection and provisioning."
   },
   "routes": [
     {
@@ -13,6 +13,13 @@
       "protocol": "https",
       "path": "/api/v1/session",
       "purpose": "Verify the current session and application-provisioning permission through the configured Admin API."
+    },
+    {
+      "id": "admin-app-intents",
+      "direction": "outbound",
+      "protocol": "https",
+      "path": "/api/v1/app-intents",
+      "purpose": "Submit an idempotent application description and receive a server-generated decomposition for review."
     },
     {
       "id": "admin-templates",
