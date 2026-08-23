@@ -36,7 +36,7 @@ const state = {
   requestPhase: 'loading',
   requests: [],
   staleMessage: '',
-  form: { name: '', slug: '', description: '' },
+  form: { name: '', slug: '', description: '', intent: '' },
   errors: {},
   submission: { phase: 'idle', key: '', fingerprint: '', response: null, error: '' },
 }
@@ -51,7 +51,7 @@ const templateId = (item) => String(item?.id || item?.templateId || item?.slug |
 const templateName = (item) => String(item?.name || item?.displayName || templateId(item))
 const templateDescription = (item) => String(item?.description || item?.summary || '')
 const requestId = (item) => String(item?.id || item?.requestId || item?.appRequestId || item?.request?.id || '')
-const requestStatus = (item) => String(item?.status || item?.phase || item?.request?.status || 'queued').replace(/[-_]/g, ' ')
+const requestStatus = (item) => String(item?.status || item?.phase || item?.request?.status || item?.app?.status || 'queued').replace(/[-_]/g, ' ')
 const requestBranch = (item) => String(item?.branch || item?.branchName || item?.app?.branch || item?.request?.branch || '')
 const requestPreview = (item) => String(item?.previewUrl || item?.url || item?.app?.previewUrl || item?.request?.previewUrl || '')
 const idempotencyKey = () => globalThis.crypto?.randomUUID?.() || `gallery-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -101,8 +101,9 @@ function validate(form) {
   const errors = {}
   if (!state.selectedTemplate) errors.template = 'Choose a template.'
   if (form.name.length < 2 || form.name.length > 80) errors.name = 'Enter a name between 2 and 80 characters.'
-  if (!/^[a-z][a-z0-9-]{1,62}$/.test(form.slug)) errors.slug = 'Use 2–63 lowercase letters, numbers, and hyphens, starting with a letter.'
-  if (form.description.length > 1000) errors.description = 'Keep the description to 1,000 characters or fewer.'
+  if (!/^[a-z][a-z0-9-]{1,47}$/.test(form.slug)) errors.slug = 'Use 2–48 lowercase letters, numbers, and hyphens, starting with a letter.'
+  if (form.description.length > 280) errors.description = 'Keep the description to 280 characters or fewer.'
+  if (form.intent.length > 4000) errors.intent = 'Keep the customization request to 4,000 characters or fewer.'
   return errors
 }
 
@@ -146,9 +147,10 @@ function page() {
     <section class="gallery-layout" aria-labelledby="create-title"><div class="template-panel"><div class="panel-heading"><p class="eyebrow">Template</p><h2>Choose a starting point</h2><p>${state.templatePhase === 'loading' ? 'Loading worker templates; local choices are available now.' : 'Templates are supplied or confirmed by the worker.'}</p></div><div class="template-list" role="group" aria-label="App templates">${templateOptions()}</div>${state.errors.template ? `<p class="field-error">${escapeHtml(state.errors.template)}</p>` : ''}</div>
       <form id="create-app-form" class="provision-form" novalidate><div class="panel-heading"><p class="eyebrow">Create request</p><h2 id="create-title">Describe the new app</h2><p>The server validates authorization and performs all branch, preview, and deployment work.</p></div>
         <label class="field-label" for="name">Name <span aria-hidden="true">*</span></label><input class="field-input" id="name" name="name" required maxlength="80" value="${escapeHtml(state.form.name)}" aria-invalid="${Boolean(state.errors.name)}" aria-describedby="name-error" />${state.errors.name ? `<p id="name-error" class="field-error">${escapeHtml(state.errors.name)}</p>` : ''}
-        <label class="field-label" for="slug">Slug <span aria-hidden="true">*</span></label><input class="field-input" id="slug" name="slug" required maxlength="63" pattern="[a-z][a-z0-9\\-]{1,62}" value="${escapeHtml(state.form.slug)}" aria-invalid="${Boolean(state.errors.slug)}" aria-describedby="slug-hint slug-error" /><p id="slug-hint" class="field-hint">Lowercase letters, numbers, and hyphens only.</p>${state.errors.slug ? `<p id="slug-error" class="field-error">${escapeHtml(state.errors.slug)}</p>` : ''}
-        <label class="field-label" for="description">Description</label><textarea class="field-input field-textarea" id="description" name="description" maxlength="1000" aria-invalid="${Boolean(state.errors.description)}" aria-describedby="description-error">${escapeHtml(state.form.description)}</textarea>${state.errors.description ? `<p id="description-error" class="field-error">${escapeHtml(state.errors.description)}</p>` : ''}
-        <button class="submit-button" type="submit" ${state.submission.phase === 'submitting' ? 'disabled' : ''}>${state.submission.phase === 'submitting' ? 'Creating request…' : 'Create app request'}</button><p class="submit-note">The request includes the selected template, name, slug, description, and an idempotency key. It does not include credentials.</p>
+        <label class="field-label" for="slug">Slug <span aria-hidden="true">*</span></label><input class="field-input" id="slug" name="slug" required maxlength="48" pattern="[a-z][a-z0-9\\-]{1,47}" value="${escapeHtml(state.form.slug)}" aria-invalid="${Boolean(state.errors.slug)}" aria-describedby="slug-hint slug-error" /><p id="slug-hint" class="field-hint">2–48 lowercase letters, numbers, and hyphens.</p>${state.errors.slug ? `<p id="slug-error" class="field-error">${escapeHtml(state.errors.slug)}</p>` : ''}
+        <label class="field-label" for="description">Description</label><textarea class="field-input field-textarea" id="description" name="description" maxlength="280" aria-invalid="${Boolean(state.errors.description)}" aria-describedby="description-error">${escapeHtml(state.form.description)}</textarea>${state.errors.description ? `<p id="description-error" class="field-error">${escapeHtml(state.errors.description)}</p>` : ''}
+        <label class="field-label" for="intent">Customization request</label><textarea class="field-input field-textarea" id="intent" name="intent" maxlength="4000" placeholder="What should be different in this app?" aria-invalid="${Boolean(state.errors.intent)}" aria-describedby="intent-error">${escapeHtml(state.form.intent)}</textarea>${state.errors.intent ? `<p id="intent-error" class="field-error">${escapeHtml(state.errors.intent)}</p>` : ''}
+        <button class="submit-button" type="submit" ${state.submission.phase === 'submitting' ? 'disabled' : ''}>${state.submission.phase === 'submitting' ? 'Creating branch…' : 'Create editable app'}</button><p class="submit-note">The worker creates a new branch from the selected app, preserves its deployment files, and records this customization request.</p>
       </form></section>
     ${requestStatusCard()}${requestsView()}
   </section>`
@@ -218,6 +220,7 @@ async function submit(event) {
     name: String(event.currentTarget.elements.name.value || '').trim(),
     slug: String(event.currentTarget.elements.slug.value || '').trim().toLowerCase(),
     description: String(event.currentTarget.elements.description.value || '').trim(),
+    intent: String(event.currentTarget.elements.intent.value || '').trim(),
   }
   state.form = form
   state.errors = validate(form)
@@ -231,7 +234,7 @@ async function submit(event) {
     render()
     return
   }
-  const payload = { templateId: state.selectedTemplate, name: form.name, slug: form.slug, description: form.description }
+  const payload = { templateId: state.selectedTemplate, name: form.name, slug: form.slug, description: form.description, intent: form.intent }
   const fingerprint = JSON.stringify(payload)
   const key = state.submission.fingerprint === fingerprint ? state.submission.key : idempotencyKey()
   state.submission = { phase: 'submitting', key, fingerprint, response: null, error: '' }
