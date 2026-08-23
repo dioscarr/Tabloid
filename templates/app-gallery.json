@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "news-site",
+      "name": "News & publication",
+      "description": "A responsive multi-page publication with shared navigation.",
+      "sourceBranch": "main",
+      "contractPath": "public/app.contract.json",
+      "accent": "indigo"
+    },
+    {
+      "id": "operations-console",
+      "name": "Operations console",
+      "description": "A private dashboard foundation with application cards and activity.",
+      "sourceBranch": "admin",
+      "contractPath": "public/app.contract.json",
+      "accent": "emerald"
+    },
+    {
+      "id": "agent-workspace",
+      "name": "Agent workspace",
+      "description": "A starting point for tools, content proposals, and operator workflows.",
+      "sourceBranch": "brain",
+      "contractPath": "public/app.contract.json",
+      "accent": "violet"
+    }
+  ]
+}

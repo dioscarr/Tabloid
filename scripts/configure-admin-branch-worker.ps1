@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory)] [string]$AdminLogin,
-  [string]$AdminOrigin = 'https://tabloid-admin-8c6976.tail70b7f1.ts.net',
+  [string]$AdminOrigin = 'https://tabloid-app-gallery-0f8e89.tail70b7f1.ts.net',
   [int]$Port = 8790,
   [int]$HttpsPort = 9443
 )
