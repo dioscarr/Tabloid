@@ -108,13 +108,7 @@ function Normalize-Origin([string]$Origin) {
   if (-not [Uri]::TryCreate($Origin, [UriKind]::Absolute, [ref]$uri)) {
     throw "ADMIN_ALLOWED_ORIGINS contains an invalid origin: $Origin"
   }
-  if (
-    @('http', 'https') -notcontains $uri.Scheme.ToLowerInvariant()
-    -or $uri.UserInfo
-    -or $uri.AbsolutePath -ne '/'
-    -or $uri.Query
-    -or $uri.Fragment
-  ) {
+  if (@('http', 'https') -notcontains $uri.Scheme.ToLowerInvariant() -or $uri.UserInfo -or $uri.AbsolutePath -ne '/' -or $uri.Query -or $uri.Fragment) {
     throw "ADMIN_ALLOWED_ORIGINS must contain exact HTTP(S) origins without paths: $Origin"
   }
 
