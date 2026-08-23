@@ -6,6 +6,9 @@ $stateDirectory = Join-Path $env:LOCALAPPDATA 'Tabloid'
 $config = Get-Content -Raw (Join-Path $stateDirectory 'admin-worker.json') | ConvertFrom-Json
 $podman = Join-Path $env:LOCALAPPDATA 'Programs\Podman\podman.exe'
 $tombstonePath = Join-Path $stateDirectory 'preview-tombstones.json'
+$previewStatePath = Join-Path $stateDirectory 'preview-state.json'
+$staticVolume = 'tabloid-static-deployments'
+$staticGatewayImage = 'localhost/tabloid-static-gateway:latest'
 $listener = [Net.HttpListener]::new()
 $listener.Prefixes.Add("http://127.0.0.1:$($config.port)/")
 
@@ -35,16 +38,28 @@ function Test-Workspace([string]$Id) {
   Invoke-Podman @('exec', '--user', 'abc', 'code-server', 'test', '-e', "/config/workspaces/$Id/.git") -AllowFailure
 }
 
+function Test-StaticDeployment([string]$Project) {
+  if (-not (Test-Path $previewStatePath)) { return $false }
+  try {
+    $state = Get-Content -Raw $previewStatePath | ConvertFrom-Json
+    $record = $state.PSObject.Properties[$Project]
+    return $null -ne $record -and [string]$record.Value.mode -eq 'static'
+  } catch { return $false }
+}
+
 function Get-Inventory([string]$Branch) {
   $id = Get-PreviewId $Branch
   $project = if ($Branch -eq 'main') { 'my-web-stack' } else { "tabloid-preview-$id" }
   $appContainerName = if ($Branch -eq 'main') { 'tabloid' } else { "$project-app" }
   $tailscaleContainerName = if ($Branch -eq 'main') { 'tabloid-tailscale' } else { "$project-tailscale" }
   $networkName = if ($Branch -eq 'main') { 'my-web-stack_default' } else { $project }
+  $legacyApp = Test-Resource 'container' $appContainerName
+  $staticDeployment = if ($Branch -eq 'main') { $false } else { Test-StaticDeployment $project }
   [ordered]@{
     branch = $Branch; id = $id; project = $project
     image = if ($Branch -eq 'main') { 'ghcr.io/dioscarr/tabloid:main' } else { "ghcr.io/dioscarr/tabloid:preview-$id" }
-    appContainer = Test-Resource 'container' $appContainerName
+    appContainer = $legacyApp -or $staticDeployment
+    staticHosting = $staticDeployment
     tailscaleContainer = Test-Resource 'container' $tailscaleContainerName
     network = Test-Resource 'network' $networkName
     volume = if ($Branch -eq 'main') { $false } else { Test-Resource 'volume' "$project-tailscale-state" }
@@ -81,6 +96,9 @@ function Remove-Preview([string]$Branch, [bool]$PurgeVolume) {
   foreach ($container in @("$($item.project)-tailscale", "$($item.project)-app")) { if (Test-Resource 'container' $container) { Invoke-Podman @('rm', '--force', $container) | Out-Null } }
   if (Test-Resource 'network' $item.project) { Invoke-Podman @('network', 'rm', $item.project) | Out-Null }
   if ($PurgeVolume -and (Test-Resource 'volume' "$($item.project)-tailscale-state")) { Invoke-Podman @('volume', 'rm', "$($item.project)-tailscale-state") | Out-Null }
+  if (Test-Resource 'volume' $staticVolume) {
+    Invoke-Podman @('run', '--rm', '--entrypoint', '/bin/sh', '--volume', "${staticVolume}:/deployments", $staticGatewayImage, '-c', "rm -rf /deployments/$($item.id)") -AllowFailure | Out-Null
+  }
   Invoke-Podman @('image', 'rm', $item.image) -AllowFailure | Out-Null
   Get-Inventory $Branch
 }
