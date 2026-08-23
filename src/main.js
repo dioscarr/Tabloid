@@ -22,12 +22,12 @@ const localTemplates = Object.freeze([
 // deployment system, or Podman is unavailable. URLs are known preview routes,
 // not claimed deployment or health information.
 const inventory = Object.freeze([
-  ['The Daily Echo', 'https://tabloid.tail70b7f1.ts.net/', 'daily-echo'],
-  ['Admin', 'https://tabloid-admin-8c6976.tail70b7f1.ts.net/', 'admin-control'],
-  ['App Gallery', 'https://tabloid-app-gallery-0f8e89.tail70b7f1.ts.net/', 'app-gallery'],
-  ['Big News', 'https://tabloid-big-news-f1a4f4.tail70b7f1.ts.net/', 'big-news'],
-  ['Tech', 'https://tabloid-tech-fe9bbd.tail70b7f1.ts.net/', 'tech'],
-].map(([name, url, templateId]) => ({ name, url, templateId })))
+  ['The Daily Echo', 'https://tabloid.tail70b7f1.ts.net/', 'daily-echo', 'daily', 'Today\'s local briefing'],
+  ['Admin', 'https://tabloid-admin-8c6976.tail70b7f1.ts.net/', 'admin-control', 'admin', 'Control plane'],
+  ['App Gallery', 'https://tabloid-app-gallery-0f8e89.tail70b7f1.ts.net/', 'app-gallery', 'gallery', 'Apps and templates'],
+  ['Big News', 'https://tabloid-big-news-f1a4f4.tail70b7f1.ts.net/', 'big-news', 'news', 'Intelligence briefing'],
+  ['Tech', 'https://tabloid-tech-fe9bbd.tail70b7f1.ts.net/', 'tech', 'tech', 'Engineering signal'],
+].map(([name, url, templateId, preview, headline]) => ({ name, url, templateId, preview, headline })))
 
 const state = {
   templates: [...localTemplates],
@@ -142,7 +142,7 @@ function page() {
   return `<section class="gallery-home" aria-labelledby="gallery-title">
     <div class="gallery-home__heading"><div><p class="eyebrow">Application gallery</p><h1 id="gallery-title">Apps, templates, and requests</h1><p>Browse known apps immediately. Creating an app sends a small, idempotent request to the private worker; no GitHub or deployment credentials are in this browser.</p></div></div>
     ${staleNotice()}
-    <section aria-labelledby="inventory-title"><h2 id="inventory-title" class="sr-only">Known apps</h2><div class="app-gallery-grid">${inventory.map((item) => `<article class="app-gallery-card"><div class="app-gallery-card__preview"><span class="app-gallery-card__monogram" aria-hidden="true">${escapeHtml(item.name.slice(0, 2).toUpperCase())}</span><span>Open the app in a new tab</span></div><div class="app-gallery-card__body"><h2>${escapeHtml(item.name)}</h2><div class="state-actions"><a class="secondary-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open app</a><button class="secondary-button" type="button" data-create-from="${escapeHtml(item.templateId)}">Create from this app</button></div></div></article>`).join('')}</div></section>
+    <section aria-labelledby="inventory-title"><h2 id="inventory-title" class="sr-only">Known apps</h2><div class="app-gallery-grid">${inventory.map((item) => `<article class="app-gallery-card"><div class="app-gallery-card__preview app-gallery-card__preview--${escapeHtml(item.preview)}" aria-label="${escapeHtml(item.name)} visual preview"><div class="preview-browser-bar"><span></span><span></span><span></span><i></i></div><div class="preview-site"><div class="preview-site__masthead">${escapeHtml(item.name)}</div><div class="preview-site__nav"><span></span><span></span><span></span></div><div class="preview-site__content"><p>${escapeHtml(item.headline)}</p><div></div><div></div><div></div></div></div></div><div class="app-gallery-card__body"><h2>${escapeHtml(item.name)}</h2><div class="state-actions"><a class="secondary-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open app</a><button class="secondary-button" type="button" data-create-from="${escapeHtml(item.templateId)}">Create from this app</button></div></div></article>`).join('')}</div></section>
     <section class="gallery-layout" aria-labelledby="create-title"><div class="template-panel"><div class="panel-heading"><p class="eyebrow">Template</p><h2>Choose a starting point</h2><p>${state.templatePhase === 'loading' ? 'Loading worker templates; local choices are available now.' : 'Templates are supplied or confirmed by the worker.'}</p></div><div class="template-list" role="group" aria-label="App templates">${templateOptions()}</div>${state.errors.template ? `<p class="field-error">${escapeHtml(state.errors.template)}</p>` : ''}</div>
       <form id="create-app-form" class="provision-form" novalidate><div class="panel-heading"><p class="eyebrow">Create request</p><h2 id="create-title">Describe the new app</h2><p>The server validates authorization and performs all branch, preview, and deployment work.</p></div>
         <label class="field-label" for="name">Name <span aria-hidden="true">*</span></label><input class="field-input" id="name" name="name" required maxlength="80" value="${escapeHtml(state.form.name)}" aria-invalid="${Boolean(state.errors.name)}" aria-describedby="name-error" />${state.errors.name ? `<p id="name-error" class="field-error">${escapeHtml(state.errors.name)}</p>` : ''}
