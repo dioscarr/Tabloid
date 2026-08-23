@@ -7,6 +7,7 @@ $config = Get-Content -Raw (Join-Path $stateDirectory 'admin-worker.json') | Con
 $podman = Join-Path $env:LOCALAPPDATA 'Programs\Podman\podman.exe'
 $tombstonePath = Join-Path $stateDirectory 'preview-tombstones.json'
 $previewStatePath = Join-Path $stateDirectory 'preview-state.json'
+$branchCachePath = Join-Path $stateDirectory 'admin-branch-cache.json'
 $staticVolume = 'tabloid-static-deployments'
 $staticGatewayImage = 'localhost/tabloid-static-gateway:latest'
 $listener = [Net.HttpListener]::new()
@@ -45,6 +46,23 @@ function Test-StaticDeployment([string]$Project) {
     $record = $state.PSObject.Properties[$Project]
     return $null -ne $record -and [string]$record.Value.mode -eq 'static'
   } catch { return $false }
+}
+
+function Get-BranchNames {
+  try {
+    $remote = Invoke-RestMethod -Headers @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'tabloid-admin-worker' } -Uri 'https://api.github.com/repos/dioscarr/Tabloid/branches?per_page=100' -TimeoutSec 20
+    $names = @($remote | ForEach-Object { [string]$_.name })
+    $names | ConvertTo-Json | Set-Content -Encoding utf8 $branchCachePath
+    return $names
+  } catch {
+    if (Test-Path $branchCachePath) { return @(Get-Content -Raw $branchCachePath | ConvertFrom-Json) }
+    $names = @('main')
+    if (Test-Path $previewStatePath) {
+      $state = Get-Content -Raw $previewStatePath | ConvertFrom-Json
+      $names += @($state.PSObject.Properties | ForEach-Object { [string]$_.Value.branch })
+    }
+    return @($names | Sort-Object -Unique)
+  }
 }
 
 function Get-Inventory([string]$Branch) {
@@ -104,12 +122,14 @@ function Remove-Preview([string]$Branch, [bool]$PurgeVolume) {
 }
 
 function Write-Json($Response, [int]$Status, $Body) {
-  $bytes = [Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Depth 8 -Compress))
   $Response.StatusCode = $Status
-  $Response.ContentType = 'application/json'
   $Response.Headers['Access-Control-Allow-Origin'] = [string]$config.adminOrigin
   $Response.Headers['Access-Control-Allow-Headers'] = 'content-type'
   $Response.Headers['Access-Control-Allow-Methods'] = 'GET,POST,DELETE,OPTIONS'
+  if ($Status -eq 204) { $Response.Close(); return }
+  $bytes = [Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Depth 8 -Compress))
+  $Response.ContentType = 'application/json'
+  $Response.ContentLength64 = $bytes.Length
   $Response.OutputStream.Write($bytes, 0, $bytes.Length)
   $Response.Close()
 }
@@ -127,8 +147,7 @@ while ($listener.IsListening) {
       Write-Json $context.Response 403 @{ error = 'Forbidden' }; continue
     }
     if ($request.HttpMethod -eq 'GET' -and $request.Url.AbsolutePath -eq '/api/v1/branches') {
-      $remote = Invoke-RestMethod -Headers @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'tabloid-admin-worker' } -Uri 'https://api.github.com/repos/dioscarr/Tabloid/branches?per_page=100'
-      Write-Json $context.Response 200 @{ branches = @($remote | ForEach-Object { Get-Inventory $_.name }) }; continue
+      Write-Json $context.Response 200 @{ branches = @(Get-BranchNames | ForEach-Object { Get-Inventory $_ }) }; continue
     }
     if ($request.Url.AbsolutePath -notmatch '^/api/v1/branches/([^/]+)/(workspace|preview)$') { Write-Json $context.Response 404 @{ error = 'Not found' }; continue }
     $branch = [Uri]::UnescapeDataString($Matches[1]); $action = $Matches[2]
