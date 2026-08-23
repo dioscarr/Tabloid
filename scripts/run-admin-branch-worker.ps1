@@ -2,7 +2,8 @@
 param()
 
 $ErrorActionPreference = 'Stop'
-$worker = Join-Path $PSScriptRoot 'admin-branch-worker.ps1'
+$galleryWorker = Join-Path (Split-Path -Parent $PSScriptRoot) 'work\app-gallery-direct\scripts\admin-branch-worker.ps1'
+$worker = if (Test-Path $galleryWorker) { $galleryWorker } else { Join-Path $PSScriptRoot 'admin-branch-worker.ps1' }
 $log = Join-Path $env:LOCALAPPDATA 'Tabloid\admin-worker-supervisor.log'
 
 while ($true) {

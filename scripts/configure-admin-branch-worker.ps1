@@ -2,6 +2,7 @@
 param(
   [Parameter(Mandatory)] [string]$AdminLogin,
   [string]$AdminOrigin = 'https://tabloid-admin-8c6976.tail70b7f1.ts.net',
+  [string]$GalleryOrigin = 'https://tabloid-app-gallery-0f8e89.tail70b7f1.ts.net',
   [int]$Port = 8790,
   [int]$HttpsPort = 9443
 )
@@ -12,7 +13,7 @@ $runner = Join-Path $PSScriptRoot 'run-admin-branch-worker.ps1'
 $stateDirectory = Join-Path $env:LOCALAPPDATA 'Tabloid'
 $configPath = Join-Path $stateDirectory 'admin-worker.json'
 New-Item -ItemType Directory -Force -Path $stateDirectory | Out-Null
-[ordered]@{ adminLogin = $AdminLogin.ToLowerInvariant(); adminOrigin = $AdminOrigin; port = $Port } | ConvertTo-Json | Set-Content -Encoding utf8 $configPath
+[ordered]@{ adminLogin = $AdminLogin.ToLowerInvariant(); adminOrigin = $AdminOrigin; allowedOrigins = @($AdminOrigin, $GalleryOrigin); port = $Port } | ConvertTo-Json | Set-Content -Encoding utf8 $configPath
 
 $taskName = 'Tabloid Admin Branch Worker'
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$runner`""
