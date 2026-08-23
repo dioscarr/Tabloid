@@ -9,6 +9,7 @@ import { generateWithCopilot, stopCopilot } from './copilot.js'
 import { contentStore } from './content-store.js'
 import { controlStore } from './control-store.js'
 import { getLiveFeed } from './feed.js'
+import { authorize } from './authorization.js'
 
 const port = Number(process.env.PORT || 8787)
 const host = process.env.HOST || '0.0.0.0'
@@ -27,6 +28,8 @@ const buildMcpServer = () => {
   register('content_surfaces_list', { description: 'List admin-editable content surfaces for an application.', inputSchema: z.object({ appId: z.string() }), annotations: readOnly }, async ({ appId }) => textResult({ surfaces: catalog.listSurfaces(appId) }))
   register('content_read', { description: 'Read the current content adapter view for an application surface.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string() }), annotations: readOnly }, async ({ appId, surfaceId }) => textResult(catalog.readContent(appId, surfaceId)))
   register('content_propose', { description: 'Generate a reviewable content proposal. This tool does not publish.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string(), intent: z.string(), context: z.record(z.string(), z.unknown()).optional() }) }, async ({ appId, surfaceId, intent, context }) => {
+    const decision = await authorize({ subject: context?.subject || 'tailnet-admin', application: appId, action: 'content.propose', context: { surfaceId } })
+    if (!decision.allowed) return { isError: true, content: [{ type: 'text', text: `Authorization denied: ${decision.reason}` }] }
     const surface = catalog.listSurfaces(appId).find(({ id }) => id === surfaceId)
     if (!surface) return { isError: true, content: [{ type: 'text', text: `Unknown surface ${appId}/${surfaceId}` }] }
     const content = await generateWithCopilot({ appId, surface, intent, context })
@@ -77,9 +80,9 @@ const apiHandler = async (request) => {
       if (!action && request.method === 'GET') return json(contentStore.get(appId, pageId), 200, cors)
       if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, cors)
       const body = await request.json()
-      if (action === 'draft') return json(contentStore.saveDraft(appId, pageId, body.values, body.actor), 201, cors)
-      if (action === 'publish') return json(contentStore.publish(appId, pageId, body), 200, cors)
-      if (action === 'rollback') return json(contentStore.rollback(appId, pageId, body), 200, cors)
+      if (action === 'draft') { const decision = await authorize({ subject: body.actor || request.headers.get('x-actor') || 'tailnet-admin', application: appId, action: 'content.propose', context: { pageId } }); if (!decision.allowed) return json({ error: 'Authorization denied', decision }, 403, cors); return json(contentStore.saveDraft(appId, pageId, body.values, body.actor), 201, cors) }
+      if (action === 'publish') { const decision = await authorize({ subject: body.actor || request.headers.get('x-actor') || 'tailnet-admin', application: appId, action: 'content.publish', context: { pageId } }); if (!decision.allowed) return json({ error: 'Authorization denied', decision }, 403, cors); return json(contentStore.publish(appId, pageId, body), 200, cors) }
+      if (action === 'rollback') { const decision = await authorize({ subject: body.actor || request.headers.get('x-actor') || 'tailnet-admin', application: appId, action: 'content.publish', context: { pageId, rollback: true } }); if (!decision.allowed) return json({ error: 'Authorization denied', decision }, 403, cors); return json(contentStore.rollback(appId, pageId, body), 200, cors) }
       if (action === 'rewrite') {
         const fields = Object.keys(body.values || {})
         if (!fields.length || fields.length > 250) return json({ error: 'Provide between 1 and 250 page fields.' }, 400, cors)
