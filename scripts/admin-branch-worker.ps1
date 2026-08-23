@@ -122,7 +122,7 @@ function Remove-Preview([string]$Branch, [bool]$PurgeVolume) {
   if (Test-Resource 'network' $item.project) { Invoke-Podman @('network', 'rm', $item.project) | Out-Null }
   if ($PurgeVolume -and (Test-Resource 'volume' "$($item.project)-tailscale-state")) { Invoke-Podman @('volume', 'rm', "$($item.project)-tailscale-state") | Out-Null }
   if (Test-Resource 'volume' $staticVolume) {
-    Invoke-Podman @('run', '--rm', '--entrypoint', '/bin/sh', '--volume', "${staticVolume}:/deployments", $staticGatewayImage, '-c', "rm -rf /deployments/$($item.id)") -AllowFailure | Out-Null
+    Invoke-Podman @('run', '--rm', '--user', '0', '--entrypoint', '/bin/sh', '--volume', "${staticVolume}:/deployments", $staticGatewayImage, '-c', "rm -rf /deployments/$($item.id)") -AllowFailure | Out-Null
   }
   Invoke-Podman @('image', 'rm', $item.image) -AllowFailure | Out-Null
   Get-Inventory $Branch

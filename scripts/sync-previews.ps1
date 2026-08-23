@@ -116,10 +116,19 @@ function Publish-StaticDeployment([string]$Id, [string]$Sha, [string]$Image) {
   $script = "set -eu; target=/deployments/$Id/$Sha; mkdir -p `$target; cp -R /usr/share/nginx/html/. `$target/; ln -sfn $Sha /deployments/$Id/current"
   Invoke-Podman -Arguments @(
     'run', '--rm',
+    '--user', '0',
     '--entrypoint', '/bin/sh',
     '--volume', "${staticVolume}:/deployments",
     $Image, '-c', $script
   ) | Out-Null
+}
+
+function Test-StaticPreviewImage([string]$Image) {
+  return Test-Podman -Arguments @(
+    'run', '--rm',
+    '--entrypoint', '/bin/sh',
+    $Image, '-c', 'test -d /usr/share/nginx/html'
+  )
 }
 
 function Deploy-Preview {
@@ -220,7 +229,7 @@ function Remove-Preview([string]$Project, [string]$Id) {
   }
   if ($Id -and (Test-Podman -Arguments @('volume', 'exists', $staticVolume))) {
     $script = "rm -rf /deployments/$Id"
-    Invoke-Podman -Arguments @('run', '--rm', '--entrypoint', '/bin/sh', '--volume', "${staticVolume}:/deployments", $staticGatewayImage, '-c', $script) -AllowFailure | Out-Null
+    Invoke-Podman -Arguments @('run', '--rm', '--user', '0', '--entrypoint', '/bin/sh', '--volume', "${staticVolume}:/deployments", $staticGatewayImage, '-c', $script) -AllowFailure | Out-Null
   }
 }
 
@@ -268,6 +277,11 @@ foreach ($branch in $branches) {
 
   if (-not (Invoke-Podman -Arguments @('pull', $image) -AllowFailure)) {
     Write-Warning "Preview image is not ready for branch '$($branch.name)'; leaving any current preview untouched."
+    if ($previous.ContainsKey($project)) { $desired[$project] = $previous[$project] }
+    continue
+  }
+  if (-not (Test-StaticPreviewImage $image)) {
+    Write-Warning "Preview image for branch '$($branch.name)' is not a static site; leaving any current preview untouched."
     if ($previous.ContainsKey($project)) { $desired[$project] = $previous[$project] }
     continue
   }
