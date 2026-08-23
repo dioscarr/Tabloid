@@ -32,8 +32,13 @@ const writeStore = (store) => {
   renameSync(temporary, storePath)
 }
 const control = (store) => (store.control ??= { tools: {}, skills: {}, activity: [] })
-const addActivity = (state, event) => {
-  state.activity.unshift({ id: randomUUID(), createdAt: new Date().toISOString(), actor: 'tailnet-admin', ...event })
+const actorPattern = /^[a-z0-9][a-z0-9._:@/-]{0,127}$/i
+const cleanActor = (actor) => {
+  if (typeof actor !== 'string' || !actorPattern.test(actor)) throw new Error('Invalid actor identity.')
+  return actor
+}
+const addActivity = (state, actor, event) => {
+  state.activity.unshift({ id: randomUUID(), createdAt: new Date().toISOString(), actor: cleanActor(actor), ...event })
   state.activity = state.activity.slice(0, 100)
 }
 
@@ -43,16 +48,19 @@ export const controlStore = {
     return toolDefinitions.map((definition) => ({ ...definition, enabled: state.tools[definition.id]?.enabled ?? definition.defaultEnabled, approvalMode: state.tools[definition.id]?.approvalMode ?? definition.approvalMode, updatedAt: state.tools[definition.id]?.updatedAt ?? null }))
   },
   isToolEnabled(id) { return this.listTools().find((tool) => tool.id === id)?.enabled === true },
-  configureTool(id, input) {
+  configureTool(id, input, actor) {
     const definition = toolDefinitions.find((tool) => tool.id === id)
     if (!definition) throw new Error('Unknown tool.')
+    if (!input || typeof input !== 'object' || Array.isArray(input) || !Object.keys(input).every((key) => ['enabled', 'approvalMode'].includes(key)) || !Object.keys(input).length) throw new Error('Invalid tool configuration.')
+    if (Object.hasOwn(input, 'enabled') && typeof input.enabled !== 'boolean') throw new Error('Tool enabled must be a boolean.')
+    if (Object.hasOwn(input, 'approvalMode') && typeof input.approvalMode !== 'string') throw new Error('Invalid approval mode.')
     if (id === 'content_publish' && input.enabled === true) throw new Error('The MCP publish tool remains locked; use the explicit revision API until identity roles are enforced.')
     const store = readStore(); const state = control(store)
     const previous = state.tools[id] || {}
     const approvalMode = input.approvalMode ?? previous.approvalMode ?? definition.approvalMode
     if (!['automatic', 'review', 'manual', 'blocked'].includes(approvalMode)) throw new Error('Invalid approval mode.')
     state.tools[id] = { enabled: input.enabled ?? previous.enabled ?? definition.defaultEnabled, approvalMode, updatedAt: new Date().toISOString() }
-    addActivity(state, { type: 'tool.configuration', subject: id, message: `${state.tools[id].enabled ? 'Enabled' : 'Disabled'} ${definition.name} · ${approvalMode}` })
+    addActivity(state, actor, { type: 'tool.configuration', subject: id, message: `${state.tools[id].enabled ? 'Enabled' : 'Disabled'} ${definition.name} · ${approvalMode}` })
     writeStore(store)
     return this.listTools().find((tool) => tool.id === id)
   },
@@ -60,12 +68,13 @@ export const controlStore = {
     const state = control(readStore())
     return skillDefinitions.map((definition) => ({ ...definition, enabled: state.skills[definition.id]?.enabled ?? definition.defaultEnabled, updatedAt: state.skills[definition.id]?.updatedAt ?? null }))
   },
-  configureSkill(id, input) {
+  configureSkill(id, input, actor) {
     const definition = skillDefinitions.find((skill) => skill.id === id)
     if (!definition) throw new Error('Unknown skill.')
+    if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 1 || !Object.hasOwn(input, 'enabled') || typeof input.enabled !== 'boolean') throw new Error('Invalid skill configuration.')
     const store = readStore(); const state = control(store)
-    state.skills[id] = { enabled: Boolean(input.enabled), updatedAt: new Date().toISOString() }
-    addActivity(state, { type: 'skill.configuration', subject: id, message: `${state.skills[id].enabled ? 'Enabled' : 'Disabled'} ${definition.name}` })
+    state.skills[id] = { enabled: input.enabled, updatedAt: new Date().toISOString() }
+    addActivity(state, actor, { type: 'skill.configuration', subject: id, message: `${state.skills[id].enabled ? 'Enabled' : 'Disabled'} ${definition.name}` })
     writeStore(store)
     return this.listSkills().find((skill) => skill.id === id)
   },

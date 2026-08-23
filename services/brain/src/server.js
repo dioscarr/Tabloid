@@ -1,6 +1,8 @@
 import { createServer } from 'node:http'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, timingSafeEqual } from 'node:crypto'
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createMcpHandler, McpServer } from '@modelcontextprotocol/server'
 import { toNodeHandler } from '@modelcontextprotocol/node'
 import * as z from 'zod/v4'
@@ -13,115 +15,370 @@ import { authorize } from './authorization.js'
 
 const port = Number(process.env.PORT || 8787)
 const host = process.env.HOST || '0.0.0.0'
-const readSecret = (value, file) => value || (file ? readFileSync(file, 'utf8').trim() : '')
-const token = readSecret(process.env.BRAIN_MCP_TOKEN, process.env.BRAIN_MCP_TOKEN_FILE)
-const allowedOrigin = /^https:\/\/tabloid(?:-[a-z0-9-]+)?\.tail70b7f1\.ts\.net$/
+const maxBodyBytes = 64 * 1024
+const browserOrigin = /^https:\/\/tabloid(?:-[a-z0-9-]+)?\.tail70b7f1\.ts\.net$/i
+const actorPattern = /^[a-z0-9][a-z0-9._:@/-]{0,127}$/i
+const idPattern = /^[a-z0-9][a-z0-9-]{0,63}$/i
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const json = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json', ...headers } })
 const textResult = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value })
+const isPlainObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype
+
+class RequestError extends Error {
+  constructor(status, message) {
+    super(message)
+    this.status = status
+  }
+}
+
+const readSecret = (value, file, name) => {
+  const secret = value || (file ? readFileSync(file, 'utf8') : '')
+  if (typeof secret !== 'string') throw new Error(`${name} must be a string.`)
+  return secret.trim()
+}
+
+const normalizeOrigin = (value) => {
+  if (!value) return ''
+  let parsed
+  try { parsed = new URL(value) } catch { throw new Error('BRAIN_ADMIN_ORIGIN must be an absolute HTTPS origin.') }
+  if (parsed.protocol !== 'https:' || parsed.origin !== value.replace(/\/$/, '') || parsed.pathname !== '/' || parsed.search || parsed.hash || parsed.username || parsed.password) {
+    throw new Error('BRAIN_ADMIN_ORIGIN must be an HTTPS origin without a path, query, or credentials.')
+  }
+  return parsed.origin
+}
+
+const secretsMatch = (first, second) => {
+  if (!first || !second) return false
+  const left = Buffer.from(first)
+  const right = Buffer.from(second)
+  return left.length === right.length && timingSafeEqual(left, right)
+}
+
+export const readConfiguration = () => {
+  const mcpToken = readSecret(process.env.BRAIN_MCP_TOKEN, process.env.BRAIN_MCP_TOKEN_FILE, 'BRAIN_MCP_TOKEN')
+  const adminToken = readSecret(process.env.BRAIN_ADMIN_TOKEN, process.env.BRAIN_ADMIN_TOKEN_FILE, 'BRAIN_ADMIN_TOKEN')
+  if (secretsMatch(mcpToken, adminToken)) throw new Error('BRAIN_ADMIN_TOKEN must differ from BRAIN_MCP_TOKEN.')
+  return { mcpToken, adminToken, adminOrigin: normalizeOrigin(process.env.BRAIN_ADMIN_ORIGIN || '') }
+}
+
+const bearerMatches = (request, expected) => {
+  if (!expected) return false
+  const match = /^Bearer ([^\s]+)$/i.exec(request.headers.get('authorization') || '')
+  return Boolean(match && secretsMatch(match[1], expected))
+}
+
+const isMcpAuthorized = (request, configuration) => !request.headers.get('origin') && bearerMatches(request, configuration.mcpToken)
+const isBrowserReadRequest = (request) => browserOrigin.test(request.headers.get('origin') || '')
+const corsHeaders = (origin) => browserOrigin.test(origin || '') ? {
+  'access-control-allow-origin': origin,
+  vary: 'Origin',
+  'access-control-allow-methods': 'GET, HEAD, OPTIONS'
+} : {}
+
+const invalidBody = () => { throw new RequestError(400, 'Invalid request body.') }
+const readJson = async (request) => {
+  const contentType = request.headers.get('content-type') || ''
+  if (!/^application\/json(?:\s*;|$)/i.test(contentType)) throw new RequestError(415, 'Content-Type must be application/json.')
+
+  const declaredLength = request.headers.get('content-length')
+  if (declaredLength !== null && (!/^\d+$/.test(declaredLength) || Number(declaredLength) > maxBodyBytes)) {
+    throw new RequestError(413, 'Request body is too large.')
+  }
+  if (!request.body) invalidBody()
+
+  const reader = request.body.getReader()
+  const chunks = []
+  let length = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      length += value.byteLength
+      if (length > maxBodyBytes) throw new RequestError(413, 'Request body is too large.')
+      chunks.push(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  try {
+    const value = JSON.parse(new TextDecoder().decode(Buffer.concat(chunks)))
+    if (!isPlainObject(value)) invalidBody()
+    return value
+  } catch (error) {
+    if (error instanceof RequestError) throw error
+    invalidBody()
+  }
+}
+
+const parseBody = (schema, body) => {
+  const result = schema.safeParse(body)
+  if (!result.success) invalidBody()
+  return result.data
+}
+
+const validateContext = (value, depth = 0) => {
+  if (depth > 4) throw new RequestError(400, 'Context is too deeply nested.')
+  if (value === null || typeof value === 'boolean' || typeof value === 'number') return value
+  if (typeof value === 'string') {
+    if (value.length > 4000) throw new RequestError(400, 'Context strings cannot exceed 4000 characters.')
+    return value
+  }
+  if (Array.isArray(value)) {
+    if (value.length > 50) throw new RequestError(400, 'Context arrays cannot contain more than 50 values.')
+    return value.map((entry) => validateContext(entry, depth + 1))
+  }
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value)
+    if (entries.length > 50 || entries.some(([key]) => !/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(key))) throw new RequestError(400, 'Invalid content context.')
+    return Object.fromEntries(entries.map(([key, entry]) => [key, validateContext(entry, depth + 1)]))
+  }
+  throw new RequestError(400, 'Invalid content context.')
+}
+
+const toolConfigurationSchema = z.object({
+  enabled: z.boolean().optional(),
+  approvalMode: z.enum(['automatic', 'review', 'manual', 'blocked']).optional()
+}).strict().refine((value) => value.enabled !== undefined || value.approvalMode !== undefined)
+const skillConfigurationSchema = z.object({ enabled: z.boolean() }).strict()
+const draftSchema = z.object({ values: z.record(z.string(), z.string()) }).strict()
+const publishSchema = z.object({
+  draftId: z.string().regex(uuidPattern),
+  confirmed: z.literal(true),
+  message: z.string().trim().min(1).max(240).optional()
+}).strict()
+const rollbackSchema = z.object({ revisionId: z.string().regex(uuidPattern), confirmed: z.literal(true) }).strict()
+const proposalSchema = z.object({
+  appId: z.string().regex(idPattern),
+  surfaceId: z.string().regex(idPattern),
+  intent: z.string().trim().min(1).max(4000),
+  context: z.unknown().optional()
+}).strict()
+const rewriteSchema = z.object({
+  values: z.record(z.string(), z.string()),
+  intent: z.string().trim().min(1).max(4000)
+}).strict()
+
+const readQueryAppId = (url, required = false) => {
+  const values = url.searchParams.getAll('appId')
+  if (values.length > 1 || (required && values.length !== 1)) throw new RequestError(400, 'Provide one application identifier.')
+  if (!values.length) return null
+  if (!idPattern.test(values[0]) || !catalog.getApp(values[0])) throw new RequestError(404, 'Unknown application.')
+  return values[0]
+}
+
+const pageFromRoute = (url) => {
+  const match = url.pathname.match(/^\/api\/v1\/content\/pages\/([a-z0-9-]+)\/([a-z0-9-]+)(?:\/(draft|publish|rollback|rewrite))?$/i)
+  if (!match) return null
+  const [, appId, pageId, action] = match
+  if (!catalog.getApp(appId) || !catalog.getSurface(appId, pageId)) throw new RequestError(404, 'Unknown application content surface.')
+  return { appId, pageId, action }
+}
+
+const adminTransport = (request, configuration) => {
+  if (!configuration.adminToken || !configuration.adminOrigin) {
+    return { error: new RequestError(503, 'The Admin API is not configured.') }
+  }
+  if (!bearerMatches(request, configuration.adminToken)) return { error: new RequestError(401, 'Admin authentication is required.') }
+  if (request.headers.get('origin') !== configuration.adminOrigin) return { error: new RequestError(403, 'A trusted Admin origin is required.') }
+  const actor = request.headers.get('x-actor') || ''
+  if (!actorPattern.test(actor)) return { error: new RequestError(400, 'A valid X-Actor identity header is required.') }
+  return { actor }
+}
+
+const authorizeMutation = async ({ request, configuration, authorizeFn, application, action, context }) => {
+  const transport = adminTransport(request, configuration)
+  if (transport.error) return transport
+  try {
+    const decision = await authorizeFn({ subject: transport.actor, application, action, context })
+    if (!decision || decision.allowed !== true) return { error: new RequestError(403, 'Authorization denied.') }
+    return { actor: transport.actor }
+  } catch {
+    return { error: new RequestError(503, 'Authorization service is unavailable.') }
+  }
+}
 
 const buildMcpServer = () => {
   const server = new McpServer({ name: 'tabloid-brain', version: '0.1.0' })
   const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   const register = (id, definition, handler) => { if (controlStore.isToolEnabled(id)) server.registerTool(id, definition, handler) }
   register('apps_list', { description: 'List applications connected to Brain.', annotations: readOnly }, async () => textResult({ apps: catalog.listApps() }))
-  register('routes_list', { description: 'List routes and dependencies between Brain and applications.', inputSchema: z.object({ appId: z.string().optional() }), annotations: readOnly }, async ({ appId }) => textResult({ routes: catalog.listRoutes(appId) }))
-  register('content_surfaces_list', { description: 'List admin-editable content surfaces for an application.', inputSchema: z.object({ appId: z.string() }), annotations: readOnly }, async ({ appId }) => textResult({ surfaces: catalog.listSurfaces(appId) }))
-  register('content_read', { description: 'Read the current content adapter view for an application surface.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string() }), annotations: readOnly }, async ({ appId, surfaceId }) => textResult(catalog.readContent(appId, surfaceId)))
-  register('content_propose', { description: 'Generate a reviewable content proposal. This tool does not publish.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string(), intent: z.string(), context: z.record(z.string(), z.unknown()).optional() }) }, async ({ appId, surfaceId, intent, context }) => {
-    const decision = await authorize({ subject: context?.subject || 'tailnet-admin', application: appId, action: 'content.propose', context: { surfaceId } })
-    if (!decision.allowed) return { isError: true, content: [{ type: 'text', text: `Authorization denied: ${decision.reason}` }] }
-    const surface = catalog.listSurfaces(appId).find(({ id }) => id === surfaceId)
-    if (!surface) return { isError: true, content: [{ type: 'text', text: `Unknown surface ${appId}/${surfaceId}` }] }
-    const content = await generateWithCopilot({ appId, surface, intent, context })
-    return textResult(catalog.saveProposal({ id: randomUUID(), appId, surfaceId, intent, content, status: 'proposed', createdAt: new Date().toISOString() }))
+  register('routes_list', { description: 'List routes and dependencies between Brain and applications.', inputSchema: z.object({ appId: z.string().optional() }), annotations: readOnly }, async ({ appId }) => {
+    if (appId && !catalog.getApp(appId)) return { isError: true, content: [{ type: 'text', text: 'Unknown application.' }] }
+    return textResult({ routes: catalog.listRoutes(appId) })
   })
-  register('content_publish', { description: 'Publish an approved proposal. Disabled until approval storage and GitHub write integration are configured.', inputSchema: z.object({ proposalId: z.string(), approvalId: z.string() }) }, async () => ({ isError: true, content: [{ type: 'text', text: 'Publishing is intentionally disabled. Configure approval storage and a narrowly scoped GitHub App before enabling mutations.' }] }))
+  register('content_surfaces_list', { description: 'List admin-editable content surfaces for an application.', inputSchema: z.object({ appId: z.string() }), annotations: readOnly }, async ({ appId }) => {
+    if (!catalog.getApp(appId)) return { isError: true, content: [{ type: 'text', text: 'Unknown application.' }] }
+    return textResult({ surfaces: catalog.listSurfaces(appId) })
+  })
+  register('content_read', { description: 'Read the current content adapter view for an application surface.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string() }), annotations: readOnly }, async ({ appId, surfaceId }) => {
+    const content = catalog.readContent(appId, surfaceId)
+    if (!content) return { isError: true, content: [{ type: 'text', text: 'Unknown application content surface.' }] }
+    return textResult(content)
+  })
   return server
 }
 
-const mcp = createMcpHandler(buildMcpServer, { responseMode: 'json' })
-const mcpNodeHandler = toNodeHandler(mcp)
-
-const isAuthorized = (request) => token && request.headers.get('authorization') === `Bearer ${token}`
-const isTrustedAppRequest = (request) => allowedOrigin.test(request.headers.get('origin') || '')
-const corsHeaders = (origin) => allowedOrigin.test(origin || '') ? { 'access-control-allow-origin': origin, vary: 'Origin', 'access-control-allow-headers': 'authorization, content-type', 'access-control-allow-methods': 'GET, POST, OPTIONS' } : {}
-
-const apiHandler = async (request) => {
+const createApiHandler = (configuration, authorizeFn) => async (request) => {
   const url = new URL(request.url)
   const origin = request.headers.get('origin') || ''
   const cors = corsHeaders(origin)
-  if (request.method === 'OPTIONS') return new Response(null, { status: Object.keys(cors).length ? 204 : 403, headers: cors })
-  if (url.pathname === '/health') return json({ status: 'ok', service: 'tabloid-brain', copilotConfigured: Boolean(process.env.COPILOT_GITHUB_TOKEN || process.env.COPILOT_GITHUB_TOKEN_FILE), mcpConfigured: Boolean(token) })
-  if (!isAuthorized(request) && !isTrustedAppRequest(request)) return json({ error: 'Unauthorized' }, 401, cors)
-  if (url.pathname === '/api/v1/apps' && request.method === 'GET') return json({ apps: catalog.listApps() }, 200, cors)
-  if (url.pathname === '/api/v1/routes' && request.method === 'GET') return json({ routes: catalog.listRoutes(url.searchParams.get('appId')) }, 200, cors)
-  if (url.pathname === '/api/v1/content/surfaces' && request.method === 'GET') return json({ surfaces: catalog.listSurfaces(url.searchParams.get('appId')) }, 200, cors)
-  if (url.pathname === '/api/v1/tools' && request.method === 'GET') return json({ tools: controlStore.listTools() }, 200, cors)
-  if (url.pathname === '/api/v1/skills' && request.method === 'GET') return json({ skills: controlStore.listSkills() }, 200, cors)
-  if (url.pathname === '/api/v1/activity' && request.method === 'GET') return json({ activity: controlStore.activity() }, 200, cors)
-  if (url.pathname === '/api/v1/feed' && request.method === 'GET') {
-    try { return json(await getLiveFeed(url.searchParams.get('channel') || 'all'), 200, cors) }
-    catch (error) { return json({ error: error.message }, 503, cors) }
-  }
-  const toolRoute = url.pathname.match(/^\/api\/v1\/tools\/([a-z0-9_-]+)$/i)
-  const skillRoute = url.pathname.match(/^\/api\/v1\/skills\/([a-z0-9_-]+)$/i)
-  if (toolRoute && request.method === 'POST') {
-    try { const decision = await authorize({ subject: request.headers.get('x-actor') || 'tailnet-admin', application: 'brain', action: 'tools.configure', context: { toolId: toolRoute[1] } }); if (!decision.allowed) return json({ error: 'Authorization denied', decision }, 403, cors); return json({ tool: controlStore.configureTool(toolRoute[1], await request.json()) }, 200, cors) }
-    catch (error) { return json({ error: error.message }, 400, cors) }
-  }
-  if (skillRoute && request.method === 'POST') {
-    try { const decision = await authorize({ subject: request.headers.get('x-actor') || 'tailnet-admin', application: 'brain', action: 'skills.configure', context: { skillId: skillRoute[1] } }); if (!decision.allowed) return json({ error: 'Authorization denied', decision }, 403, cors); return json({ skill: controlStore.configureSkill(skillRoute[1], await request.json()) }, 200, cors) }
-    catch (error) { return json({ error: error.message }, 400, cors) }
-  }
-  const pageRoute = url.pathname.match(/^\/api\/v1\/content\/pages\/([a-z0-9-]+)\/([a-z0-9._-]+)(?:\/(draft|publish|rollback|rewrite))?$/i)
-  if (pageRoute) {
-    const [, appId, pageId, action] = pageRoute
-    try {
-      if (!action && request.method === 'GET') return json(contentStore.get(appId, pageId), 200, cors)
-      if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, cors)
-      const body = await request.json()
-      if (action === 'draft') { const decision = await authorize({ subject: body.actor || request.headers.get('x-actor') || 'tailnet-admin', application: appId, action: 'content.propose', context: { pageId } }); if (!decision.allowed) return json({ error: 'Authorization denied', decision }, 403, cors); return json(contentStore.saveDraft(appId, pageId, body.values, body.actor), 201, cors) }
-      if (action === 'publish') { const decision = await authorize({ subject: body.actor || request.headers.get('x-actor') || 'tailnet-admin', application: appId, action: 'content.publish', context: { pageId } }); if (!decision.allowed) return json({ error: 'Authorization denied', decision }, 403, cors); return json(contentStore.publish(appId, pageId, body), 200, cors) }
-      if (action === 'rollback') { const decision = await authorize({ subject: body.actor || request.headers.get('x-actor') || 'tailnet-admin', application: appId, action: 'content.publish', context: { pageId, rollback: true } }); if (!decision.allowed) return json({ error: 'Authorization denied', decision }, 403, cors); return json(contentStore.rollback(appId, pageId, body), 200, cors) }
-      if (action === 'rewrite') {
-        const fields = Object.keys(body.values || {})
-        if (!fields.length || fields.length > 250) return json({ error: 'Provide between 1 and 250 page fields.' }, 400, cors)
-        const surface = { id: pageId, label: `${appId} ${pageId} page`, fields, dynamic: true }
-        const content = await generateWithCopilot({ appId, surface, intent: body.intent, context: { currentValues: body.values } })
-        return json(catalog.saveProposal({ id: randomUUID(), appId, surfaceId: pageId, intent: body.intent, content, status: 'proposed', createdAt: new Date().toISOString() }), 201, cors)
+  const method = request.method.toUpperCase()
+  const isRead = method === 'GET' || method === 'HEAD'
+
+  try {
+    if (method === 'OPTIONS') return new Response(null, { status: Object.keys(cors).length ? 204 : 403, headers: cors })
+    if (url.pathname === '/health') {
+      return json({
+        status: 'ok',
+        service: 'tabloid-brain',
+        copilotConfigured: Boolean(process.env.COPILOT_GITHUB_TOKEN || process.env.COPILOT_GITHUB_TOKEN_FILE),
+        mcpConfigured: Boolean(configuration.mcpToken),
+        adminConfigured: Boolean(configuration.adminToken && configuration.adminOrigin)
+      })
+    }
+
+    if (!isRead && origin && origin !== configuration.adminOrigin) {
+      return json({ error: 'Browser requests are read-only. Use the Admin server API proxy for mutations.' }, 403, cors)
+    }
+
+    if (isRead) {
+      const browserRead = isBrowserReadRequest(request)
+      const mcpRead = isMcpAuthorized(request, configuration)
+      const adminRead = !browserRead && !mcpRead ? adminTransport(request, configuration) : null
+      if (!browserRead && !mcpRead && adminRead?.error) throw adminRead.error
+    }
+
+    if (url.pathname === '/api/v1/apps' && method === 'GET') return json({ apps: catalog.listApps() }, 200, cors)
+    if (url.pathname === '/api/v1/routes' && method === 'GET') return json({ routes: catalog.listRoutes(readQueryAppId(url)) }, 200, cors)
+    if (url.pathname === '/api/v1/content/surfaces' && method === 'GET') return json({ surfaces: catalog.listSurfaces(readQueryAppId(url, true)) }, 200, cors)
+    if (url.pathname === '/api/v1/tools' && method === 'GET') return json({ tools: controlStore.listTools() }, 200, cors)
+    if (url.pathname === '/api/v1/skills' && method === 'GET') return json({ skills: controlStore.listSkills() }, 200, cors)
+    if (url.pathname === '/api/v1/activity' && method === 'GET') return json({ activity: controlStore.activity() }, 200, cors)
+    if (url.pathname === '/api/v1/feed' && method === 'GET') {
+      try { return json(await getLiveFeed(url.searchParams.get('channel') || 'all'), 200, cors) }
+      catch { return json({ error: 'Live feed is currently unavailable.' }, 503, cors) }
+    }
+
+    const toolRoute = url.pathname.match(/^\/api\/v1\/tools\/([a-z0-9_-]+)$/i)
+    if (toolRoute && method === 'POST') {
+      const access = await authorizeMutation({ request, configuration, authorizeFn, application: 'brain', action: 'tools.configure', context: { toolId: toolRoute[1] } })
+      if (access.error) throw access.error
+      const input = parseBody(toolConfigurationSchema, await readJson(request))
+      return json({ tool: controlStore.configureTool(toolRoute[1], input, access.actor) }, 200, cors)
+    }
+
+    const skillRoute = url.pathname.match(/^\/api\/v1\/skills\/([a-z0-9_-]+)$/i)
+    if (skillRoute && method === 'POST') {
+      const access = await authorizeMutation({ request, configuration, authorizeFn, application: 'brain', action: 'skills.configure', context: { skillId: skillRoute[1] } })
+      if (access.error) throw access.error
+      const input = parseBody(skillConfigurationSchema, await readJson(request))
+      return json({ skill: controlStore.configureSkill(skillRoute[1], input, access.actor) }, 200, cors)
+    }
+
+    const page = pageFromRoute(url)
+    if (page) {
+      if (!page.action && method === 'GET') return json(contentStore.get(page.appId, page.pageId), 200, cors)
+      if (method !== 'POST') return json({ error: 'Method not allowed.' }, 405, cors)
+
+      const action = page.action
+      if (action === 'draft') {
+        const access = await authorizeMutation({ request, configuration, authorizeFn, application: page.appId, action: 'content.propose', context: { pageId: page.pageId } })
+        if (access.error) throw access.error
+        const input = parseBody(draftSchema, await readJson(request))
+        return json(contentStore.saveDraft(page.appId, page.pageId, catalog.validateContentValues(page.appId, page.pageId, input.values), access.actor), 201, cors)
       }
-    } catch (error) {
-      const generation = error.code === 'COPILOT_NOT_CONFIGURED' || error.code === 'GENERATION_FAILED'
-      return json({ error: error.message, code: error.code || (generation ? 'GENERATION_FAILED' : 'CONTENT_OPERATION_FAILED') }, generation ? 503 : 400, cors)
+      if (action === 'publish') {
+        const access = await authorizeMutation({ request, configuration, authorizeFn, application: page.appId, action: 'content.publish', context: { pageId: page.pageId } })
+        if (access.error) throw access.error
+        const input = parseBody(publishSchema, await readJson(request))
+        return json(contentStore.publish(page.appId, page.pageId, { ...input, actor: access.actor }), 200, cors)
+      }
+      if (action === 'rollback') {
+        const access = await authorizeMutation({ request, configuration, authorizeFn, application: page.appId, action: 'content.publish', context: { pageId: page.pageId, rollback: true } })
+        if (access.error) throw access.error
+        const input = parseBody(rollbackSchema, await readJson(request))
+        return json(contentStore.rollback(page.appId, page.pageId, { ...input, actor: access.actor }), 200, cors)
+      }
+      if (action === 'rewrite') {
+        const access = await authorizeMutation({ request, configuration, authorizeFn, application: page.appId, action: 'content.propose', context: { pageId: page.pageId } })
+        if (access.error) throw access.error
+        const input = parseBody(rewriteSchema, await readJson(request))
+        const values = catalog.validateContentValues(page.appId, page.pageId, input.values)
+        const surface = catalog.getSurface(page.appId, page.pageId)
+        const content = await generateWithCopilot({ appId: page.appId, surface, intent: input.intent, context: { currentValues: values } })
+        return json(catalog.saveProposal({ id: randomUUID(), appId: page.appId, surfaceId: page.pageId, intent: input.intent, content, status: 'proposed', createdAt: new Date().toISOString(), actor: access.actor }), 201, cors)
+      }
     }
-  }
-  if (url.pathname === '/api/v1/content/proposals' && request.method === 'POST') {
-    const body = await request.json()
-    const surface = catalog.listSurfaces(body.appId).find(({ id }) => id === body.surfaceId)
-    if (!surface) return json({ error: 'Unknown application content surface' }, 404, cors)
-    try {
-      const content = await generateWithCopilot({ appId: body.appId, surface, intent: body.intent, context: body.context })
-      return json(catalog.saveProposal({ id: randomUUID(), ...body, content, status: 'proposed', createdAt: new Date().toISOString() }), 201, cors)
-    } catch (error) {
-      return json({ error: error.message, code: error.code || 'GENERATION_FAILED' }, error.code === 'COPILOT_NOT_CONFIGURED' ? 503 : 500, cors)
+
+    if (url.pathname === '/api/v1/content/proposals' && method === 'POST') {
+      const input = parseBody(proposalSchema, await readJson(request))
+      const surface = catalog.getSurface(input.appId, input.surfaceId)
+      if (!surface) throw new RequestError(404, 'Unknown application content surface.')
+      const access = await authorizeMutation({ request, configuration, authorizeFn, application: input.appId, action: 'content.propose', context: { surfaceId: input.surfaceId } })
+      if (access.error) throw access.error
+      const content = await generateWithCopilot({ appId: input.appId, surface, intent: input.intent, context: input.context === undefined ? undefined : validateContext(input.context) })
+      return json(catalog.saveProposal({ id: randomUUID(), appId: input.appId, surfaceId: input.surfaceId, intent: input.intent, content, status: 'proposed', createdAt: new Date().toISOString(), actor: access.actor }), 201, cors)
     }
+
+    return json({ error: 'Not found.' }, 404, cors)
+  } catch (error) {
+    if (error instanceof RequestError) return json({ error: error.message }, error.status, cors)
+    if (error instanceof SyntaxError || error instanceof z.ZodError) return json({ error: 'Invalid request body.' }, 400, cors)
+    return json({ error: 'Content operation failed.' }, 400, cors)
   }
-  return json({ error: 'Not found' }, 404, cors)
 }
 
-const server = createServer(async (req, res) => {
-  const request = new Request(`http://${req.headers.host}${req.url}`, { method: req.method, headers: req.headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : req, duplex: 'half' })
-  if (new URL(request.url).pathname === '/mcp') {
-    if (!isAuthorized(request)) { res.writeHead(401).end('Unauthorized'); return }
-    await mcpNodeHandler(req, res)
-    return
-  }
-  const response = await apiHandler(request)
-  res.writeHead(response.status, Object.fromEntries(response.headers))
-  res.end(Buffer.from(await response.arrayBuffer()))
-})
+export const createBrainServer = ({ configuration = readConfiguration(), authorizeFn = authorize } = {}) => {
+  const mcp = createMcpHandler(buildMcpServer, { responseMode: 'json' })
+  const mcpNodeHandler = toNodeHandler(mcp)
+  const apiHandler = createApiHandler(configuration, authorizeFn)
+  const server = createServer(async (req, res) => {
+    const request = new Request(`http://brain.internal${req.url}`, {
+      method: req.method,
+      headers: req.headers,
+      body: ['GET', 'HEAD'].includes(req.method || '') ? undefined : req,
+      duplex: 'half'
+    })
 
-server.listen(port, host, () => console.log(`Tabloid Brain listening on http://${host}:${port}`))
-const shutdown = async () => { server.close(); await mcp.close(); await stopCopilot() }
-process.on('SIGINT', shutdown)
-process.on('SIGTERM', shutdown)
+    if (new URL(request.url).pathname === '/mcp') {
+      if (!isMcpAuthorized(request, configuration)) {
+        res.writeHead(401).end('Unauthorized')
+        return
+      }
+      await mcpNodeHandler(req, res)
+      return
+    }
+
+    try {
+      const response = await apiHandler(request)
+      res.writeHead(response.status, Object.fromEntries(response.headers))
+      res.end(Buffer.from(await response.arrayBuffer()))
+    } catch {
+      res.writeHead(500, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Internal server error.' }))
+    }
+  })
+
+  return {
+    server,
+    close: async () => {
+      await new Promise((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()))
+      await mcp.close()
+      await stopCopilot()
+    }
+  }
+}
+
+export const startBrainServer = () => {
+  const application = createBrainServer()
+  application.server.listen(port, host, () => console.log(`Tabloid Brain listening on http://${host}:${port}`))
+  const shutdown = async () => {
+    try { await application.close() } finally { process.exit(0) }
+  }
+  process.once('SIGINT', shutdown)
+  process.once('SIGTERM', shutdown)
+  return application
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) startBrainServer()

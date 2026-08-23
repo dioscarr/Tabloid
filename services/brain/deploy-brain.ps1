@@ -2,7 +2,8 @@
 param(
   [string]$TailscaleSecretPath = "$env:LOCALAPPDATA\Tabloid\preview-oauth-secret.txt",
   [string]$Hostname = 'tabloid-brain-api',
-  [string]$TailnetDomain = 'tail70b7f1.ts.net'
+  [string]$TailnetDomain = 'tail70b7f1.ts.net',
+  [string]$AdminOrigin = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,9 +16,18 @@ $stateVolume = 'tabloid-brain-service-tailscale-state'
 $contentVolume = 'tabloid-brain-content'
 $copilotSecretName = 'tabloid-brain-copilot-token'
 $mcpSecretName = 'tabloid-brain-mcp-token'
+$adminSecretName = 'tabloid-brain-admin-token'
 
 if (-not (Test-Path $podman)) { throw "Podman was not found at $podman" }
 if (-not (Test-Path $TailscaleSecretPath)) { throw "Tailscale OAuth secret is missing. Configure the preview deployer first." }
+if (-not $AdminOrigin) { $AdminOrigin = "https://tabloid-admin.$TailnetDomain" }
+try {
+  $adminUri = [Uri]$AdminOrigin
+  if (-not $adminUri.IsAbsoluteUri -or $adminUri.Scheme -ne 'https' -or $adminUri.AbsolutePath -notin @('', '/') -or $adminUri.Query -or $adminUri.Fragment -or $adminUri.UserInfo) { throw 'invalid origin' }
+  $AdminOrigin = $adminUri.GetLeftPart([UriPartial]::Authority)
+} catch {
+  throw 'AdminOrigin must be an HTTPS origin without a path, query, fragment, or credentials.'
+}
 
 function Invoke-Podman([string[]]$Arguments, [switch]$AllowFailure) {
   & $podman @Arguments | Out-Host
@@ -33,20 +43,30 @@ function Read-PlainSecret([string]$Path) {
   finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($handle) }
 }
 
+function New-RandomToken {
+  $random = New-Object byte[] 48
+  $generator = [Security.Cryptography.RandomNumberGenerator]::Create()
+  try {
+    $generator.GetBytes($random)
+    return [Convert]::ToBase64String($random)
+  } finally {
+    $generator.Dispose()
+    [Array]::Clear($random, 0, $random.Length)
+  }
+}
+
+function New-PodmanSecret([string]$Name, [string]$Value) {
+  $Value | & $podman secret create $Name - | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Podman could not create secret $Name." }
+}
+
 Write-Host 'A GitHub Copilot user/OAuth token is required by the server-side SDK.'
 $copilotSecure = Read-Host 'Paste the Copilot GitHub token' -AsSecureString
 $copilotHandle = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($copilotSecure)
 $copilotToken = $null
-$tempCopilot = [IO.Path]::GetTempFileName()
-$tempMcp = [IO.Path]::GetTempFileName()
 try {
   $copilotToken = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($copilotHandle)
   if (-not $copilotToken) { throw 'The Copilot token cannot be empty.' }
-  [IO.File]::WriteAllText($tempCopilot, $copilotToken)
-  $random = New-Object byte[] 48
-  $generator = [Security.Cryptography.RandomNumberGenerator]::Create()
-  try { $generator.GetBytes($random) } finally { $generator.Dispose() }
-  [IO.File]::WriteAllText($tempMcp, [Convert]::ToBase64String($random))
 
   foreach ($container in @($tailscaleContainer, $serviceContainer)) {
     if (Invoke-Podman @('container', 'exists', $container) -AllowFailure) { Invoke-Podman @('rm', '--force', $container) | Out-Null }
@@ -54,12 +74,14 @@ try {
   foreach ($name in @($copilotSecretName, $mcpSecretName)) {
     if (Invoke-Podman @('secret', 'exists', $name) -AllowFailure) { Invoke-Podman @('secret', 'rm', $name) | Out-Null }
   }
-  Invoke-Podman @('secret', 'create', $copilotSecretName, $tempCopilot) | Out-Null
-  Invoke-Podman @('secret', 'create', $mcpSecretName, $tempMcp) | Out-Null
+  New-PodmanSecret $copilotSecretName $copilotToken
+  New-PodmanSecret $mcpSecretName (New-RandomToken)
+  if (-not (Invoke-Podman @('secret', 'exists', $adminSecretName) -AllowFailure)) {
+    New-PodmanSecret $adminSecretName (New-RandomToken)
+  }
 } finally {
   if ($copilotHandle -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($copilotHandle) }
   $copilotToken = $null
-  Remove-Item -Force -ErrorAction SilentlyContinue $tempCopilot, $tempMcp
 }
 
 Invoke-Podman @('build', '-t', 'localhost/tabloid-brain-service:latest', '-f', (Join-Path $serviceRoot 'Containerfile'), $serviceRoot) | Out-Null
@@ -71,9 +93,10 @@ if (-not (Invoke-Podman @('volume', 'exists', $contentVolume) -AllowFailure)) { 
 Invoke-Podman @(
   'run', '--detach', '--name', $serviceContainer, '--restart', 'unless-stopped',
   '--network', $network, '--network-alias', 'brain-service',
-  '--secret', "$copilotSecretName,target=copilot_token", '--secret', "$mcpSecretName,target=brain_mcp_token",
+  '--secret', "$copilotSecretName,target=copilot_token", '--secret', "$mcpSecretName,target=brain_mcp_token", '--secret', "$adminSecretName,target=brain_admin_token",
   '--env', 'COPILOT_GITHUB_TOKEN_FILE=/run/secrets/copilot_token',
   '--env', 'BRAIN_MCP_TOKEN_FILE=/run/secrets/brain_mcp_token',
+  '--env', 'BRAIN_ADMIN_TOKEN_FILE=/run/secrets/brain_admin_token', '--env', "BRAIN_ADMIN_ORIGIN=$AdminOrigin",
   '--env', 'BRAIN_MCP_URL=http://127.0.0.1:8787/mcp', '--env', 'AUTHZ_API_URL=https://tabloid-authorization.tail70b7f1.ts.net', '--env', 'AUTHZ_SERVICE_TOKEN',
   '--env', 'BRAIN_CONTENT_STORE=/data/content.json', '--volume', "${contentVolume}:/data",
   '--label', 'io.dioscarr.tabloid.service=brain',
@@ -113,4 +136,4 @@ for ($attempt = 0; $attempt -lt 30; $attempt++) {
 
 $url = "https://$Hostname.$TailnetDomain/"
 Write-Host "Brain service deployed: $url"
-Write-Host 'The Copilot and MCP credentials are stored as Podman secrets, not in the repository or browser bundle.'
+Write-Host 'The Copilot, MCP, and shared Admin credentials are stored as Podman secrets and are never printed.'
