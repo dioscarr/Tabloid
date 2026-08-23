@@ -8,7 +8,17 @@ The preview identifier is a normalized branch name plus the first six characters
 https://tabloid-feature-new-header-xxxxxx.tail70b7f1.ts.net/
 ```
 
-GitHub Actions publishes `ghcr.io/dioscarr/tabloid:preview-<id>`. A constrained Windows task runs `scripts/sync-previews.ps1` every five minutes. It deploys each available branch image with a dedicated Podman network, application container, Tailscale sidecar, and state volume. It removes only resources recorded for branches that no longer exist. Production remains the `main` branch at `https://tabloid.tail70b7f1.ts.net/`.
+GitHub Actions publishes `ghcr.io/dioscarr/tabloid:preview-<id>`. A constrained Windows task runs `scripts/sync-previews.ps1` every five minutes. The image is the immutable delivery artifact; the reconciler extracts `/usr/share/nginx/html` into the `tabloid-static-deployments` Podman volume under `<id>/<commit>` and atomically moves `<id>/current` after extraction succeeds.
+
+One `tabloid-static-gateway` container mounts that volume read-only and serves every branch. Each branch retains its dedicated Tailscale sidecar, network, state volume, hostname, and HTTPS URL, so the shared application switcher does not change. The sidecar proxies to `<id>/current` over the private `tabloid-static` network. There is no per-branch Nginx application container.
+
+The reconciler verifies the shared gateway, the extracted branch path, and Tailscale authentication before removing a legacy app container. It removes only resources recorded for branches that no longer exist. Production remains the separately managed `main` deployment at `https://tabloid.tail70b7f1.ts.net/`.
+
+For a canary deployment, reconcile one branch without touching the others:
+
+```powershell
+.\scripts\sync-previews.ps1 -OnlyBranch dashboard
+```
 
 ## One-time setup
 
