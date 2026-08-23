@@ -31,7 +31,11 @@ const writeStore = (store) => {
   writeFileSync(temporary, `${JSON.stringify(store, null, 2)}\n`, { mode: 0o600 })
   renameSync(temporary, storePath)
 }
-const control = (store) => (store.control ??= { tools: {}, skills: {}, activity: [] })
+const control = (store) => {
+  const state = (store.control ??= { tools: {}, skills: {}, activity: [], intents: [] })
+  state.intents ??= []
+  return state
+}
 const actorPattern = /^[a-z0-9][a-z0-9._:@/-]{0,127}$/i
 const cleanActor = (actor) => {
   if (typeof actor !== 'string' || !actorPattern.test(actor)) throw new Error('Invalid actor identity.')
@@ -77,6 +81,17 @@ export const controlStore = {
     addActivity(state, actor, { type: 'skill.configuration', subject: id, message: `${state.skills[id].enabled ? 'Enabled' : 'Disabled'} ${definition.name}` })
     writeStore(store)
     return this.listSkills().find((skill) => skill.id === id)
+  },
+  saveIntent({ id, createdAt, actor, input, decomposition }) {
+    if (typeof id !== 'string' || !id || typeof createdAt !== 'string' || !createdAt || !input || typeof input !== 'object' || !decomposition || typeof decomposition !== 'object') {
+      throw new Error('Invalid intent decomposition.')
+    }
+    const store = readStore(); const state = control(store)
+    const record = { id, createdAt, actor: cleanActor(actor), input, decomposition }
+    state.intents.unshift(record)
+    state.intents = state.intents.slice(0, 100)
+    writeStore(store)
+    return record
   },
   activity() { return control(readStore()).activity }
 }

@@ -7,7 +7,7 @@ import { createMcpHandler, McpServer } from '@modelcontextprotocol/server'
 import { toNodeHandler } from '@modelcontextprotocol/node'
 import * as z from 'zod/v4'
 import { catalog } from './catalog.js'
-import { generateWithCopilot, stopCopilot } from './copilot.js'
+import { decomposeIntentWithCopilot, generateWithCopilot, stopCopilot } from './copilot.js'
 import { contentStore } from './content-store.js'
 import { controlStore } from './control-store.js'
 import { getLiveFeed } from './feed.js'
@@ -158,6 +158,34 @@ const rewriteSchema = z.object({
   values: z.record(z.string(), z.string()),
   intent: z.string().trim().min(1).max(4000)
 }).strict()
+const intentDecomposeSchema = z.object({
+  intent: z.string().trim().min(20).max(8000),
+  appIdHint: z.string().trim().regex(idPattern).optional()
+}).strict()
+const decompositionSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  summary: z.string().trim().min(1).max(4000),
+  audience: z.string().trim().min(1).max(1000),
+  pages: z.array(z.object({
+    id: z.string().trim().regex(idPattern),
+    name: z.string().trim().min(1).max(160),
+    purpose: z.string().trim().min(20).max(1000),
+    route: z.string().trim().min(1).max(160).regex(/^\/[a-z0-9/_-]*$/i)
+  }).strict()).min(1).max(50),
+  navigation: z.array(z.string().trim().min(1).max(240)).max(100),
+  entities: z.array(z.string().trim().min(1).max(240)).max(100),
+  acceptanceCriteria: z.array(z.string().trim().min(1).max(1000)).max(100),
+  tasks: z.array(z.object({
+    id: z.string().trim().regex(idPattern),
+    title: z.string().trim().min(1).max(240),
+    description: z.string().trim().min(1).max(2000),
+    agentHint: z.string().trim().min(1).max(240)
+  }).strict()).min(1).max(100)
+}).strict().refine((value) => {
+  const pageIds = new Set(value.pages.map((page) => page.id))
+  const taskIds = new Set(value.tasks.map((task) => task.id))
+  return pageIds.size === value.pages.length && taskIds.size === value.tasks.length
+}, 'Page and task identifiers must be unique.')
 
 const readQueryAppId = (url, required = false) => {
   const values = url.searchParams.getAll('appId')
@@ -219,7 +247,7 @@ const buildMcpServer = () => {
   return server
 }
 
-const createApiHandler = (configuration, authorizeFn) => async (request) => {
+const createApiHandler = (configuration, authorizeFn, decomposeIntentFn) => async (request) => {
   const url = new URL(request.url)
   const origin = request.headers.get('origin') || ''
   const cors = corsHeaders(origin)
@@ -258,6 +286,22 @@ const createApiHandler = (configuration, authorizeFn) => async (request) => {
     if (url.pathname === '/api/v1/feed' && method === 'GET') {
       try { return json(await getLiveFeed(url.searchParams.get('channel') || 'all'), 200, cors) }
       catch { return json({ error: 'Live feed is currently unavailable.' }, 503, cors) }
+    }
+
+    if (url.pathname === '/api/v1/intents/decompose' && method === 'POST') {
+      const access = await authorizeMutation({ request, configuration, authorizeFn, application: 'brain', action: 'intents.decompose', context: {} })
+      if (access.error) throw access.error
+      const input = parseBody(intentDecomposeSchema, await readJson(request))
+      const result = decompositionSchema.safeParse(await decomposeIntentFn(input))
+      if (!result.success) throw new RequestError(502, 'Copilot returned an invalid intent decomposition.')
+      const decomposition = controlStore.saveIntent({
+        id: randomUUID(),
+        createdAt: new Date().toISOString(),
+        actor: access.actor,
+        input,
+        decomposition: result.data
+      })
+      return json({ decomposition }, 201, cors)
     }
 
     const toolRoute = url.pathname.match(/^\/api\/v1\/tools\/([a-z0-9_-]+)$/i)
@@ -324,15 +368,17 @@ const createApiHandler = (configuration, authorizeFn) => async (request) => {
     return json({ error: 'Not found.' }, 404, cors)
   } catch (error) {
     if (error instanceof RequestError) return json({ error: error.message }, error.status, cors)
+    if (error?.code === 'COPILOT_NOT_CONFIGURED') return json({ error: 'Copilot is not configured.' }, 503, cors)
+    if (error?.code === 'COPILOT_INVALID_RESPONSE') return json({ error: 'Copilot returned an invalid intent decomposition.' }, 502, cors)
     if (error instanceof SyntaxError || error instanceof z.ZodError) return json({ error: 'Invalid request body.' }, 400, cors)
     return json({ error: 'Content operation failed.' }, 400, cors)
   }
 }
 
-export const createBrainServer = ({ configuration = readConfiguration(), authorizeFn = authorize } = {}) => {
+export const createBrainServer = ({ configuration = readConfiguration(), authorizeFn = authorize, decomposeIntentFn = decomposeIntentWithCopilot } = {}) => {
   const mcp = createMcpHandler(buildMcpServer, { responseMode: 'json' })
   const mcpNodeHandler = toNodeHandler(mcp)
-  const apiHandler = createApiHandler(configuration, authorizeFn)
+  const apiHandler = createApiHandler(configuration, authorizeFn, decomposeIntentFn)
   const server = createServer(async (req, res) => {
     const request = new Request(`http://brain.internal${req.url}`, {
       method: req.method,

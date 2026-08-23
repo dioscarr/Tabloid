@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
-import { rmSync } from 'node:fs'
+import { readFileSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const contentStorePath = resolve('test', `.brain-content-${process.pid}.json`)
@@ -11,11 +11,35 @@ process.env.BRAIN_ADMIN_ORIGIN = 'https://tabloid-admin.example.test'
 
 const { createBrainServer } = await import('../src/server.js')
 const authorizationCalls = []
+const decompositionCalls = []
 const application = createBrainServer({
   authorizeFn: async (request) => {
     authorizationCalls.push(request)
     if (request.subject === 'outage-user') throw new Error('Authorization unavailable')
     return { allowed: request.subject === 'operator-123' }
+  },
+  decomposeIntentFn: async (input) => {
+    decompositionCalls.push(input)
+    return {
+      title: 'Neighborhood food rescue',
+      summary: 'Coordinates surplus food pickup and delivery for local community groups.',
+      audience: 'Volunteer drivers and community organizers',
+      pages: [{
+        id: 'pickup-board',
+        name: 'Pickup board',
+        purpose: 'Shows available food pickups with location, pickup window, and delivery destination.',
+        route: '/pickups'
+      }],
+      navigation: ['Pickup board'],
+      entities: ['Food donation', 'Pickup', 'Volunteer'],
+      acceptanceCriteria: ['A volunteer can find and claim an available food pickup.'],
+      tasks: [{
+        id: 'build-pickup-board',
+        title: 'Build the pickup board',
+        description: 'Create the responsive pickup listing with clear status and action states.',
+        agentHint: 'frontend'
+      }]
+    }
   }
 })
 
@@ -177,4 +201,82 @@ test('content writes require catalog pages, catalog fields, and explicit approva
   assert.equal(rollback.response.status, 200)
   assert.equal(authorizationCalls.at(-1).action, 'content.publish')
   assert.equal(authorizationCalls.at(-1).subject, 'operator-123')
+})
+
+test('intent decomposition is Admin-gated, validated, generated, and persisted', async () => {
+  decompositionCalls.length = 0
+  const intent = 'Build a neighborhood food rescue app that helps volunteer drivers collect surplus meals and deliver them to community groups.'
+
+  const unauthenticated = await jsonRequest('/api/v1/intents/decompose', {
+    method: 'POST',
+    headers: { origin: 'https://tabloid-admin.example.test', 'x-actor': 'operator-123', 'content-type': 'application/json' },
+    body: JSON.stringify({ intent })
+  })
+  assert.equal(unauthenticated.response.status, 401)
+  assert.equal(decompositionCalls.length, 0)
+
+  const denied = await jsonRequest('/api/v1/intents/decompose', {
+    method: 'POST',
+    headers: adminHeaders('denied-user'),
+    body: JSON.stringify({ intent })
+  })
+  assert.equal(denied.response.status, 403)
+  assert.equal(authorizationCalls.at(-1).action, 'intents.decompose')
+  assert.equal(decompositionCalls.length, 0)
+
+  const tooShort = await jsonRequest('/api/v1/intents/decompose', {
+    method: 'POST',
+    headers: adminHeaders(),
+    body: JSON.stringify({ intent: 'Too short' })
+  })
+  assert.equal(tooShort.response.status, 400)
+  assert.equal(decompositionCalls.length, 0)
+
+  const unexpectedField = await jsonRequest('/api/v1/intents/decompose', {
+    method: 'POST',
+    headers: adminHeaders(),
+    body: JSON.stringify({ intent, unexpected: true })
+  })
+  assert.equal(unexpectedField.response.status, 400)
+  assert.equal(decompositionCalls.length, 0)
+
+  const generated = await jsonRequest('/api/v1/intents/decompose', {
+    method: 'POST',
+    headers: adminHeaders(),
+    body: JSON.stringify({ intent, appIdHint: 'food-rescue' })
+  })
+  assert.equal(generated.response.status, 201)
+  assert.equal(decompositionCalls.length, 1)
+  assert.deepEqual(decompositionCalls[0], { intent, appIdHint: 'food-rescue' })
+  assert.equal(generated.body.decomposition.actor, 'operator-123')
+  assert.match(generated.body.decomposition.id, /^[0-9a-f-]{36}$/)
+  assert.match(generated.body.decomposition.createdAt, /^\d{4}-\d{2}-\d{2}T/)
+  assert.equal(generated.body.decomposition.decomposition.pages[0].purpose, 'Shows available food pickups with location, pickup window, and delivery destination.')
+
+  const persisted = JSON.parse(readFileSync(contentStorePath, 'utf8'))
+  assert.equal(persisted.control.intents[0].id, generated.body.decomposition.id)
+  assert.equal(persisted.control.intents[0].actor, 'operator-123')
+})
+
+test('intent decomposition fails closed when Copilot is not configured', async () => {
+  const unavailable = createBrainServer({
+    authorizeFn: async () => ({ allowed: true }),
+    decomposeIntentFn: async () => {
+      const error = new Error('Copilot is not configured.')
+      error.code = 'COPILOT_NOT_CONFIGURED'
+      throw error
+    }
+  })
+  await new Promise((resolveListen) => unavailable.server.listen(0, '127.0.0.1', resolveListen))
+  const { port } = unavailable.server.address()
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/v1/intents/decompose`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ intent: 'Build a food rescue app for volunteer drivers and community organizations.' })
+    })
+    assert.equal(response.status, 503)
+  } finally {
+    await unavailable.close()
+  }
 })

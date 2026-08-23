@@ -23,6 +23,12 @@ Authorization decision. There is no cookie authentication on this boundary,
 so CSRF protection is not applicable; the bearer token, trusted server origin,
 and actor authorization are required instead.
 
+`POST /api/v1/intents/decompose` is an Admin-only `intents.decompose` mutation.
+It accepts a strict `{ "intent": "...", "appIdHint": "optional-id" }` body,
+requires an intent of 20–8000 characters, and persists the generated
+decomposition in the control store's `intents` section. It returns 503 without
+calling a model when the server-side Copilot token is not configured.
+
 `deploy-brain.ps1` creates the shared `tabloid-brain-admin-token` Podman secret
 when absent and mounts it at `/run/secrets/brain_admin_token`. The Admin
 service should mount that same secret for its API proxy; deployments never
