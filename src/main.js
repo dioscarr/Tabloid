@@ -1,5 +1,6 @@
 import './style.css'
 import { mountSharedNav } from './shared-nav.js'
+import { initializeContentAdapter } from './content-adapter.js'
 
 const arrowIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-4" fill="none"><path d="M4 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>`
 const appsIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-5" fill="currentColor"><circle cx="4" cy="4" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="16" cy="4" r="1.5"/><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/><circle cx="4" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg>`
@@ -325,6 +326,7 @@ document.querySelector('#app').innerHTML = `
 `
 
 mountSharedNav()
+initializeContentAdapter('tech')
 const menuButton = document.querySelector('#menu-button')
 const mobileNav = document.querySelector('#mobile-nav')
 const appsButton = document.querySelector('#apps-button')
