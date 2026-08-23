@@ -17,10 +17,11 @@ const textResult = (value) => ({ content: [{ type: 'text', text: JSON.stringify(
 
 const buildMcpServer = () => {
   const server = new McpServer({ name: 'tabloid-brain', version: '0.1.0' })
-  server.registerTool('apps_list', { description: 'List applications connected to Brain.' }, async () => textResult({ apps: catalog.listApps() }))
-  server.registerTool('routes_list', { description: 'List routes and dependencies between Brain and applications.', inputSchema: z.object({ appId: z.string().optional() }) }, async ({ appId }) => textResult({ routes: catalog.listRoutes(appId) }))
-  server.registerTool('content_surfaces_list', { description: 'List admin-editable content surfaces for an application.', inputSchema: z.object({ appId: z.string() }) }, async ({ appId }) => textResult({ surfaces: catalog.listSurfaces(appId) }))
-  server.registerTool('content_read', { description: 'Read the current content adapter view for an application surface.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string() }) }, async ({ appId, surfaceId }) => textResult(catalog.readContent(appId, surfaceId)))
+  const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  server.registerTool('apps_list', { description: 'List applications connected to Brain.', annotations: readOnly }, async () => textResult({ apps: catalog.listApps() }))
+  server.registerTool('routes_list', { description: 'List routes and dependencies between Brain and applications.', inputSchema: z.object({ appId: z.string().optional() }), annotations: readOnly }, async ({ appId }) => textResult({ routes: catalog.listRoutes(appId) }))
+  server.registerTool('content_surfaces_list', { description: 'List admin-editable content surfaces for an application.', inputSchema: z.object({ appId: z.string() }), annotations: readOnly }, async ({ appId }) => textResult({ surfaces: catalog.listSurfaces(appId) }))
+  server.registerTool('content_read', { description: 'Read the current content adapter view for an application surface.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string() }), annotations: readOnly }, async ({ appId, surfaceId }) => textResult(catalog.readContent(appId, surfaceId)))
   server.registerTool('content_propose', { description: 'Generate a reviewable content proposal. This tool does not publish.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string(), intent: z.string(), context: z.record(z.string(), z.unknown()).optional() }) }, async ({ appId, surfaceId, intent, context }) => {
     const surface = catalog.listSurfaces(appId).find(({ id }) => id === surfaceId)
     if (!surface) return { isError: true, content: [{ type: 'text', text: `Unknown surface ${appId}/${surfaceId}` }] }
