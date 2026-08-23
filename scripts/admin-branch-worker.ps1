@@ -2,6 +2,7 @@
 param()
 
 $ErrorActionPreference = 'Stop'
+$repoRoot = Split-Path -Parent $PSScriptRoot
 $stateDirectory = Join-Path $env:LOCALAPPDATA 'Tabloid'
 $config = Get-Content -Raw (Join-Path $stateDirectory 'admin-worker.json') | ConvertFrom-Json
 $podman = Join-Path $env:LOCALAPPDATA 'Programs\Podman\podman.exe'
@@ -17,6 +18,12 @@ $staticVolume = 'tabloid-static-deployments'
 $staticGatewayImage = 'localhost/tabloid-static-gateway:latest'
 $listener = [Net.HttpListener]::new()
 $listener.Prefixes.Add("http://127.0.0.1:$($config.port)/")
+$allowedOrigins = @($config.allowedOrigins)
+if (-not $allowedOrigins.Count) { $allowedOrigins = @([string]$config.adminOrigin) }
+
+function Test-AllowedOrigin([string]$Origin) {
+  return $Origin -and $Origin -in $allowedOrigins
+}
 
 function Get-PreviewId([string]$Branch) {
   $slug = ($Branch.ToLowerInvariant() -replace '[^a-z0-9]+', '-').Trim('-')
@@ -321,7 +328,7 @@ function Remove-Preview([string]$Branch, [bool]$PurgeVolume) {
 
 function Write-Json($Response, [int]$Status, $Body) {
   $Response.StatusCode = $Status
-  $Response.Headers['Access-Control-Allow-Origin'] = [string]$config.adminOrigin
+  $Response.Headers['Access-Control-Allow-Origin'] = [string]$script:responseOrigin
   $Response.Headers['Access-Control-Allow-Headers'] = 'content-type,idempotency-key'
   $Response.Headers['Access-Control-Allow-Methods'] = 'GET,POST,DELETE,OPTIONS'
   $Response.Headers['Vary'] = 'Origin'
@@ -339,6 +346,7 @@ while ($listener.IsListening) {
   $context = $listener.GetContext()
   try {
     $request = $context.Request
+    $script:responseOrigin = [string]$request.Headers['Origin']
     if ($request.HttpMethod -eq 'GET' -and $request.Url.AbsolutePath -eq '/healthz') {
       $context.Response.StatusCode = 200
       $context.Response.ContentType = 'application/json'
@@ -349,11 +357,11 @@ while ($listener.IsListening) {
       continue
     }
     if ($request.HttpMethod -eq 'OPTIONS') {
-      if ($request.Headers['Origin'] -ne $config.adminOrigin) { $context.Response.StatusCode = 403; $context.Response.Close(); continue }
+      if (-not (Test-AllowedOrigin $script:responseOrigin)) { $context.Response.StatusCode = 403; $context.Response.Close(); continue }
       Write-Json $context.Response 204 @{}; continue
     }
     $login = [string]$request.Headers['Tailscale-User-Login']
-    if ($request.Headers['Origin'] -ne $config.adminOrigin -or $login.ToLowerInvariant() -ne $config.adminLogin.ToLowerInvariant()) {
+    if (-not (Test-AllowedOrigin $script:responseOrigin) -or $login.ToLowerInvariant() -ne $config.adminLogin.ToLowerInvariant()) {
       Add-Content -Path (Join-Path $stateDirectory 'admin-worker-auth.log') -Value "$([DateTime]::UtcNow.ToString('o')) origin=$($request.Headers['Origin']) login=$login remote=$($request.RemoteEndPoint.Address)"
       Write-AppGalleryAudit $login 'request' 'denied'
       Write-Json $context.Response 403 @{ error = 'Forbidden' }; continue

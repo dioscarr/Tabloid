@@ -142,11 +142,11 @@ function page() {
   return `<section class="gallery-home" aria-labelledby="gallery-title">
     <div class="gallery-home__heading"><div><p class="eyebrow">Application gallery</p><h1 id="gallery-title">Apps, templates, and requests</h1><p>Browse known apps immediately. Creating an app sends a small, idempotent request to the private worker; no GitHub or deployment credentials are in this browser.</p></div></div>
     ${staleNotice()}
-    <section aria-labelledby="inventory-title"><h2 id="inventory-title" class="sr-only">Known apps</h2><div class="app-gallery-grid">${inventory.map((item) => `<article class="app-gallery-card"><div class="app-gallery-card__preview"><iframe src="${escapeHtml(item.url)}" title="${escapeHtml(item.name)} preview" loading="lazy" sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"></iframe></div><div class="app-gallery-card__body"><h2>${escapeHtml(item.name)}</h2><div class="state-actions"><a class="secondary-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open app</a><button class="secondary-button" type="button" data-create-from="${escapeHtml(item.templateId)}">Create from this app</button></div></div></article>`).join('')}</div></section>
+    <section aria-labelledby="inventory-title"><h2 id="inventory-title" class="sr-only">Known apps</h2><div class="app-gallery-grid">${inventory.map((item) => `<article class="app-gallery-card"><div class="app-gallery-card__preview"><span class="app-gallery-card__monogram" aria-hidden="true">${escapeHtml(item.name.slice(0, 2).toUpperCase())}</span><span>Open the app in a new tab</span></div><div class="app-gallery-card__body"><h2>${escapeHtml(item.name)}</h2><div class="state-actions"><a class="secondary-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open app</a><button class="secondary-button" type="button" data-create-from="${escapeHtml(item.templateId)}">Create from this app</button></div></div></article>`).join('')}</div></section>
     <section class="gallery-layout" aria-labelledby="create-title"><div class="template-panel"><div class="panel-heading"><p class="eyebrow">Template</p><h2>Choose a starting point</h2><p>${state.templatePhase === 'loading' ? 'Loading worker templates; local choices are available now.' : 'Templates are supplied or confirmed by the worker.'}</p></div><div class="template-list" role="group" aria-label="App templates">${templateOptions()}</div>${state.errors.template ? `<p class="field-error">${escapeHtml(state.errors.template)}</p>` : ''}</div>
       <form id="create-app-form" class="provision-form" novalidate><div class="panel-heading"><p class="eyebrow">Create request</p><h2 id="create-title">Describe the new app</h2><p>The server validates authorization and performs all branch, preview, and deployment work.</p></div>
         <label class="field-label" for="name">Name <span aria-hidden="true">*</span></label><input class="field-input" id="name" name="name" required maxlength="80" value="${escapeHtml(state.form.name)}" aria-invalid="${Boolean(state.errors.name)}" aria-describedby="name-error" />${state.errors.name ? `<p id="name-error" class="field-error">${escapeHtml(state.errors.name)}</p>` : ''}
-        <label class="field-label" for="slug">Slug <span aria-hidden="true">*</span></label><input class="field-input" id="slug" name="slug" required maxlength="63" pattern="[a-z][a-z0-9-]{1,62}" value="${escapeHtml(state.form.slug)}" aria-invalid="${Boolean(state.errors.slug)}" aria-describedby="slug-hint slug-error" /><p id="slug-hint" class="field-hint">Lowercase letters, numbers, and hyphens only.</p>${state.errors.slug ? `<p id="slug-error" class="field-error">${escapeHtml(state.errors.slug)}</p>` : ''}
+        <label class="field-label" for="slug">Slug <span aria-hidden="true">*</span></label><input class="field-input" id="slug" name="slug" required maxlength="63" pattern="[a-z][a-z0-9\\-]{1,62}" value="${escapeHtml(state.form.slug)}" aria-invalid="${Boolean(state.errors.slug)}" aria-describedby="slug-hint slug-error" /><p id="slug-hint" class="field-hint">Lowercase letters, numbers, and hyphens only.</p>${state.errors.slug ? `<p id="slug-error" class="field-error">${escapeHtml(state.errors.slug)}</p>` : ''}
         <label class="field-label" for="description">Description</label><textarea class="field-input field-textarea" id="description" name="description" maxlength="1000" aria-invalid="${Boolean(state.errors.description)}" aria-describedby="description-error">${escapeHtml(state.form.description)}</textarea>${state.errors.description ? `<p id="description-error" class="field-error">${escapeHtml(state.errors.description)}</p>` : ''}
         <button class="submit-button" type="submit" ${state.submission.phase === 'submitting' ? 'disabled' : ''}>${state.submission.phase === 'submitting' ? 'Creating request…' : 'Create app request'}</button><p class="submit-note">The request includes the selected template, name, slug, description, and an idempotency key. It does not include credentials.</p>
       </form></section>
@@ -178,6 +178,13 @@ function bindEvents() {
 }
 
 async function refresh() {
+  if (!workerOrigin) {
+    state.templatePhase = 'stale'
+    state.requestPhase = 'stale'
+    state.staleMessage = 'The private creation worker is being configured.'
+    render()
+    return
+  }
   state.templatePhase = 'loading'
   state.requestPhase = 'loading'
   render()
@@ -217,6 +224,11 @@ async function submit(event) {
   if (Object.keys(state.errors).length) {
     render()
     document.querySelector(`[name="${Object.keys(state.errors)[0]}"]`)?.focus()
+    return
+  }
+  if (!workerOrigin) {
+    state.submission = { phase: 'failed', key: '', fingerprint: '', response: null, error: 'The private app-creation worker is being configured. Your app inventory remains available.' }
+    render()
     return
   }
   const payload = { templateId: state.selectedTemplate, name: form.name, slug: form.slug, description: form.description }
