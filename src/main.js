@@ -1,6 +1,7 @@
 import './style.css'
 import { mountSharedNav } from './shared-nav.js'
 import { initializeContentAdapter } from './content-adapter.js'
+import { initializeLiveFeed } from './live-feed.js'
 
 const arrowIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-4" fill="none"><path d="M4 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>`
 const appsIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-5" fill="currentColor"><circle cx="4" cy="4" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="16" cy="4" r="1.5"/><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/><circle cx="4" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg>`
@@ -178,7 +179,7 @@ const homePage = `
       </div>
     </section>
 
-    <section class="border-y border-red-200 bg-red-50 text-stone-950" aria-label="Breaking news"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white">AI Radar</span><p class="font-display text-lg font-black leading-tight sm:text-xl">New local models promise better privacy and useful performance on hardware you already own.</p><a href="news.html" class="ml-auto inline-flex shrink-0 items-center gap-2 text-sm font-black text-red-700">Why it matters ${arrowIcon}</a></div></section>
+    <section class="border-y border-red-200 bg-red-50 text-stone-950" aria-label="Breaking news"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white">Live signal</span><p id="live-breaking" class="font-display text-lg font-black leading-tight sm:text-xl">Connecting to the live technology feed…</p><span data-feed-status class="ml-auto shrink-0 text-[.65rem] font-bold text-red-700">Refreshing sources…</span></div></section>
 
     <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
       <div class="grid gap-8 lg:grid-cols-[.72fr_1.28fr]">
@@ -186,7 +187,7 @@ const homePage = `
           <div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-100">Today, in five</p><h2 class="mt-4 font-display text-5xl font-black leading-[0.9] tracking-[-0.055em]">Three signals. One clear next step.</h2></div>
           <p class="mt-12 max-w-sm leading-7 text-red-50">Enough context to move forward—without losing your morning to the feed.</p>
         </div>
-        <div class="divide-y divide-stone-300 border-y border-stone-400">
+        <div id="live-front-stories" class="divide-y divide-stone-300 border-y border-stone-400">
           ${frontStories.map(([href, category, title, time], index) => `<a href="${href}" class="group grid grid-cols-[2.5rem_1fr] gap-4 py-6 sm:grid-cols-[4rem_1fr_auto] sm:items-center"><span class="font-display text-3xl font-black text-stone-400">0${index + 1}</span><span><span class="mb-2 block text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</span><span class="font-display text-2xl font-black leading-tight tracking-[-0.03em] transition group-hover:text-red-600 sm:text-3xl">${title}</span></span><span class="hidden text-sm font-bold text-stone-500 sm:block">${time}</span></a>`).join('')}
         </div>
       </div>
@@ -195,7 +196,7 @@ const homePage = `
     <section class="border-y border-stone-300 bg-white">
       <div class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
         <div class="mb-8 flex items-end justify-between"><div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-600">Chosen for usefulness</p><h2 class="mt-2 font-display text-5xl font-black tracking-[-0.055em] sm:text-6xl">Useful, not endless.</h2></div><a href="sports.html" class="hidden items-center gap-2 text-sm font-black text-red-700 sm:flex">See your briefing ${arrowIcon}</a></div>
-        <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div id="live-features" class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           ${features.map(([href, category, title, image, size], index) => `<a href="${href}" class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8] ${size}"><div class="overflow-hidden ${index === 0 ? 'aspect-[16/8]' : 'aspect-[4/3]'}"><img src="${image}" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" /></div><div class="p-6"><p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</p><h3 class="mt-3 font-display font-black leading-[0.95] tracking-[-0.04em] transition group-hover:text-red-600 ${index === 0 ? 'text-4xl sm:text-5xl' : 'text-3xl'}">${title}</h3></div></a>`).join('')}
         </div>
       </div>
@@ -225,16 +226,16 @@ const sectionTemplate = (key) => {
         <div class="grid gap-9 lg:grid-cols-[1.5fr_minmax(280px,.8fr)] lg:gap-10">
           <article>
             <p class="eyebrow">${page.kicker}</p>
-            <h1 class="mt-4 max-w-4xl font-display text-[clamp(2.7rem,6vw,5.6rem)] font-black leading-[0.92] tracking-[-0.055em]">${page.headline}</h1>
-            <p class="mt-6 max-w-3xl text-lg leading-8 text-stone-600">${page.deck}</p>
-            <p class="mt-5 text-sm font-semibold text-stone-500">${page.byline}</p>
+            <h1 data-live-title class="mt-4 max-w-4xl font-display text-[clamp(2.7rem,6vw,5.6rem)] font-black leading-[0.92] tracking-[-0.055em]">${page.headline}</h1>
+            <p data-live-deck class="mt-6 max-w-3xl text-lg leading-8 text-stone-600">${page.deck}</p>
+            <p data-live-byline class="mt-5 text-sm font-semibold text-stone-500">${page.byline}</p><a data-live-source hidden target="_blank" rel="noreferrer" class="mt-4 inline-flex rounded-full bg-red-600 px-4 py-2 text-xs font-black text-white">Open original source ↗</a>
             <figure class="mt-8 overflow-hidden rounded-3xl border border-stone-200">
               <img src="${page.image}" alt="${page.title} feature image" class="h-[380px] w-full object-cover sm:h-[500px]" />
             </figure>
           </article>
           <aside class="rounded-3xl border border-stone-200 bg-white p-6">
             <h2 class="font-display text-3xl font-black tracking-[-0.04em]">What to know</h2>
-            <div class="mt-6 divide-y divide-stone-200">${page.updates.map(([tag, story]) => `<article class="py-4 first:pt-0"><p class="text-[0.68rem] font-black uppercase tracking-[0.18em] text-red-600">${tag}</p><p class="mt-2 text-sm leading-6 text-stone-700">${story}</p></article>`).join('')}</div>
+            <div data-live-updates class="mt-6 divide-y divide-stone-200">${page.updates.map(([tag, story]) => `<article class="py-4 first:pt-0"><p class="text-[0.68rem] font-black uppercase tracking-[0.18em] text-red-600">${tag}</p><p class="mt-2 text-sm leading-6 text-stone-700">${story}</p></article>`).join('')}</div><p data-feed-status class="mt-5 text-[.65rem] font-bold text-stone-400">Refreshing live sources…</p>
           </aside>
         </div>
       </section>
@@ -326,7 +327,7 @@ document.querySelector('#app').innerHTML = `
 `
 
 mountSharedNav()
-initializeContentAdapter('big-news')
+initializeLiveFeed(pageKey).finally(() => initializeContentAdapter('big-news'))
 const menuButton = document.querySelector('#menu-button')
 const mobileNav = document.querySelector('#mobile-nav')
 const appsButton = document.querySelector('#apps-button')
