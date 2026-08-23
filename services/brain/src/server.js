@@ -1,5 +1,6 @@
 import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { createMcpHandler, McpServer } from '@modelcontextprotocol/server'
 import { toNodeHandler } from '@modelcontextprotocol/node'
 import * as z from 'zod/v4'
@@ -8,7 +9,8 @@ import { generateWithCopilot, stopCopilot } from './copilot.js'
 
 const port = Number(process.env.PORT || 8787)
 const host = process.env.HOST || '0.0.0.0'
-const token = process.env.BRAIN_MCP_TOKEN
+const readSecret = (value, file) => value || (file ? readFileSync(file, 'utf8').trim() : '')
+const token = readSecret(process.env.BRAIN_MCP_TOKEN, process.env.BRAIN_MCP_TOKEN_FILE)
 const allowedOrigin = /^https:\/\/tabloid(?:-[a-z0-9-]+)?\.tail70b7f1\.ts\.net$/
 const json = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json', ...headers } })
 const textResult = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value })
@@ -40,7 +42,7 @@ const apiHandler = async (request) => {
   const origin = request.headers.get('origin') || ''
   const cors = corsHeaders(origin)
   if (request.method === 'OPTIONS') return new Response(null, { status: Object.keys(cors).length ? 204 : 403, headers: cors })
-  if (url.pathname === '/health') return json({ status: 'ok', service: 'tabloid-brain', copilotConfigured: Boolean(process.env.COPILOT_GITHUB_TOKEN) })
+  if (url.pathname === '/health') return json({ status: 'ok', service: 'tabloid-brain', copilotConfigured: Boolean(process.env.COPILOT_GITHUB_TOKEN || process.env.COPILOT_GITHUB_TOKEN_FILE), mcpConfigured: Boolean(token) })
   if (!isAuthorized(request)) return json({ error: 'Unauthorized' }, 401, cors)
   if (url.pathname === '/api/v1/apps' && request.method === 'GET') return json({ apps: catalog.listApps() }, 200, cors)
   if (url.pathname === '/api/v1/routes' && request.method === 'GET') return json({ routes: catalog.listRoutes(url.searchParams.get('appId')) }, 200, cors)
