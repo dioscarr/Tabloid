@@ -174,7 +174,7 @@ function New-AppGalleryApp($Body, [string]$Actor, [string]$IdempotencyKey) {
       if ([string]$existing.fingerprint -ne $fingerprint) { New-RequestError 409 'Idempotency-Key was already used with a different request.' }
       if ([string]$existing.status -notin @('creating', 'failed')) { return @{ app = (ConvertTo-AppGalleryResponse $existing); previewUrl = $existing.previewUrl; customizationSaved = [bool]$existing.intent } }
     }
-    $reserved = @($records | Where-Object branch -eq $branch | Where-Object idempotencyKey -ne $IdempotencyKey)[0]
+    $reserved = @($records | Where-Object branch -eq $branch | Where-Object idempotencyKey -ne $IdempotencyKey | Where-Object status -ne 'failed')[0]
     if ($null -ne $reserved) { New-RequestError 409 "App branch '$branch' is already reserved." }
     if ($null -eq $existing) {
       $existing = [pscustomobject][ordered]@{
