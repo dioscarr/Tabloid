@@ -41,7 +41,8 @@ const values = {
   VITE_APP_URL: `https://${hostname}.${tailnetDomain}/`,
   VITE_API_BASE_URL: '/api/v1',
   VITE_AUTH_BASE_URL: `https://auth.${tailnetDomain}/`,
-  ...(branch === 'app-gallery' ? { VITE_ADMIN_API_URL: '' } : {}),
+  // Public tailnet origin of the deployed Admin API. Not a credential.
+  ...(branch === 'app-gallery' ? { VITE_ADMIN_API_URL: `https://tabloid-copilot-admin-production-foundation-24deb8.${tailnetDomain}` } : {}),
 }
 
 const body = [
