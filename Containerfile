@@ -7,6 +7,9 @@ RUN npm ci
 COPY *.html vite.config.js ./
 COPY public ./public
 COPY src ./src
+COPY scripts ./scripts
+ARG APP_BRANCH=app-gallery
+RUN node scripts/generate-branch-env.mjs --branch "$APP_BRANCH"
 RUN npm run build
 
 FROM docker.io/nginxinc/nginx-unprivileged:1.29-alpine

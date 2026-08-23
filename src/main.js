@@ -4,6 +4,7 @@ import { mountSharedNav } from './shared-nav.js'
 const apiBaseUrl = String(import.meta.env.VITE_ADMIN_API_URL || '').trim().replace(/\/+$/, '')
 const apiRoutes = Object.freeze({
   session: '/api/v1/session',
+  applications: '/api/v1/applications',
   intents: '/api/v1/app-intents',
   templates: '/api/v1/app-templates',
   provision: '/api/v1/applications/provision',
@@ -14,6 +15,7 @@ const state = {
   view: apiBaseUrl ? 'loading-session' : 'unavailable',
   session: null,
   templates: [],
+  applications: [],
   selectedTemplateId: '',
   intent: {
     draft: { description: '', audience: '', goal: '' },
@@ -123,6 +125,18 @@ const sessionIsAuthenticated = (session) => session?.authenticated !== false && 
 const templateId = (template) => String(template?.id || template?.templateId || template?.slug || '')
 const templateName = (template) => String(template?.name || template?.displayName || templateId(template))
 const templateDescription = (template) => String(template?.description || template?.summary || '')
+const applicationId = (application) => String(application?.id || application?.slug || application?.branch || '')
+const applicationName = (application) => String(application?.name || application?.displayName || applicationId(application))
+const applicationDescription = (application) => String(application?.description || application?.summary || '')
+const applicationUrl = (application) => {
+  const candidate = application?.url || application?.appUrl || application?.previewUrl
+  try {
+    const url = new URL(candidate)
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : ''
+  } catch {
+    return ''
+  }
+}
 
 const capabilitiesFor = (template) => {
   const source = template?.capabilities ?? template?.features ?? template?.includes ?? []
@@ -398,14 +412,25 @@ const generationFailedView = () => `<section class="state-panel state-panel--err
 const loadingView = (message) => `<section class="state-panel state-panel--loading" role="status" aria-live="polite" aria-busy="true"><p class="eyebrow">Loading</p><h1>${escapeHtml(message)}</h1><p>App Gallery is waiting for an authenticated response from the Admin API.</p></section>`
 const emptyView = () => '<section class="state-panel state-panel--empty" role="status"><p class="eyebrow">No approved templates</p><h1>There are no templates available to provision</h1><p>The Admin API returned no approved templates for this session. Your reviewed draft has been retained; ask an administrator to publish a template or grant access, then retry.</p><button data-action="load-templates" class="secondary-button" type="button">Refresh templates</button><button data-action="back-to-review" class="secondary-button" type="button">Return to draft</button></section>'
 
+const galleryView = () => `<section class="gallery-home" aria-labelledby="gallery-title">
+  <div class="gallery-home__heading"><div><p class="eyebrow">Application gallery</p><h1 id="gallery-title">Explore your applications</h1><p>Open a live preview or start a new application from the governed template workflow.</p></div><button class="submit-button gallery-home__cta" type="button" data-action="create-app">Create new app</button></div>
+  ${state.applications.length ? `<div class="app-gallery-grid">${state.applications.map((application) => {
+    const url = applicationUrl(application)
+    return `<article class="app-gallery-card" ${url ? `tabindex="0" role="link" data-app-url="${escapeHtml(url)}"` : ''}><div class="app-gallery-card__preview">${url ? `<iframe src="${escapeHtml(url)}" title="${escapeHtml(applicationName(application))} first-page preview" loading="lazy" sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts"></iframe>` : '<p>Preview URL is not available.</p>'}</div><div class="app-gallery-card__body"><div><h2>${escapeHtml(applicationName(application))}</h2>${applicationDescription(application) ? `<p>${escapeHtml(applicationDescription(application))}</p>` : ''}</div>${url ? `<a class="secondary-button" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">Open application</a>` : '<span class="unavailable-label">Preview unavailable</span>'}</div></article>`
+  }).join('')}</div>` : '<div class="gallery-empty"><h2>No applications are registered yet</h2><p>Your first application will appear here after the Admin API completes provisioning.</p></div>'}
+  <button class="create-app-card" type="button" data-action="create-app"><span aria-hidden="true">＋</span><span><strong>Create a new application</strong><small>Describe what you need, review the generated plan, and choose an approved template.</small></span></button>
+</section>`
+
 const heroView = () => '<section class="hero"><div><p class="eyebrow">Authorized application design</p><h1>Describe the application before choosing a template.</h1><p>Review the Admin API’s returned decomposition first. Template selection and provisioning become available only after you approve a complete draft.</p></div><div class="session-summary"><span class="session-summary__dot" aria-hidden="true"></span><span>Session verified by Admin API</span></div></section>'
 
 const pageBody = () => {
   if (state.view === 'unavailable') return unavailableView()
   if (state.view === 'loading-session') return loadingView('Checking your session')
+  if (state.view === 'loading-gallery') return loadingView('Loading application gallery')
   if (state.view === 'loading-templates') return loadingView('Loading approved templates')
   if (state.view === 'denied') return deniedView()
   if (state.view === 'error') return errorView()
+  if (state.view === 'gallery') return galleryView()
   if (state.view === 'analyzing') return analyzingView()
   if (state.view === 'generation-failed') return generationFailedView()
   if (state.view === 'empty') return emptyView()
@@ -546,7 +571,24 @@ const reviseIntent = () => {
 }
 
 const bindEvents = () => {
+  document.querySelectorAll('[data-app-url]').forEach((card) => {
+    const open = () => window.open(card.dataset.appUrl, '_blank', 'noopener,noreferrer')
+    card.addEventListener('click', (event) => {
+      if (event.target.closest('a')) return
+      open()
+    })
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        open()
+      }
+    })
+  })
   document.querySelector('[data-action="initialize"]')?.addEventListener('click', initialize)
+  document.querySelectorAll('[data-action="create-app"]').forEach((button) => button.addEventListener('click', () => {
+    state.view = 'ready'
+    render()
+  }))
   document.querySelector('[data-action="retry-error"]')?.addEventListener('click', () => {
     if (state.errorContext === 'templates') loadTemplates()
     else initialize()
@@ -617,7 +659,11 @@ async function initialize() {
       render()
       return
     }
-    state.view = 'ready'
+    state.view = 'loading-gallery'
+    render()
+    const { payload } = await request(apiRoutes.applications)
+    state.applications = valuesFrom(payload?.data || payload?.applications || payload?.items || payload)
+    state.view = 'gallery'
   } catch (error) {
     if (error.status === 401 || error.status === 403) state.view = 'denied'
     else {

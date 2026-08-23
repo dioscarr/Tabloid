@@ -98,6 +98,99 @@
     @apply mt-4 max-w-2xl text-base leading-7 text-slate-300;
   }
 
+  .gallery-home {
+    @apply mt-2;
+  }
+
+  .gallery-home__heading {
+    @apply flex flex-col gap-6 border-b border-slate-800 pb-8 sm:flex-row sm:items-end sm:justify-between;
+  }
+
+  .gallery-home__heading h1 {
+    @apply mt-3 text-4xl font-black tracking-[-0.045em] text-white sm:text-5xl;
+  }
+
+  .gallery-home__heading p:last-child {
+    @apply mt-4 max-w-2xl text-base leading-7 text-slate-300;
+  }
+
+  .gallery-home__cta {
+    @apply shrink-0;
+  }
+
+  .app-gallery-grid {
+    @apply mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .app-gallery-card {
+    @apply overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 shadow-2xl shadow-slate-950/20 transition hover:-translate-y-0.5 hover:border-slate-600;
+  }
+
+  .app-gallery-card__preview {
+    @apply relative aspect-[16/10] overflow-hidden border-b border-slate-800 bg-slate-950;
+  }
+
+  .app-gallery-card__preview iframe {
+    @apply pointer-events-none h-[200%] w-[200%] origin-top-left scale-50 border-0;
+  }
+
+  .app-gallery-card__preview p {
+    @apply grid h-full place-items-center p-6 text-center text-sm text-slate-500;
+  }
+
+  .app-gallery-card__body {
+    @apply flex min-h-32 flex-col justify-between gap-4 p-5;
+  }
+
+  .app-gallery-card__body h2 {
+    @apply text-lg font-black text-white;
+  }
+
+  .app-gallery-card__body p {
+    @apply mt-1 text-sm leading-6 text-slate-400;
+  }
+
+  .app-gallery-card__body .secondary-button {
+    @apply w-full text-center;
+  }
+
+  .unavailable-label {
+    @apply text-sm font-bold text-slate-500;
+  }
+
+  .gallery-empty {
+    @apply mt-7 rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 p-10 text-center;
+  }
+
+  .gallery-empty h2 {
+    @apply text-xl font-black text-white;
+  }
+
+  .gallery-empty p {
+    @apply mt-2 text-sm text-slate-400;
+  }
+
+  .create-app-card {
+    @apply mt-5 flex w-full items-center gap-4 rounded-2xl border border-dashed border-lime-300/50 bg-lime-300/5 p-5 text-left text-lime-100 transition hover:border-lime-300 hover:bg-lime-300/10 focus-visible:outline-lime-300;
+  }
+
+  .create-app-card > span:first-child {
+    @apply grid size-11 shrink-0 place-items-center rounded-xl bg-lime-300 text-2xl text-slate-950;
+  }
+
+  .create-app-card strong,
+  .create-app-card small {
+    @apply block;
+  }
+
+  .create-app-card strong {
+    @apply text-sm font-black;
+  }
+
+  .create-app-card small {
+    @apply mt-1 text-sm leading-6 text-slate-300;
+  }
+
   .session-summary {
     @apply flex items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-100;
   }
