@@ -6,6 +6,7 @@ import { toNodeHandler } from '@modelcontextprotocol/node'
 import * as z from 'zod/v4'
 import { catalog } from './catalog.js'
 import { generateWithCopilot, stopCopilot } from './copilot.js'
+import { contentStore } from './content-store.js'
 
 const port = Number(process.env.PORT || 8787)
 const host = process.env.HOST || '0.0.0.0'
@@ -49,6 +50,28 @@ const apiHandler = async (request) => {
   if (url.pathname === '/api/v1/apps' && request.method === 'GET') return json({ apps: catalog.listApps() }, 200, cors)
   if (url.pathname === '/api/v1/routes' && request.method === 'GET') return json({ routes: catalog.listRoutes(url.searchParams.get('appId')) }, 200, cors)
   if (url.pathname === '/api/v1/content/surfaces' && request.method === 'GET') return json({ surfaces: catalog.listSurfaces(url.searchParams.get('appId')) }, 200, cors)
+  const pageRoute = url.pathname.match(/^\/api\/v1\/content\/pages\/([a-z0-9-]+)\/([a-z0-9._-]+)(?:\/(draft|publish|rollback|rewrite))?$/i)
+  if (pageRoute) {
+    const [, appId, pageId, action] = pageRoute
+    try {
+      if (!action && request.method === 'GET') return json(contentStore.get(appId, pageId), 200, cors)
+      if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, cors)
+      const body = await request.json()
+      if (action === 'draft') return json(contentStore.saveDraft(appId, pageId, body.values, body.actor), 201, cors)
+      if (action === 'publish') return json(contentStore.publish(appId, pageId, body), 200, cors)
+      if (action === 'rollback') return json(contentStore.rollback(appId, pageId, body), 200, cors)
+      if (action === 'rewrite') {
+        const fields = Object.keys(body.values || {})
+        if (!fields.length || fields.length > 250) return json({ error: 'Provide between 1 and 250 page fields.' }, 400, cors)
+        const surface = { id: pageId, label: `${appId} ${pageId} page`, fields, dynamic: true }
+        const content = await generateWithCopilot({ appId, surface, intent: body.intent, context: { currentValues: body.values } })
+        return json(catalog.saveProposal({ id: randomUUID(), appId, surfaceId: pageId, intent: body.intent, content, status: 'proposed', createdAt: new Date().toISOString() }), 201, cors)
+      }
+    } catch (error) {
+      const generation = error.code === 'COPILOT_NOT_CONFIGURED' || error.code === 'GENERATION_FAILED'
+      return json({ error: error.message, code: error.code || (generation ? 'GENERATION_FAILED' : 'CONTENT_OPERATION_FAILED') }, generation ? 503 : 400, cors)
+    }
+  }
   if (url.pathname === '/api/v1/content/proposals' && request.method === 'POST') {
     const body = await request.json()
     const surface = catalog.listSurfaces(body.appId).find(({ id }) => id === body.surfaceId)
