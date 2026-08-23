@@ -78,7 +78,7 @@ Invoke-Podman @(
 ) | Out-Null
 
 for ($attempt = 0; $attempt -lt 20; $attempt++) {
-  & $podman exec $serviceContainer node -e "fetch('http://127.0.0.1:8787/health').then(r=>{if(!r.ok)process.exit(1)})"
+  & $podman exec $serviceContainer node -e "fetch('http://127.0.0.1:8787/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
   if ($LASTEXITCODE -eq 0) { break }
   if ($attempt -eq 19) { throw 'Brain service failed its health check.' }
   Start-Sleep -Seconds 1
