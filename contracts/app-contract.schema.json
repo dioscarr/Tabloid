@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tabloid.tail70b7f1.ts.net/contracts/app-contract.schema.json",
+  "title": "Tabloid Brain application contract",
+  "type": "object",
+  "required": ["contractVersion", "app", "routes", "content"],
+  "properties": {
+    "contractVersion": { "const": "1.0" },
+    "app": {
+      "type": "object",
+      "required": ["id", "name", "branch", "description"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "branch": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 280 }
+      },
+      "additionalProperties": false
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "direction", "protocol", "path", "purpose"],
+        "properties": {
+          "id": { "type": "string" },
+          "direction": { "enum": ["inbound", "outbound", "bidirectional"] },
+          "protocol": { "enum": ["https", "mcp", "event", "webhook"] },
+          "path": { "type": "string" },
+          "purpose": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "content": {
+      "type": "object",
+      "required": ["editable", "surfaces"],
+      "properties": {
+        "editable": { "type": "boolean" },
+        "surfaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "fields"],
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "fields": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
