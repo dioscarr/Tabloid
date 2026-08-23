@@ -53,7 +53,7 @@ function Get-AppGalleryTemplates {
   foreach ($template in $templates) {
     $id = [string]$template.id
     if ($id -notmatch '^[a-z0-9][a-z0-9-]{1,48}$' -or $ids.ContainsKey($id)) { throw 'App Gallery template registry contains an invalid or duplicate ID.' }
-    if ([string]$template.sourceBranch -notin @('main', 'admin', 'brain')) { throw 'App Gallery template source branch is not allowlisted.' }
+    if ([string]$template.sourceBranch -notin @('main', 'admin', 'app-gallery', 'big-news', 'tech')) { throw 'App Gallery template source branch is not allowlisted.' }
     if ([string]$template.contractPath -ne 'public/app.contract.json') { throw 'App Gallery template contract path is not allowlisted.' }
     $ids[$id] = $true
   }

@@ -11,21 +11,23 @@ const routes = Object.freeze({
 })
 
 const localTemplates = Object.freeze([
-  { id: 'news', name: 'News publication', description: 'A responsive publication shell with section navigation.' },
-  { id: 'admin', name: 'Admin control plane', description: 'A private, accessible control-plane starting point.' },
-  { id: 'static', name: 'Static site', description: 'A focused starting point for a small content site.' },
+  { id: 'daily-echo', name: 'The Daily Echo', description: 'A responsive publication shell with section navigation.', sourceBranch: 'main' },
+  { id: 'admin-control', name: 'Admin control plane', description: 'A private, accessible control-plane starting point.', sourceBranch: 'admin' },
+  { id: 'app-gallery', name: 'App Gallery', description: 'A catalog-first application launcher and creation experience.', sourceBranch: 'app-gallery' },
+  { id: 'big-news', name: 'Big News', description: 'A personal intelligence publication starting point.', sourceBranch: 'big-news' },
+  { id: 'tech', name: 'Tech', description: 'An engineering briefing and technology news starting point.', sourceBranch: 'tech' },
 ])
 
 // Inventory is deliberately local so the gallery is useful while the worker,
 // deployment system, or Podman is unavailable. URLs are known preview routes,
 // not claimed deployment or health information.
 const inventory = Object.freeze([
-  ['The Daily Echo', 'https://tabloid.tail70b7f1.ts.net/'],
-  ['Admin', 'https://tabloid-admin-8c6976.tail70b7f1.ts.net/'],
-  ['App Gallery', 'https://tabloid-app-gallery-0f8e89.tail70b7f1.ts.net/'],
-  ['Big News', 'https://tabloid-big-news-f1a4f4.tail70b7f1.ts.net/'],
-  ['Tech', 'https://tabloid-tech-fe9bbd.tail70b7f1.ts.net/'],
-].map(([name, url]) => ({ name, url })))
+  ['The Daily Echo', 'https://tabloid.tail70b7f1.ts.net/', 'daily-echo'],
+  ['Admin', 'https://tabloid-admin-8c6976.tail70b7f1.ts.net/', 'admin-control'],
+  ['App Gallery', 'https://tabloid-app-gallery-0f8e89.tail70b7f1.ts.net/', 'app-gallery'],
+  ['Big News', 'https://tabloid-big-news-f1a4f4.tail70b7f1.ts.net/', 'big-news'],
+  ['Tech', 'https://tabloid-tech-fe9bbd.tail70b7f1.ts.net/', 'tech'],
+].map(([name, url, templateId]) => ({ name, url, templateId })))
 
 const state = {
   templates: [...localTemplates],
@@ -140,7 +142,7 @@ function page() {
   return `<section class="gallery-home" aria-labelledby="gallery-title">
     <div class="gallery-home__heading"><div><p class="eyebrow">Application gallery</p><h1 id="gallery-title">Apps, templates, and requests</h1><p>Browse known apps immediately. Creating an app sends a small, idempotent request to the private worker; no GitHub or deployment credentials are in this browser.</p></div></div>
     ${staleNotice()}
-    <section aria-labelledby="inventory-title"><h2 id="inventory-title" class="sr-only">Known apps</h2><div class="app-gallery-grid">${inventory.map((item) => `<article class="app-gallery-card"><div class="app-gallery-card__preview"><iframe src="${escapeHtml(item.url)}" title="${escapeHtml(item.name)} preview" loading="lazy" sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"></iframe></div><div class="app-gallery-card__body"><h2>${escapeHtml(item.name)}</h2><a class="secondary-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open app</a></div></article>`).join('')}</div></section>
+    <section aria-labelledby="inventory-title"><h2 id="inventory-title" class="sr-only">Known apps</h2><div class="app-gallery-grid">${inventory.map((item) => `<article class="app-gallery-card"><div class="app-gallery-card__preview"><iframe src="${escapeHtml(item.url)}" title="${escapeHtml(item.name)} preview" loading="lazy" sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"></iframe></div><div class="app-gallery-card__body"><h2>${escapeHtml(item.name)}</h2><div class="state-actions"><a class="secondary-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open app</a><button class="secondary-button" type="button" data-create-from="${escapeHtml(item.templateId)}">Create from this app</button></div></div></article>`).join('')}</div></section>
     <section class="gallery-layout" aria-labelledby="create-title"><div class="template-panel"><div class="panel-heading"><p class="eyebrow">Template</p><h2>Choose a starting point</h2><p>${state.templatePhase === 'loading' ? 'Loading worker templates; local choices are available now.' : 'Templates are supplied or confirmed by the worker.'}</p></div><div class="template-list" role="group" aria-label="App templates">${templateOptions()}</div>${state.errors.template ? `<p class="field-error">${escapeHtml(state.errors.template)}</p>` : ''}</div>
       <form id="create-app-form" class="provision-form" novalidate><div class="panel-heading"><p class="eyebrow">Create request</p><h2 id="create-title">Describe the new app</h2><p>The server validates authorization and performs all branch, preview, and deployment work.</p></div>
         <label class="field-label" for="name">Name <span aria-hidden="true">*</span></label><input class="field-input" id="name" name="name" required maxlength="80" value="${escapeHtml(state.form.name)}" aria-invalid="${Boolean(state.errors.name)}" aria-describedby="name-error" />${state.errors.name ? `<p id="name-error" class="field-error">${escapeHtml(state.errors.name)}</p>` : ''}
@@ -164,6 +166,12 @@ function bindEvents() {
     state.selectedTemplate = button.dataset.template
     state.errors = { ...state.errors, template: '' }
     render()
+  }))
+  document.querySelectorAll('[data-create-from]').forEach((button) => button.addEventListener('click', () => {
+    state.selectedTemplate = button.dataset.createFrom
+    state.errors = { ...state.errors, template: '' }
+    render()
+    document.querySelector('#name')?.focus()
   }))
   document.querySelector('[data-action="refresh"]')?.addEventListener('click', refresh)
   document.querySelector('#create-app-form')?.addEventListener('submit', submit)

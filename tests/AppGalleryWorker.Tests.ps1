@@ -4,7 +4,7 @@ $registry = Get-Content -Raw (Join-Path $PSScriptRoot '..\templates\app-gallery.
 Describe 'App Gallery worker contract' {
   It 'has a non-empty, allowlisted template registry' {
     $registry.templates.Count | Should BeGreaterThan 0
-    @($registry.templates.sourceBranch | Select-Object -Unique | Where-Object { $_ -notin @('main', 'admin', 'brain') }).Count | Should Be 0
+    @($registry.templates.sourceBranch | Select-Object -Unique | Where-Object { $_ -notin @('main', 'admin', 'app-gallery', 'big-news', 'tech') }).Count | Should Be 0
     @($registry.templates.contractPath | Select-Object -Unique | Where-Object { $_ -ne 'public/app.contract.json' }).Count | Should Be 0
   }
 

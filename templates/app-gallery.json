@@ -2,28 +2,44 @@
   "version": 1,
   "templates": [
     {
-      "id": "news-site",
-      "name": "News & publication",
+      "id": "daily-echo",
+      "name": "The Daily Echo",
       "description": "A responsive multi-page publication with shared navigation.",
       "sourceBranch": "main",
       "contractPath": "public/app.contract.json",
       "accent": "indigo"
     },
     {
-      "id": "operations-console",
-      "name": "Operations console",
+      "id": "admin-control",
+      "name": "Admin control plane",
       "description": "A private dashboard foundation with application cards and activity.",
       "sourceBranch": "admin",
       "contractPath": "public/app.contract.json",
       "accent": "emerald"
     },
     {
-      "id": "agent-workspace",
-      "name": "Agent workspace",
-      "description": "A starting point for tools, content proposals, and operator workflows.",
-      "sourceBranch": "brain",
+      "id": "app-gallery",
+      "name": "App Gallery",
+      "description": "A catalog-first application launcher and creation experience.",
+      "sourceBranch": "app-gallery",
       "contractPath": "public/app.contract.json",
       "accent": "violet"
+    },
+    {
+      "id": "big-news",
+      "name": "Big News",
+      "description": "A personal intelligence publication starting point.",
+      "sourceBranch": "big-news",
+      "contractPath": "public/app.contract.json",
+      "accent": "amber"
+    },
+    {
+      "id": "tech",
+      "name": "Tech",
+      "description": "An engineering briefing and technology news starting point.",
+      "sourceBranch": "tech",
+      "contractPath": "public/app.contract.json",
+      "accent": "sky"
     }
   ]
 }
