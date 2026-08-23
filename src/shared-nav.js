@@ -91,10 +91,6 @@ class TabloidSharedNav extends HTMLElement {
         fetch(`${BRAIN_API}/api/v1/apps`).then(async (response) => {
           if (!response.ok) throw new Error(`Brain returned ${response.status}`)
           return (await response.json()).apps.map(({ branch }) => branch)
-        }),
-        fetch(`https://api.github.com/repos/${REPOSITORY}/branches?per_page=100`, { headers: { Accept: 'application/vnd.github+json' } }).then(async (response) => {
-          if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
-          return (await response.json()).map(({ name }) => name)
         })
       ])
       const authorized = sources[0].status === 'fulfilled'
