@@ -1,5 +1,7 @@
 const REPOSITORY = 'dioscarr/Tabloid'
 const TAILNET = 'tail70b7f1.ts.net'
+const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
+const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
 
 const previewId = async (branch) => {
   let slug = branch.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'branch'
@@ -80,14 +82,28 @@ class TabloidSharedNav extends HTMLElement {
   async loadBranches() {
     this.loaded = true
     try {
-      const response = await fetch(`https://api.github.com/repos/${REPOSITORY}/branches?per_page=100`, { headers: { Accept: 'application/vnd.github+json' } })
-      if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
-      const branches = (await response.json()).map(({ name }) => name).sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
+      const sources = await Promise.allSettled([
+        fetch(`${BRAIN_API}/api/v1/apps`).then(async (response) => {
+          if (!response.ok) throw new Error(`Brain returned ${response.status}`)
+          return (await response.json()).apps.map(({ branch }) => branch)
+        }),
+        fetch(`https://api.github.com/repos/${REPOSITORY}/branches?per_page=100`, { headers: { Accept: 'application/vnd.github+json' } }).then(async (response) => {
+          if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
+          return (await response.json()).map(({ name }) => name)
+        })
+      ])
+      const branches = [...new Set(sources.flatMap((source) => source.status === 'fulfilled' ? source.value : []))]
+      if (!branches.length) throw new Error('No application source is available.')
+      branches.sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
-      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><a class="repo" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage branches ↗</a></div><div class="apps">${apps.map((app) => {
+      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><button class="repo studio-launch" type="button">Brain Studio ✦</button></div><div class="apps">${apps.map((app) => {
         const current = new URL(app.url).hostname === window.location.hostname
-        return `<a class="app${current ? ' current' : ''}" href="${app.url}"><span class="icon">${app.name[0]}</span><span><span class="name">${app.name}</span><span class="branch">${app.branch}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
-      }).join('')}</div>`
+        return `<a class="app${current ? ' current' : ''}" href="${app.url}"><span class="icon">${escapeHtml(app.name[0])}</span><span><span class="name">${escapeHtml(app.name)}</span><span class="branch">${escapeHtml(app.branch)}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
+      }).join('')}</div><a class="status" style="display:block;text-decoration:none" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage repository branches ↗</a>`
+      this.menu.querySelector('.studio-launch')?.addEventListener('click', () => {
+        this.close()
+        document.querySelector('tabloid-brain-studio')?.open()
+      })
     } catch {
       this.loaded = false
       this.menu.innerHTML = `<div class="heading">Live repository branches</div><a class="app" href="https://tabloid.${TAILNET}/"><span class="icon">P</span><span><span class="name">Production</span><span class="branch">main</span></span></a><div class="status">New branches could not be loaded. Try again shortly.</div>`
@@ -95,9 +111,65 @@ class TabloidSharedNav extends HTMLElement {
   }
 }
 
+class TabloidBrainStudio extends HTMLElement {
+  connectedCallback() {
+    if (this.shadowRoot) return
+    const root = this.attachShadow({ mode: 'open' })
+    root.innerHTML = `<style>
+      :host{position:fixed;z-index:100;inset:0;display:none;font:500 14px/1.45 ui-sans-serif,system-ui;color:#e2e8f0}:host([open]){display:block}.backdrop{position:absolute;inset:0;border:0;background:#020617c9;backdrop-filter:blur(8px)}.panel{position:absolute;top:12px;right:12px;bottom:12px;width:min(520px,calc(100vw - 24px));overflow:auto;border:1px solid #334155;border-radius:24px;background:#0f172a;box-shadow:0 30px 90px #020617;padding:24px}.head{display:flex;justify-content:space-between;gap:20px}.eyebrow{color:#a3e635;font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}h2{margin:5px 0 0;font-size:25px}.close{width:38px;height:38px;border:1px solid #334155;border-radius:11px;background:#1e293b;color:white;font-size:20px}.note{margin:18px 0;padding:12px;border:1px solid #a3e63530;border-radius:12px;background:#a3e6350b;color:#cbd5e1;font-size:12px}label{display:block;margin-top:16px;color:#94a3b8;font-size:11px;font-weight:800}select,textarea{width:100%;margin-top:7px;border:1px solid #334155;border-radius:12px;background:#020617;color:white;padding:12px;font:inherit}textarea{min-height:120px;resize:vertical}.generate{width:100%;margin-top:18px;border:0;border-radius:13px;background:#a3e635;color:#1a2e05;padding:13px;font-weight:900}.generate:disabled{opacity:.55}.result{margin-top:18px;border:1px solid #334155;border-radius:16px;background:#020617;padding:16px}.result[hidden]{display:none}.result h3{margin:0 0 12px}.field{padding:10px 0;border-top:1px solid #1e293b}.field:first-of-type{border:0}.field small,.field strong{display:block}.field small{color:#64748b;text-transform:uppercase;font-size:9px}.field strong{margin-top:5px;color:#f8fafc}.status{margin-top:12px;color:#94a3b8;font-size:11px}
+    </style><button class="backdrop" aria-label="Close Brain Studio"></button><section class="panel" role="dialog" aria-modal="true" aria-labelledby="brain-studio-title"><div class="head"><div><div class="eyebrow">Private AI workspace</div><h2 id="brain-studio-title">Brain Studio</h2></div><button class="close" aria-label="Close">×</button></div><div class="note">Generate a reviewable proposal for this application. Brain cannot publish without a separate human approval.</div><div class="status loading">Loading this app's content contract…</div><form hidden><label>Content surface<select name="surface"></select></label><label>What should Brain create or improve?<textarea name="intent" required placeholder="Make the homepage hero clearer, warmer, and focused on saving time…"></textarea></label><button class="generate">Generate proposal ✦</button></form><div class="result" hidden aria-live="polite"></div></section>`
+    root.querySelectorAll('.close,.backdrop').forEach((button) => button.addEventListener('click', () => this.close()))
+    root.querySelector('form').addEventListener('submit', (event) => this.generate(event))
+  }
+
+  async open() {
+    this.setAttribute('open', '')
+    const root = this.shadowRoot
+    const status = root.querySelector('.loading')
+    const form = root.querySelector('form')
+    const result = root.querySelector('.result')
+    result.hidden = true
+    form.hidden = true
+    status.textContent = 'Loading this app’s content contract…'
+    try {
+      const response = await fetch('/app.contract.json', { cache: 'no-store' })
+      if (!response.ok) throw new Error('This branch has not adopted the Brain contract yet.')
+      this.contract = await response.json()
+      const surfaces = this.contract.content?.surfaces || []
+      if (!surfaces.length) throw new Error('This app has no editable content surfaces.')
+      root.querySelector('[name=surface]').innerHTML = surfaces.map(({ id, label }) => `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`).join('')
+      status.textContent = `${this.contract.app.name} · ${surfaces.length} editable surface${surfaces.length === 1 ? '' : 's'}`
+      form.hidden = false
+    } catch (error) { status.textContent = error.message }
+  }
+
+  close() { this.removeAttribute('open') }
+
+  async generate(event) {
+    event.preventDefault()
+    const root = this.shadowRoot
+    const button = root.querySelector('.generate')
+    const result = root.querySelector('.result')
+    button.disabled = true
+    button.textContent = 'Brain is working…'
+    result.hidden = false
+    result.innerHTML = '<div class="status">Discovering tools and generating a structured proposal…</div>'
+    try {
+      const response = await fetch(`${BRAIN_API}/api/v1/content/proposals`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ appId: this.contract.app.id, surfaceId: root.querySelector('[name=surface]').value, intent: root.querySelector('[name=intent]').value }) })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || `Brain returned ${response.status}`)
+      const proposal = payload.content?.proposal || payload.content || {}
+      result.innerHTML = `<h3>Proposal ready</h3>${Object.entries(proposal).map(([field, value]) => `<div class="field"><small>${escapeHtml(field)}</small><strong>${escapeHtml(Array.isArray(value) ? value.join(', ') : value)}</strong></div>`).join('')}<div class="status">Proposal ${escapeHtml(payload.id)} · Not published</div>`
+    } catch (error) { result.innerHTML = `<h3>Generation unavailable</h3><div class="status">${escapeHtml(error.message)}</div>` }
+    finally { button.disabled = false; button.textContent = 'Generate proposal ✦' }
+  }
+}
+
 if (!customElements.get('tabloid-shared-nav')) customElements.define('tabloid-shared-nav', TabloidSharedNav)
+if (!customElements.get('tabloid-brain-studio')) customElements.define('tabloid-brain-studio', TabloidBrainStudio)
 
 export const mountSharedNav = () => {
+  if (!document.querySelector('tabloid-brain-studio')) document.body.append(document.createElement('tabloid-brain-studio'))
   if (document.querySelector('tabloid-shared-nav')) return
   const sharedNav = document.createElement('tabloid-shared-nav')
   const explicitSlot = document.querySelector('[data-shared-nav-slot]')
