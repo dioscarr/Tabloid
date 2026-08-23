@@ -1,5 +1,6 @@
 import './style.css'
 import { mountSharedNav } from './shared-nav.js'
+import { initializeContentAdapter } from './content-adapter.js'
 
 const glyph = (name) => ({ overview: '▦', apps: '◈', resources: '≡', activity: '∿', settings: '⚙' }[name])
 const nav = [['overview', 'Overview'], ['apps', 'Applications'], ['resources', 'Resources'], ['activity', 'Activity'], ['settings', 'Settings']]
@@ -59,5 +60,6 @@ document.querySelector('#app').innerHTML = `
   </div>`
 
 mountSharedNav()
+initializeContentAdapter('dashboard')
 
 if (requestedApp) window.requestAnimationFrame(() => document.querySelector('#app-detail')?.scrollIntoView({ block: 'start' }))
