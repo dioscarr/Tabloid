@@ -16,7 +16,7 @@ $staticNetwork = 'tabloid-static'
 $staticVolume = 'tabloid-static-deployments'
 $staticGateway = 'tabloid-static-gateway'
 $staticGatewayImage = 'localhost/tabloid-static-gateway:latest'
-$staticTailscaleImage = 'localhost/tabloid-tailscale-static:latest'
+$previewTailscaleImage = 'localhost/tabloid-tailscale-preview:latest'
 
 if (-not (Test-Path $podman)) { throw "Podman was not found at $podman" }
 if (-not (Test-Path $SecretPath)) { throw "Tailscale OAuth secret is not configured. Run scripts\configure-preview-deployer.ps1 first." }
@@ -45,6 +45,15 @@ function Get-PreviewId([string]$Branch) {
   }
   $hash = ([BitConverter]::ToString($hashBytes) -replace '-', '').Substring(0, 6).ToLowerInvariant()
   return "$slug-$hash"
+}
+
+function Get-PreviewMode([string]$Branch) {
+  if ($Branch -eq 'api') { return 'service' }
+  return 'static'
+}
+
+function Get-PreviewOrigin([string]$Hostname, [string]$TailnetDomain) {
+  return "https://$Hostname.$TailnetDomain"
 }
 
 function Invoke-Podman {
@@ -77,9 +86,64 @@ function Ensure-LocalImage([string]$Image, [string]$Containerfile) {
   }
 }
 
+function Wait-ContainerHealthy {
+  param(
+    [string]$Container,
+    [int]$Attempts,
+    [int]$DelaySeconds,
+    [string]$FailureMessage
+  )
+
+  for ($attempt = 0; $attempt -lt $Attempts; $attempt++) {
+    if (Test-Podman -Arguments @('healthcheck', 'run', $Container)) { return }
+    Start-Sleep -Seconds $DelaySeconds
+  }
+  throw $FailureMessage
+}
+
+function Normalize-Origin([string]$Origin) {
+  if (-not $Origin) { return $null }
+
+  $uri = $null
+  if (-not [Uri]::TryCreate($Origin, [UriKind]::Absolute, [ref]$uri)) {
+    throw "ADMIN_ALLOWED_ORIGINS contains an invalid origin: $Origin"
+  }
+  if (
+    @('http', 'https') -notcontains $uri.Scheme.ToLowerInvariant()
+    -or $uri.UserInfo
+    -or $uri.AbsolutePath -ne '/'
+    -or $uri.Query
+    -or $uri.Fragment
+  ) {
+    throw "ADMIN_ALLOWED_ORIGINS must contain exact HTTP(S) origins without paths: $Origin"
+  }
+
+  return $uri.GetLeftPart([UriPartial]::Authority)
+}
+
+function Join-Origins([string[]]$Origins) {
+  $unique = [System.Collections.Generic.List[string]]::new()
+  foreach ($originSet in $Origins) {
+    if (-not $originSet) { continue }
+    foreach ($origin in ([string]$originSet -split ',')) {
+      $trimmed = $origin.Trim()
+      if (-not $trimmed) { continue }
+      $normalized = Normalize-Origin $trimmed
+      if ($normalized -and -not $unique.Contains($normalized)) {
+        $unique.Add($normalized)
+      }
+    }
+  }
+  return [string]::Join(',', $unique)
+}
+
+function Ensure-PreviewTailscaleImage {
+  Ensure-LocalImage -Image $previewTailscaleImage -Containerfile 'Tailscale.Containerfile'
+}
+
 function Ensure-StaticGateway {
   Ensure-LocalImage -Image $staticGatewayImage -Containerfile 'StaticGateway.Containerfile'
-  Ensure-LocalImage -Image $staticTailscaleImage -Containerfile 'Tailscale.Containerfile'
+  Ensure-PreviewTailscaleImage
   if (-not (Test-Podman -Arguments @('network', 'exists', $staticNetwork))) {
     Invoke-Podman -Arguments @('network', 'create', $staticNetwork) | Out-Null
   }
@@ -104,12 +168,8 @@ function Ensure-StaticGateway {
   } else {
     Invoke-Podman -Arguments @('start', $staticGateway) -AllowFailure | Out-Null
   }
-  $healthy = $false
-  for ($attempt = 0; $attempt -lt 15; $attempt++) {
-    if (Test-Podman -Arguments @('healthcheck', 'run', $staticGateway)) { $healthy = $true; break }
-    Start-Sleep -Seconds 1
-  }
-  if (-not $healthy) { throw "Shared static gateway '$staticGateway' did not become healthy." }
+
+  Wait-ContainerHealthy -Container $staticGateway -Attempts 15 -DelaySeconds 1 -FailureMessage "Shared static gateway '$staticGateway' did not become healthy."
 }
 
 function Publish-StaticDeployment([string]$Id, [string]$Sha, [string]$Image) {
@@ -122,34 +182,39 @@ function Publish-StaticDeployment([string]$Id, [string]$Sha, [string]$Image) {
   ) | Out-Null
 }
 
-function Deploy-Preview {
+function Remove-StaticDeployment([string]$Id) {
+  if (-not $Id -or -not (Test-Podman -Arguments @('volume', 'exists', $staticVolume))) { return }
+  $script = "rm -rf /deployments/$Id"
+  Invoke-Podman -Arguments @(
+    'run', '--rm',
+    '--entrypoint', '/bin/sh',
+    '--volume', "${staticVolume}:/deployments",
+    $staticGatewayImage, '-c', $script
+  ) -AllowFailure | Out-Null
+}
+
+function Start-PreviewTailscale {
   param(
     [string]$Project,
-    [string]$Id,
-    [string]$Sha,
     [string]$Branch,
     [string]$Hostname,
-    [string]$Image
+    [string[]]$Networks,
+    [string]$Volume,
+    [string]$ServeDestination,
+    [string]$VerificationUrl,
+    [string]$VerificationFailure
   )
 
-  $network = $Project
-  $volume = "$Project-tailscale-state"
-  $appContainer = "$Project-app"
+  Ensure-PreviewTailscaleImage
+  if (-not (Test-Podman -Arguments @('volume', 'exists', $Volume))) {
+    Invoke-Podman -Arguments @('volume', 'create', $Volume) | Out-Null
+  }
+
   $tailscaleContainer = "$Project-tailscale"
-
-  Ensure-StaticGateway
-  Publish-StaticDeployment -Id $Id -Sha $Sha -Image $Image
-
-  if (-not (Test-Podman -Arguments @('network', 'exists', $network))) {
-    Invoke-Podman -Arguments @('network', 'create', $network) | Out-Null
-  }
-  if (-not (Test-Podman -Arguments @('volume', 'exists', $volume))) {
-    Invoke-Podman -Arguments @('volume', 'create', $volume) | Out-Null
-  }
-
   if (Test-Podman -Arguments @('container', 'exists', $tailscaleContainer)) {
     Invoke-Podman -Arguments @('rm', '--force', $tailscaleContainer) | Out-Null
   }
+
   $env:TS_AUTHKEY = "${oauthSecret}?ephemeral=true&preauthorized=true"
   $env:TS_AUTH_ONCE = 'true'
   $env:TS_EXTRA_ARGS = '--advertise-tags=tag:preview'
@@ -157,15 +222,18 @@ function Deploy-Preview {
   $env:TS_STATE_DIR = '/var/lib/tailscale'
   $env:TS_SERVE_CONFIG = '/config/serve.json'
   $env:TS_USERSPACE = 'true'
-  $env:TABLOID_STATIC_PATH = "$Id/current"
+  $env:TABLOID_SERVE_DESTINATION = $ServeDestination
 
-  Invoke-Podman -Arguments @(
+  $arguments = @(
     'run', '--detach',
     '--name', $tailscaleContainer,
     '--hostname', $Hostname,
-    '--restart', 'unless-stopped',
-    '--network', $network,
-    '--network', $staticNetwork,
+    '--restart', 'unless-stopped'
+  )
+  foreach ($network in $Networks) {
+    $arguments += @('--network', $network)
+  }
+  $arguments += @(
     '--env', 'TS_AUTHKEY',
     '--env', 'TS_AUTH_ONCE',
     '--env', 'TS_EXTRA_ARGS',
@@ -173,12 +241,14 @@ function Deploy-Preview {
     '--env', 'TS_STATE_DIR',
     '--env', 'TS_SERVE_CONFIG',
     '--env', 'TS_USERSPACE',
-    '--env', 'TABLOID_STATIC_PATH',
-    '--volume', "${volume}:/var/lib/tailscale",
+    '--env', 'TABLOID_SERVE_DESTINATION',
+    '--volume', "${Volume}:/var/lib/tailscale",
     '--label', 'io.dioscarr.tabloid.preview=true',
     '--label', "io.dioscarr.tabloid.branch=$Branch",
-    $staticTailscaleImage
-  ) | Out-Null
+    $previewTailscaleImage
+  )
+
+  Invoke-Podman -Arguments $arguments | Out-Null
 
   $authenticated = $false
   for ($attempt = 0; $attempt -lt 30; $attempt++) {
@@ -195,14 +265,111 @@ function Deploy-Preview {
 
   if (-not (Test-Podman -Arguments @(
     'exec', $tailscaleContainer,
-      'wget', '-qO', '/dev/null', "http://tabloid-static-gateway:8080/$Id/current/"
+    'wget', '-qO', '/dev/null', $VerificationUrl
   ))) {
-    throw "Tailscale sidecar '$tailscaleContainer' cannot reach its static deployment."
+    throw $VerificationFailure
   }
+}
+
+function Deploy-StaticPreview {
+  param(
+    [string]$Project,
+    [string]$Id,
+    [string]$Sha,
+    [string]$Branch,
+    [string]$Hostname,
+    [string]$Image
+  )
+
+  $network = $Project
+  $tailscaleVolume = "$Project-tailscale-state"
+  $appContainer = "$Project-app"
+
+  Ensure-StaticGateway
+  Publish-StaticDeployment -Id $Id -Sha $Sha -Image $Image
+
+  if (-not (Test-Podman -Arguments @('network', 'exists', $network))) {
+    Invoke-Podman -Arguments @('network', 'create', $network) | Out-Null
+  }
+
+  Start-PreviewTailscale `
+    -Project $Project `
+    -Branch $Branch `
+    -Hostname $Hostname `
+    -Networks @($network, $staticNetwork) `
+    -Volume $tailscaleVolume `
+    -ServeDestination "http://tabloid-static-gateway:8080/$Id/current/" `
+    -VerificationUrl "http://tabloid-static-gateway:8080/$Id/current/" `
+    -VerificationFailure "Tailscale sidecar '$Project-tailscale' cannot reach its static deployment."
 
   if (Test-Podman -Arguments @('container', 'exists', $appContainer)) {
     Invoke-Podman -Arguments @('rm', '--force', $appContainer) | Out-Null
   }
+}
+
+function Deploy-ServicePreview {
+  param(
+    [string]$Project,
+    [string]$Id,
+    [string]$Branch,
+    [string]$Hostname,
+    [string]$Image,
+    [string]$TailnetDomain
+  )
+
+  $network = $Project
+  $tailscaleVolume = "$Project-tailscale-state"
+  $adminDataVolume = "$Project-admin-data"
+  $appContainer = "$Project-app"
+  $previewOrigin = Get-PreviewOrigin -Hostname $Hostname -TailnetDomain $TailnetDomain
+  $adminOrigin = Get-PreviewOrigin -Hostname "tabloid-$(Get-PreviewId 'admin')" -TailnetDomain $TailnetDomain
+  $allowedOrigins = Join-Origins @($previewOrigin, $adminOrigin, $env:ADMIN_ALLOWED_ORIGINS)
+
+  Ensure-PreviewTailscaleImage
+  if (-not (Test-Podman -Arguments @('network', 'exists', $network))) {
+    Invoke-Podman -Arguments @('network', 'create', $network) | Out-Null
+  }
+  if (-not (Test-Podman -Arguments @('volume', 'exists', $adminDataVolume))) {
+    Invoke-Podman -Arguments @('volume', 'create', $adminDataVolume) | Out-Null
+  }
+  if (Test-Podman -Arguments @('container', 'exists', $appContainer)) {
+    Invoke-Podman -Arguments @('rm', '--force', $appContainer) | Out-Null
+  }
+
+  $arguments = @(
+    'run', '--detach',
+    '--name', $appContainer,
+    '--restart', 'unless-stopped',
+    '--network', $network,
+    '--network-alias', 'tabloid-app',
+    '--volume', "${adminDataVolume}:/var/lib/tabloid-admin",
+    '--env', "ADMIN_ALLOWED_ORIGINS=$allowedOrigins",
+    '--env', 'ADMIN_DATA_DIR=/var/lib/tabloid-admin'
+  )
+  if ($env:ADMIN_CSRF_SECRET) { $arguments += @('--env', 'ADMIN_CSRF_SECRET') }
+  if ($env:ADMIN_WORKSPACE_REPOSITORIES) { $arguments += @('--env', 'ADMIN_WORKSPACE_REPOSITORIES') }
+  if ($env:BRAIN_API_URL) { $arguments += @('--env', 'BRAIN_API_URL') }
+  if ($env:BRAIN_ADMIN_TOKEN) { $arguments += @('--env', 'BRAIN_ADMIN_TOKEN') }
+  $arguments += @(
+    '--label', 'io.dioscarr.tabloid.preview=true',
+    '--label', "io.dioscarr.tabloid.branch=$Branch",
+    $Image
+  )
+
+  Invoke-Podman -Arguments $arguments | Out-Null
+  Wait-ContainerHealthy -Container $appContainer -Attempts 30 -DelaySeconds 2 -FailureMessage "Preview application container '$appContainer' did not become healthy."
+
+  Start-PreviewTailscale `
+    -Project $Project `
+    -Branch $Branch `
+    -Hostname $Hostname `
+    -Networks @($network) `
+    -Volume $tailscaleVolume `
+    -ServeDestination 'http://tabloid-app:8080/' `
+    -VerificationUrl 'http://tabloid-app:8080/health' `
+    -VerificationFailure "Tailscale sidecar '$Project-tailscale' cannot reach the Admin API service."
+
+  Remove-StaticDeployment -Id $Id
 }
 
 function Remove-Preview([string]$Project, [string]$Id) {
@@ -214,14 +381,12 @@ function Remove-Preview([string]$Project, [string]$Id) {
   if (Test-Podman -Arguments @('network', 'exists', $Project)) {
     Invoke-Podman -Arguments @('network', 'rm', $Project) | Out-Null
   }
-  $volume = "$Project-tailscale-state"
-  if (Test-Podman -Arguments @('volume', 'exists', $volume)) {
-    Invoke-Podman -Arguments @('volume', 'rm', $volume) | Out-Null
+  foreach ($volume in @("$Project-tailscale-state", "$Project-admin-data")) {
+    if (Test-Podman -Arguments @('volume', 'exists', $volume)) {
+      Invoke-Podman -Arguments @('volume', 'rm', $volume) | Out-Null
+    }
   }
-  if ($Id -and (Test-Podman -Arguments @('volume', 'exists', $staticVolume))) {
-    $script = "rm -rf /deployments/$Id"
-    Invoke-Podman -Arguments @('run', '--rm', '--entrypoint', '/bin/sh', '--volume', "${staticVolume}:/deployments", $staticGatewayImage, '-c', $script) -AllowFailure | Out-Null
-  }
+  Remove-StaticDeployment -Id $Id
 }
 
 $headers = @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'tabloid-preview-deployer' }
@@ -254,13 +419,15 @@ foreach ($branch in $branches) {
   $hostname = "tabloid-$id"
   $image = "ghcr.io/dioscarr/tabloid:preview-$id"
   $branchSha = [string]$branch.commit.sha
+  $mode = Get-PreviewMode $branch.name
+  $previewOrigin = Get-PreviewOrigin -Hostname $hostname -TailnetDomain $TailnetDomain
 
   if ($OnlyBranch -and [string]$branch.name -ne $OnlyBranch) {
     if ($previous.ContainsKey($project)) { $desired[$project] = $previous[$project] }
     continue
   }
 
-  if ($previous.ContainsKey($project) -and [string]$previous[$project].sha -eq $branchSha -and [string]$previous[$project].mode -eq 'static') {
+  if ($previous.ContainsKey($project) -and [string]$previous[$project].sha -eq $branchSha -and [string]$previous[$project].mode -eq $mode) {
     $desired[$project] = $previous[$project]
     Write-Host "$($branch.name) is unchanged at $($desired[$project].url)"
     continue
@@ -272,17 +439,25 @@ foreach ($branch in $branches) {
     continue
   }
 
-  Deploy-Preview -Project $project -Id $id -Sha $branchSha -Branch $branch.name -Hostname $hostname -Image $image
+  if ($mode -eq 'service') {
+    Deploy-ServicePreview -Project $project -Id $id -Branch $branch.name -Hostname $hostname -Image $image -TailnetDomain $TailnetDomain
+  } else {
+    Deploy-StaticPreview -Project $project -Id $id -Sha $branchSha -Branch $branch.name -Hostname $hostname -Image $image
+  }
 
-  $desired[$project] = [ordered]@{
+  $record = [ordered]@{
     branch = $branch.name
     hostname = $hostname
-    url = "https://$hostname.$TailnetDomain/"
+    url = "$previewOrigin/"
     image = $image
     sha = $branchSha
-    mode = 'static'
+    mode = $mode
   }
-  Write-Host "$($branch.name) -> $($desired[$project].url)"
+  if ($mode -eq 'service') {
+    $record.apiOrigin = $previewOrigin
+  }
+  $desired[$project] = $record
+  Write-Host "$($branch.name) -> $($desired[$project].url) ($mode)"
 }
 
 foreach ($project in @($previous.Keys)) {

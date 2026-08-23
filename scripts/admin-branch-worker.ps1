@@ -77,6 +77,8 @@ function Get-Inventory([string]$Branch) {
   $appContainerName = if ($Branch -eq 'main') { 'tabloid' } else { "$project-app" }
   $tailscaleContainerName = if ($Branch -eq 'main') { 'tabloid-tailscale' } else { "$project-tailscale" }
   $networkName = if ($Branch -eq 'main') { 'my-web-stack_default' } else { $project }
+  $tailscaleVolumeName = "$project-tailscale-state"
+  $adminDataVolumeName = "$project-admin-data"
   $legacyApp = Test-Resource 'container' $appContainerName
   $staticDeployment = if ($Branch -eq 'main') { $false } else { Test-StaticDeployment $project }
   [ordered]@{
@@ -86,7 +88,7 @@ function Get-Inventory([string]$Branch) {
     staticHosting = $staticDeployment
     tailscaleContainer = Test-Resource 'container' $tailscaleContainerName
     network = Test-Resource 'network' $networkName
-    volume = if ($Branch -eq 'main') { $false } else { Test-Resource 'volume' "$project-tailscale-state" }
+    volume = if ($Branch -eq 'main') { $false } else { (Test-Resource 'volume' $tailscaleVolumeName) -or (Test-Resource 'volume' $adminDataVolumeName) }
     workspace = Test-Workspace $id
     appUrl = if ($Branch -eq 'main') { 'https://tabloid.tail70b7f1.ts.net/' } else { "https://tabloid-$id.tail70b7f1.ts.net/" }
     vscodeUrl = "https://dio.tail70b7f1.ts.net:8443/?folder=/config/workspaces/$id"
@@ -120,7 +122,11 @@ function Remove-Preview([string]$Branch, [bool]$PurgeVolume) {
   Add-Tombstone $Branch
   foreach ($container in @("$($item.project)-tailscale", "$($item.project)-app")) { if (Test-Resource 'container' $container) { Invoke-Podman @('rm', '--force', $container) | Out-Null } }
   if (Test-Resource 'network' $item.project) { Invoke-Podman @('network', 'rm', $item.project) | Out-Null }
-  if ($PurgeVolume -and (Test-Resource 'volume' "$($item.project)-tailscale-state")) { Invoke-Podman @('volume', 'rm', "$($item.project)-tailscale-state") | Out-Null }
+  if ($PurgeVolume) {
+    foreach ($volume in @("$($item.project)-tailscale-state", "$($item.project)-admin-data")) {
+      if (Test-Resource 'volume' $volume) { Invoke-Podman @('volume', 'rm', $volume) | Out-Null }
+    }
+  }
   if (Test-Resource 'volume' $staticVolume) {
     Invoke-Podman @('run', '--rm', '--entrypoint', '/bin/sh', '--volume', "${staticVolume}:/deployments", $staticGatewayImage, '-c', "rm -rf /deployments/$($item.id)") -AllowFailure | Out-Null
   }
