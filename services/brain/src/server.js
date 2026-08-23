@@ -66,11 +66,11 @@ const apiHandler = async (request) => {
   const toolRoute = url.pathname.match(/^\/api\/v1\/tools\/([a-z0-9_-]+)$/i)
   const skillRoute = url.pathname.match(/^\/api\/v1\/skills\/([a-z0-9_-]+)$/i)
   if (toolRoute && request.method === 'POST') {
-    try { return json({ tool: controlStore.configureTool(toolRoute[1], await request.json()) }, 200, cors) }
+    try { const decision = await authorize({ subject: request.headers.get('x-actor') || 'tailnet-admin', application: 'brain', action: 'tools.configure', context: { toolId: toolRoute[1] } }); if (!decision.allowed) return json({ error: 'Authorization denied', decision }, 403, cors); return json({ tool: controlStore.configureTool(toolRoute[1], await request.json()) }, 200, cors) }
     catch (error) { return json({ error: error.message }, 400, cors) }
   }
   if (skillRoute && request.method === 'POST') {
-    try { return json({ skill: controlStore.configureSkill(skillRoute[1], await request.json()) }, 200, cors) }
+    try { const decision = await authorize({ subject: request.headers.get('x-actor') || 'tailnet-admin', application: 'brain', action: 'skills.configure', context: { skillId: skillRoute[1] } }); if (!decision.allowed) return json({ error: 'Authorization denied', decision }, 403, cors); return json({ skill: controlStore.configureSkill(skillRoute[1], await request.json()) }, 200, cors) }
     catch (error) { return json({ error: error.message }, 400, cors) }
   }
   const pageRoute = url.pathname.match(/^\/api\/v1\/content\/pages\/([a-z0-9-]+)\/([a-z0-9._-]+)(?:\/(draft|publish|rollback|rewrite))?$/i)
