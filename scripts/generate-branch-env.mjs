@@ -42,7 +42,7 @@ const values = {
   VITE_API_BASE_URL: '/api/v1',
   VITE_AUTH_BASE_URL: `https://auth.${tailnetDomain}/`,
   // Public tailnet origin of the deployed Admin API. Not a credential.
-  ...(branch === 'app-gallery' ? { VITE_ADMIN_API_URL: `https://tabloid-admin-8c6976.${tailnetDomain}` } : {}),
+  ...(branch === 'app-gallery' ? { VITE_ADMIN_API_URL: `https://tabloid-api-14c252.${tailnetDomain}` } : {}),
 }
 
 const body = [
