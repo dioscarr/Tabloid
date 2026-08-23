@@ -20,7 +20,8 @@ The create request body is:
   "templateId": "static",
   "name": "Example app",
   "slug": "example-app",
-  "description": "Optional app description"
+  "description": "Optional app description",
+  "intent": "Optional customization request"
 }
 ```
 
