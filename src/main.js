@@ -15,7 +15,7 @@ const state = {
   view: apiBaseUrl ? 'loading-session' : 'gallery',
   session: null,
   templates: [],
-  applications: [],
+  applications: applicationCatalog,
   selectedTemplateId: '',
   intent: {
     draft: { description: '', audience: '', goal: '' },
@@ -32,6 +32,28 @@ const state = {
   error: '',
   errorContext: '',
 }
+const applicationCatalog = Object.freeze([
+  ['Production', 'main'],
+  ['Admin', 'admin'],
+  ['App Gallery', 'app-gallery'],
+  ['Authorization', 'Authorization'],
+  ['Big News', 'big-news'],
+  ['Brain', 'brain'],
+  ['Dashboard', 'dashboard'],
+  ['Tech', 'tech'],
+].map(([name, branch]) => ({
+  name,
+  branch,
+  url: branch === 'main' ? 'https://tabloid.tail70b7f1.ts.net/' : `https://tabloid-${branch.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${{
+    admin: '8c6976',
+    'app-gallery': '0f8e89',
+    authorization: 'ca5839',
+    'big-news': 'f1a4f4',
+    brain: 'bbbf7a',
+    dashboard: '66cd96',
+    tech: 'fe9bbd',
+  }[branch.toLowerCase()]}.${'tail70b7f1.ts.net'}/`,
+})))
 
 const app = document.querySelector('#app')
 
@@ -671,7 +693,8 @@ async function initialize() {
     state.view = 'loading-gallery'
     render()
     const { payload } = await request(apiRoutes.applications)
-    state.applications = valuesFrom(payload?.data || payload?.applications || payload?.items || payload)
+    const applications = valuesFrom(payload?.data || payload?.applications || payload?.items || payload)
+    if (applications.length) state.applications = applications
     state.view = 'gallery'
   } catch (error) {
     if (error.status === 401 || error.status === 403) state.view = 'denied'
