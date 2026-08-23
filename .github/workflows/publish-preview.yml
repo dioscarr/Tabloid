@@ -4,6 +4,13 @@ on:
   push:
     branches-ignore:
       - main
+  create:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to build and publish
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -20,11 +27,16 @@ env:
 jobs:
   publish:
     name: Build and publish preview
+    if: github.event_name != 'create' || (github.event.ref_type == 'branch' && github.event.ref != 'main')
     runs-on: ubuntu-latest
+    env:
+      PREVIEW_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.event_name == 'create' && github.event.ref || github.ref_name }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ env.PREVIEW_BRANCH }}
 
       - name: Verify shared navigation contract
         run: node scripts/verify-shared-nav.mjs
@@ -33,7 +45,7 @@ jobs:
         id: preview
         shell: bash
         env:
-          RAW_BRANCH: ${{ github.ref_name }}
+          RAW_BRANCH: ${{ env.PREVIEW_BRANCH }}
         run: |
           raw="$RAW_BRANCH"
           slug=$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g' | cut -c1-38)
