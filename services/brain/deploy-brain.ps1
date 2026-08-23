@@ -12,6 +12,7 @@ $network = 'tabloid-brain-platform'
 $serviceContainer = 'tabloid-brain-service'
 $tailscaleContainer = 'tabloid-brain-service-tailscale'
 $stateVolume = 'tabloid-brain-service-tailscale-state'
+$contentVolume = 'tabloid-brain-content'
 $copilotSecretName = 'tabloid-brain-copilot-token'
 $mcpSecretName = 'tabloid-brain-mcp-token'
 
@@ -65,6 +66,7 @@ Invoke-Podman @('build', '-t', 'localhost/tabloid-brain-service:latest', '-f', (
 Invoke-Podman @('build', '-t', 'localhost/tabloid-brain-tailscale:latest', '-f', (Join-Path $serviceRoot 'Tailscale.Containerfile'), $serviceRoot) | Out-Null
 if (-not (Invoke-Podman @('network', 'exists', $network) -AllowFailure)) { Invoke-Podman @('network', 'create', $network) | Out-Null }
 if (-not (Invoke-Podman @('volume', 'exists', $stateVolume) -AllowFailure)) { Invoke-Podman @('volume', 'create', $stateVolume) | Out-Null }
+if (-not (Invoke-Podman @('volume', 'exists', $contentVolume) -AllowFailure)) { Invoke-Podman @('volume', 'create', $contentVolume) | Out-Null }
 
 Invoke-Podman @(
   'run', '--detach', '--name', $serviceContainer, '--restart', 'unless-stopped',
@@ -73,6 +75,7 @@ Invoke-Podman @(
   '--env', 'COPILOT_GITHUB_TOKEN_FILE=/run/secrets/copilot_token',
   '--env', 'BRAIN_MCP_TOKEN_FILE=/run/secrets/brain_mcp_token',
   '--env', 'BRAIN_MCP_URL=http://127.0.0.1:8787/mcp',
+  '--env', 'BRAIN_CONTENT_STORE=/data/content.json', '--volume', "${contentVolume}:/data",
   '--label', 'io.dioscarr.tabloid.service=brain',
   'localhost/tabloid-brain-service:latest'
 ) | Out-Null
