@@ -8,6 +8,7 @@ import { catalog } from './catalog.js'
 import { generateWithCopilot, stopCopilot } from './copilot.js'
 import { contentStore } from './content-store.js'
 import { controlStore } from './control-store.js'
+import { getLiveFeed } from './feed.js'
 
 const port = Number(process.env.PORT || 8787)
 const host = process.env.HOST || '0.0.0.0'
@@ -55,6 +56,10 @@ const apiHandler = async (request) => {
   if (url.pathname === '/api/v1/tools' && request.method === 'GET') return json({ tools: controlStore.listTools() }, 200, cors)
   if (url.pathname === '/api/v1/skills' && request.method === 'GET') return json({ skills: controlStore.listSkills() }, 200, cors)
   if (url.pathname === '/api/v1/activity' && request.method === 'GET') return json({ activity: controlStore.activity() }, 200, cors)
+  if (url.pathname === '/api/v1/feed' && request.method === 'GET') {
+    try { return json(await getLiveFeed(url.searchParams.get('channel') || 'all'), 200, cors) }
+    catch (error) { return json({ error: error.message }, 503, cors) }
+  }
   const toolRoute = url.pathname.match(/^\/api\/v1\/tools\/([a-z0-9_-]+)$/i)
   const skillRoute = url.pathname.match(/^\/api\/v1\/skills\/([a-z0-9_-]+)$/i)
   if (toolRoute && request.method === 'POST') {
