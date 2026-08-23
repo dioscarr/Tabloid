@@ -28,6 +28,7 @@ const products = {
   'big-news': ['big-news', 'Big News'],
   tech: ['tech', 'Tech'],
   admin: ['admin', 'Admin'],
+  'app-gallery': ['app-gallery', 'App Gallery'],
 }
 
 const [appSlug, appName] = products[branch] || [previewId(branch), branch]
@@ -40,6 +41,7 @@ const values = {
   VITE_APP_URL: `https://${hostname}.${tailnetDomain}/`,
   VITE_API_BASE_URL: '/api/v1',
   VITE_AUTH_BASE_URL: `https://auth.${tailnetDomain}/`,
+  ...(branch === 'app-gallery' ? { VITE_ADMIN_API_URL: '' } : {}),
 }
 
 const body = [
