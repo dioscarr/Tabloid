@@ -11,27 +11,6 @@ const apiRoutes = Object.freeze({
 })
 const reservedNames = new Set(['admin', 'api', 'app-gallery', 'auth', 'brain', 'root', 'system', 'www'])
 
-const state = {
-  view: apiBaseUrl ? 'loading-session' : 'gallery',
-  session: null,
-  templates: [],
-  applications: applicationCatalog,
-  selectedTemplateId: '',
-  intent: {
-    draft: { description: '', audience: '', goal: '' },
-    validation: {},
-    phase: 'idle',
-    fingerprint: '',
-    idempotencyKey: '',
-    decomposition: null,
-    error: '',
-  },
-  provisionDraft: { displayName: '', appId: '', branch: '' },
-  provisionValidation: {},
-  request: { phase: 'idle', fingerprint: '', idempotencyKey: '', response: null, error: '' },
-  error: '',
-  errorContext: '',
-}
 const applicationCatalog = Object.freeze([
   ['Production', 'main'],
   ['Admin', 'admin'],
@@ -54,6 +33,28 @@ const applicationCatalog = Object.freeze([
     tech: 'fe9bbd',
   }[branch.toLowerCase()]}.${'tail70b7f1.ts.net'}/`,
 })))
+
+const state = {
+  view: apiBaseUrl ? 'loading-session' : 'gallery',
+  session: null,
+  templates: [],
+  applications: applicationCatalog,
+  selectedTemplateId: '',
+  intent: {
+    draft: { description: '', audience: '', goal: '' },
+    validation: {},
+    phase: 'idle',
+    fingerprint: '',
+    idempotencyKey: '',
+    decomposition: null,
+    error: '',
+  },
+  provisionDraft: { displayName: '', appId: '', branch: '' },
+  provisionValidation: {},
+  request: { phase: 'idle', fingerprint: '', idempotencyKey: '', response: null, error: '' },
+  error: '',
+  errorContext: '',
+}
 
 const app = document.querySelector('#app')
 
