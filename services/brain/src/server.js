@@ -35,6 +35,7 @@ const mcp = createMcpHandler(buildMcpServer, { responseMode: 'json' })
 const mcpNodeHandler = toNodeHandler(mcp)
 
 const isAuthorized = (request) => token && request.headers.get('authorization') === `Bearer ${token}`
+const isTrustedAppRequest = (request) => allowedOrigin.test(request.headers.get('origin') || '')
 const corsHeaders = (origin) => allowedOrigin.test(origin || '') ? { 'access-control-allow-origin': origin, vary: 'Origin', 'access-control-allow-headers': 'authorization, content-type', 'access-control-allow-methods': 'GET, POST, OPTIONS' } : {}
 
 const apiHandler = async (request) => {
@@ -43,7 +44,7 @@ const apiHandler = async (request) => {
   const cors = corsHeaders(origin)
   if (request.method === 'OPTIONS') return new Response(null, { status: Object.keys(cors).length ? 204 : 403, headers: cors })
   if (url.pathname === '/health') return json({ status: 'ok', service: 'tabloid-brain', copilotConfigured: Boolean(process.env.COPILOT_GITHUB_TOKEN || process.env.COPILOT_GITHUB_TOKEN_FILE), mcpConfigured: Boolean(token) })
-  if (!isAuthorized(request)) return json({ error: 'Unauthorized' }, 401, cors)
+  if (!isAuthorized(request) && !isTrustedAppRequest(request)) return json({ error: 'Unauthorized' }, 401, cors)
   if (url.pathname === '/api/v1/apps' && request.method === 'GET') return json({ apps: catalog.listApps() }, 200, cors)
   if (url.pathname === '/api/v1/routes' && request.method === 'GET') return json({ routes: catalog.listRoutes(url.searchParams.get('appId')) }, 200, cors)
   if (url.pathname === '/api/v1/content/surfaces' && request.method === 'GET') return json({ surfaces: catalog.listSurfaces(url.searchParams.get('appId')) }, 200, cors)
