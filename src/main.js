@@ -12,7 +12,7 @@ const apiRoutes = Object.freeze({
 const reservedNames = new Set(['admin', 'api', 'app-gallery', 'auth', 'brain', 'root', 'system', 'www'])
 
 const state = {
-  view: apiBaseUrl ? 'loading-session' : 'unavailable',
+  view: apiBaseUrl ? 'loading-session' : 'gallery',
   session: null,
   templates: [],
   applications: [],
@@ -402,7 +402,7 @@ const unavailableView = () => {
   const detail = configured
     ? `App Gallery could not reach the configured Admin API at ${apiBaseUrl}. Confirm the public endpoint is available and accepts this application origin, then retry.`
     : 'Set VITE_ADMIN_API_URL to the public origin of the Admin API, rebuild or restart Vite, and retry. Do not put credentials or privileged tokens in this value.'
-  return `<section class="state-panel state-panel--warning" role="status" aria-live="polite"><p class="eyebrow">Connection required</p><h1>${title}</h1><p>${escapeHtml(detail)}</p>${configured ? '<button data-action="initialize" class="secondary-button" type="button">Retry connection</button>' : '<code>VITE_ADMIN_API_URL=https://admin-api.example</code>'}</section>`
+  return `<section class="state-panel state-panel--warning" role="status" aria-live="polite"><p class="eyebrow">Connection required</p><h1>${title}</h1><p>${escapeHtml(detail)}</p>${configured ? '<button data-action="initialize" class="secondary-button" type="button">Retry connection</button>' : '<div class="state-actions"><button data-action="back-to-gallery" class="secondary-button" type="button">Back to gallery</button><code>VITE_ADMIN_API_URL=https://admin-api.example</code></div>'}</section>`
 }
 
 const deniedView = () => '<section class="state-panel state-panel--denied" role="alert"><p class="eyebrow">Access denied</p><h1>You cannot create or provision applications</h1><p>Your session did not include a confirmed application-provisioning permission. Ask an Admin API administrator to grant access, then sign in again.</p><button data-action="initialize" class="secondary-button" type="button">Check session again</button></section>'
@@ -585,7 +585,16 @@ const bindEvents = () => {
     })
   })
   document.querySelector('[data-action="initialize"]')?.addEventListener('click', initialize)
+  document.querySelector('[data-action="back-to-gallery"]')?.addEventListener('click', () => {
+    state.view = 'gallery'
+    render()
+  })
   document.querySelectorAll('[data-action="create-app"]').forEach((button) => button.addEventListener('click', () => {
+    if (!apiBaseUrl) {
+      state.view = 'unavailable'
+      render()
+      return
+    }
     state.view = 'ready'
     render()
   }))
