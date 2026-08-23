@@ -89,7 +89,10 @@ class TabloidSharedNav extends HTMLElement {
           return (await response.json()).apps.map(({ branch }) => branch)
         })
       ])
-      const branches = [...new Set(sources.flatMap((source) => source.status === 'fulfilled' ? source.value : []))]
+      const branches = [...new Set([
+        'app-gallery',
+        ...sources.flatMap((source) => source.status === 'fulfilled' ? source.value : [])
+      ])]
       if (!branches.length) throw new Error('No application source is available.')
       branches.sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
