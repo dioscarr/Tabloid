@@ -7,6 +7,8 @@ RUN npm ci
 COPY *.html vite.config.js ./
 COPY public ./public
 COPY src ./src
+COPY scripts ./scripts
+RUN npm run check:shared-nav && npm run check:brain-contract
 RUN npm run build
 
 FROM docker.io/nginxinc/nginx-unprivileged:1.29-alpine
