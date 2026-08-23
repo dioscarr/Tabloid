@@ -32,7 +32,7 @@ server-side; it is not an API route.
 ## Creation, validation, and recovery
 
 The checked-in `templates/app-gallery.json` is a registry, not client input.
-Its IDs, source branches (`main`, `admin`, `brain`), and
+Its IDs, source branches (`main`, `admin`, `app-gallery`, `big-news`, `tech`), and
 `public/app.contract.json` path are validated before use.  The worker accepts
 only a 2--48 character lowercase slug and creates only `apps/<slug>`.
 It reads the selected source ref, creates a replacement contract blob/tree/
