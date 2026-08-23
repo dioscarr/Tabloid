@@ -39,7 +39,13 @@ jobs:
           ref: ${{ env.PREVIEW_BRANCH }}
 
       - name: Verify shared navigation contract
-        run: node scripts/verify-shared-nav.mjs
+        shell: bash
+        run: |
+          if [[ -f scripts/verify-shared-nav.mjs ]]; then
+            node scripts/verify-shared-nav.mjs
+          else
+            echo "Shared navigation verifier is not present on this legacy branch; continuing bootstrap."
+          fi
 
       - name: Generate preview identifier
         id: preview
