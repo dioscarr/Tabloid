@@ -1,0 +1,40 @@
+{
+  "contractVersion": "1.0",
+  "app": {
+    "id": "authorization",
+    "name": "Authorization",
+    "branch": "Authorization",
+    "description": "Identity, access policy, approvals, and audit control plane."
+  },
+  "routes": [
+    {
+      "id": "brain-content",
+      "direction": "outbound",
+      "protocol": "https",
+      "path": "/api/v1/content",
+      "purpose": "Discover, generate, preview, approve, and publish managed page content through Brain."
+    },
+    {
+      "id": "brain-tools",
+      "direction": "outbound",
+      "protocol": "mcp",
+      "path": "/mcp",
+      "purpose": "Expose Brain productivity tools to an authenticated server-side agent host."
+    }
+  ],
+  "content": {
+    "editable": true,
+    "surfaces": [
+      {
+        "id": "policy-guidance",
+        "label": "Policy guidance",
+        "fields": [
+          "title",
+          "summary",
+          "risk",
+          "remediation"
+        ]
+      }
+    ]
+  }
+}
