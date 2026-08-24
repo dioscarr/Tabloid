@@ -1,10 +1,10 @@
 {
   "contractVersion": "1.0",
   "app": {
-    "id": "tech",
-    "name": "Tech",
-    "branch": "tech",
-    "description": "Engineering discovery, emerging technology, and project showcases."
+    "id": "ai-news",
+    "name": "AI News",
+    "branch": "apps/ai-news",
+    "description": "AI News"
   },
   "routes": [
     {
