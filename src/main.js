@@ -2,6 +2,18 @@ import './style.css'
 import { mountSharedNav } from './shared-nav.js'
 import { initializeContentAdapter } from './content-adapter.js'
 
+const LIVE_NEWS_ENDPOINT = 'https://hn.algolia.com/api/v1/search_by_date'
+const LIVE_NEWS_REFRESH_MS = 8 * 60 * 1000
+const LIVE_NEWS_TOPICS = {
+  index: 'artificial intelligence engineering',
+  news: 'ai engineering',
+  city: 'open source ai github',
+  politics: 'software architecture distributed systems',
+  culture: 'llm evaluation agents prompts',
+  business: 'developer tools ai coding',
+  sports: 'indie hacker open source project',
+}
+
 const arrowIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-4" fill="none"><path d="M4 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>`
 const appsIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-5" fill="currentColor"><circle cx="4" cy="4" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="16" cy="4" r="1.5"/><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/><circle cx="4" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg>`
 
@@ -18,6 +30,12 @@ const frontStories = [
   ['city.html', 'GitHub Radar', 'Five repositories gaining contributors—not just stars—this week.', '4 min'],
   ['politics.html', 'Architecture', 'Why small teams are returning to boring infrastructure that scales.', '3 min'],
   ['sports.html', 'Showcase', 'An open-source local agent built by one developer solves a real daily problem.', '4 min'],
+]
+
+const initialLiveStories = [
+  ['https://news.ycombinator.com/', 'Live', 'Loading live AI headlines...', 'now'],
+  ['https://news.ycombinator.com/', 'Live', 'Curating top engineering and research coverage.', 'now'],
+  ['https://news.ycombinator.com/', 'Live', 'If feeds are unavailable, editorial stories stay in place.', 'now'],
 ]
 
 const features = [
@@ -109,6 +127,29 @@ const sectionPages = {
 
 const fileName = window.location.pathname.split('/').pop() || 'index.html'
 const pageKey = fileName.replace('.html', '')
+const liveTopic = LIVE_NEWS_TOPICS[pageKey] || LIVE_NEWS_TOPICS.index
+const isLivePage = pageKey !== 'subscribe'
+
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
+
+const sourceMeta = (url) => {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '')
+    if (hostname.includes('news.ycombinator.com')) return { label: 'Hacker News', badge: 'HN', tone: 'bg-orange-100 text-orange-800 border-orange-200' }
+    if (hostname.includes('github.com')) return { label: 'GitHub', badge: 'GH', tone: 'bg-slate-200 text-slate-800 border-slate-300' }
+    if (hostname.includes('arxiv.org')) return { label: 'arXiv', badge: 'AX', tone: 'bg-sky-100 text-sky-800 border-sky-200' }
+    if (hostname.includes('openai.com')) return { label: 'OpenAI', badge: 'OA', tone: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
+    if (hostname.includes('anthropic.com')) return { label: 'Anthropic', badge: 'AN', tone: 'bg-indigo-100 text-indigo-800 border-indigo-200' }
+    return { label: hostname, badge: 'WEB', tone: 'bg-blue-100 text-blue-800 border-blue-200' }
+  } catch {
+    return { label: 'Web', badge: 'WEB', tone: 'bg-blue-100 text-blue-800 border-blue-200' }
+  }
+}
 
 const navMarkup = (active) => navigation.map(([key, label, href]) => `<a href="${href}" class="text-sm font-semibold transition hover:text-emerald-200 ${key === active ? 'text-emerald-300' : 'text-emerald-50/80'}">${label}</a>`).join('')
 
@@ -156,7 +197,7 @@ const homePage = `
   <main class="bg-[#f3f1e8]">
     <section class="overflow-hidden bg-stone-950 text-white">
       <div class="mx-auto max-w-7xl px-5 pb-10 pt-8 sm:px-8 sm:pb-14">
-        <div class="flex items-center justify-between border-y border-stone-700 py-3 text-[0.65rem] font-black uppercase tracking-[0.22em] text-stone-300"><span>Thursday Edition</span><span>August 21, 2026</span></div>
+        <div class="flex items-center justify-between border-y border-stone-700 py-3 text-[0.65rem] font-black uppercase tracking-[0.22em] text-stone-300"><span id="edition-label">Daily Edition</span><span id="edition-date">Loading date</span></div>
         <div class="border-b border-stone-700 py-5 sm:py-7">
           <p class="text-center text-[clamp(4.3rem,18vw,13rem)] font-black leading-[0.72] tracking-[-0.085em] text-red-500">AI NEWS</p>
         </div>
@@ -164,10 +205,10 @@ const homePage = `
           <article class="flex flex-col justify-between">
             <div>
               <p class="inline-flex rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-white">Engineering intelligence</p>
-              <h1 class="mt-6 max-w-2xl font-display text-[clamp(3.2rem,7vw,6.6rem)] font-black leading-[0.86] tracking-[-0.065em]">Everything worth knowing before your next build.</h1>
-              <p class="mt-6 max-w-xl text-lg leading-8 text-stone-300">New technology, open-source projects, architecture, AI engineering, and the people building exciting things—explained for working developers.</p>
+              <h1 id="live-hero-title" class="mt-6 max-w-2xl font-display text-[clamp(3.2rem,7vw,6.6rem)] font-black leading-[0.86] tracking-[-0.065em]">Everything worth knowing before your next build.</h1>
+              <p id="live-hero-deck" class="mt-6 max-w-xl text-lg leading-8 text-stone-300">New technology, open-source projects, architecture, AI engineering, and the people building exciting things-explained for working developers.</p>
             </div>
-            <div class="mt-8 flex flex-wrap items-center gap-4 border-t border-stone-700 pt-5 text-sm"><span class="font-bold text-white">Curated for developers</span><span class="text-stone-400">8 minutes</span><a href="news.html" class="ml-auto inline-flex items-center gap-2 font-bold text-red-400">Open the briefing ${arrowIcon}</a></div>
+            <div class="mt-8 flex flex-wrap items-center gap-4 border-t border-stone-700 pt-5 text-sm"><span id="live-hero-source" class="font-bold text-white">Curated for developers</span><span id="live-hero-time" class="text-stone-400">8 minutes</span><a id="live-hero-link" href="news.html" class="ml-auto inline-flex items-center gap-2 font-bold text-red-400">Open the briefing ${arrowIcon}</a></div>
           </article>
           <figure class="relative min-h-[420px] overflow-hidden rounded-[2rem] bg-stone-900 sm:min-h-[560px]">
             <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1800&q=90" alt="Detailed technology circuit board" class="absolute inset-0 h-full w-full object-cover" />
@@ -178,7 +219,7 @@ const homePage = `
       </div>
     </section>
 
-    <section class="border-y border-red-200 bg-red-50 text-stone-950" aria-label="Engineering update"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white">Just shipped</span><p class="font-display text-lg font-black leading-tight sm:text-xl">A new open-source runtime makes local agent workflows faster and easier to inspect.</p><a href="city.html" class="ml-auto inline-flex shrink-0 items-center gap-2 text-sm font-black text-red-700">Inspect the project ${arrowIcon}</a></div></section>
+    <section class="border-y border-red-200 bg-red-50 text-stone-950" aria-label="Engineering update"><div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-8"><span class="w-fit rounded-full bg-red-600 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white">Live now</span><p id="live-banner-story" class="font-display text-lg font-black leading-tight sm:text-xl">A new open-source runtime makes local agent workflows faster and easier to inspect.</p><a id="live-banner-link" href="city.html" class="inline-flex shrink-0 items-center gap-2 text-sm font-black text-red-700 sm:ml-auto">Read live update ${arrowIcon}</a><span id="live-last-updated" class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-stone-500">Updating...</span></div></section>
 
     <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
       <div class="grid gap-8 lg:grid-cols-[.72fr_1.28fr]">
@@ -186,8 +227,8 @@ const homePage = `
           <div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-100">Today’s engineering brief</p><h2 class="mt-4 font-display text-5xl font-black leading-[0.9] tracking-[-0.055em]">Three signals worth opening your editor for.</h2></div>
           <p class="mt-12 max-w-sm leading-7 text-red-50">Implementation details, real tradeoffs, and projects you can inspect yourself.</p>
         </div>
-        <div class="divide-y divide-stone-300 border-y border-stone-400">
-          ${frontStories.map(([href, category, title, time], index) => `<a href="${href}" class="group grid grid-cols-[2.5rem_1fr] gap-4 py-6 sm:grid-cols-[4rem_1fr_auto] sm:items-center"><span class="font-display text-3xl font-black text-stone-400">0${index + 1}</span><span><span class="mb-2 block text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</span><span class="font-display text-2xl font-black leading-tight tracking-[-0.03em] transition group-hover:text-red-600 sm:text-3xl">${title}</span></span><span class="hidden text-sm font-bold text-stone-500 sm:block">${time}</span></a>`).join('')}
+        <div id="live-front-stories" class="divide-y divide-stone-300 border-y border-stone-400">
+          ${initialLiveStories.map(([href, category, title, time], index) => `<a href="${href}" class="group grid grid-cols-[2.5rem_1fr] gap-4 py-6 sm:grid-cols-[4rem_1fr_auto] sm:items-center"><span class="font-display text-3xl font-black text-stone-400">0${index + 1}</span><span><span class="mb-2 block text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</span><span class="font-display text-2xl font-black leading-tight tracking-[-0.03em] transition group-hover:text-red-600 sm:text-3xl">${title}</span></span><span class="hidden text-sm font-bold text-stone-500 sm:block">${time}</span></a>`).join('')}
         </div>
       </div>
     </section>
@@ -225,9 +266,9 @@ const sectionTemplate = (key) => {
         <div class="grid gap-9 lg:grid-cols-[1.5fr_minmax(280px,.8fr)] lg:gap-10">
           <article>
             <p class="eyebrow">${page.kicker}</p>
-            <h1 class="mt-4 max-w-4xl font-display text-[clamp(2.7rem,6vw,5.6rem)] font-black leading-[0.92] tracking-[-0.055em]">${page.headline}</h1>
-            <p class="mt-6 max-w-3xl text-lg leading-8 text-stone-600">${page.deck}</p>
-            <p class="mt-5 text-sm font-semibold text-stone-500">${page.byline}</p>
+            <h1 id="section-live-headline" class="mt-4 max-w-4xl font-display text-[clamp(2.7rem,6vw,5.6rem)] font-black leading-[0.92] tracking-[-0.055em]">${page.headline}</h1>
+            <p id="section-live-deck" class="mt-6 max-w-3xl text-lg leading-8 text-stone-600">${page.deck}</p>
+            <p id="section-live-byline" class="mt-5 text-sm font-semibold text-stone-500">${page.byline}</p>
             <figure class="mt-8 overflow-hidden rounded-3xl border border-stone-200">
               <img src="${page.image}" alt="${page.title} feature image" class="h-[380px] w-full object-cover sm:h-[500px]" />
             </figure>
@@ -250,6 +291,21 @@ const sectionTemplate = (key) => {
           <p class="text-[0.68rem] font-black uppercase tracking-[0.18em] text-red-300">Read Next</p>
           <div class="mt-4 space-y-4">${navigation.filter(([navKey]) => navKey !== key).slice(0, 3).map(([, label, href]) => `<a href="${href}" class="group block rounded-2xl border border-stone-800 p-4 transition hover:border-red-500"><p class="text-xs font-black uppercase tracking-[0.17em] text-red-300">${label}</p><p class="mt-2 font-display text-xl font-bold leading-tight">More from ${label}</p><p class="mt-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-stone-300 group-hover:text-white">Open ${arrowIcon}</p></a>`).join('')}</div>
         </aside>
+      </section>
+
+      <section class="mx-auto max-w-7xl px-5 pb-18 sm:px-8 lg:pb-24">
+        <div class="overflow-hidden rounded-3xl border border-stone-200 bg-white">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 px-6 py-4 sm:px-8">
+            <p class="text-[0.68rem] font-black uppercase tracking-[0.18em] text-red-600">Live Wire</p>
+            <p id="section-live-updated" class="text-xs font-semibold text-stone-500">Fresh signals for ${page.title}</p>
+          </div>
+          <div id="section-live-feed" class="divide-y divide-stone-200" aria-live="polite">
+            <article class="px-6 py-5 sm:px-8">
+              <p class="text-sm font-semibold text-stone-900">Loading live stories...</p>
+              <p class="mt-1 text-sm text-stone-500">Pulling the latest coverage now.</p>
+            </article>
+          </div>
+        </div>
       </section>
     </main>
   `
@@ -325,8 +381,207 @@ document.querySelector('#app').innerHTML = `
   </div>
 `
 
+const formatRelativeTime = (isoDate) => {
+  if (!isoDate) return 'just now'
+  const delta = Date.now() - new Date(isoDate).getTime()
+  if (Number.isNaN(delta)) return 'just now'
+  const minutes = Math.round(delta / 60000)
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+  if (Math.abs(minutes) < 60) return rtf.format(-minutes, 'minute')
+  const hours = Math.round(minutes / 60)
+  if (Math.abs(hours) < 24) return rtf.format(-hours, 'hour')
+  const days = Math.round(hours / 24)
+  return rtf.format(-days, 'day')
+}
+
+const updateEditionDate = () => {
+  const label = document.querySelector('#edition-label')
+  const date = document.querySelector('#edition-date')
+  if (!label || !date) return
+  const now = new Date()
+  label.textContent = `${now.toLocaleDateString('en-US', { weekday: 'long' })} Edition`
+  date.textContent = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+const updateLiveTimestamp = (timestamp = new Date()) => {
+  const readable = timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const homeStamp = document.querySelector('#live-last-updated')
+  const sectionStamp = document.querySelector('#section-live-updated')
+  if (homeStamp) homeStamp.textContent = `Updated ${readable}`
+  if (sectionStamp && sectionPages[pageKey]) sectionStamp.textContent = `Fresh signals for ${sectionPages[pageKey].title} · Updated ${readable}`
+}
+
+const applyLiveNews = (stories) => {
+  if (!stories.length) return
+  const [lead, ...rest] = stories
+  const heroTitle = document.querySelector('#live-hero-title')
+  const heroDeck = document.querySelector('#live-hero-deck')
+  const heroSource = document.querySelector('#live-hero-source')
+  const heroTime = document.querySelector('#live-hero-time')
+  const heroLink = document.querySelector('#live-hero-link')
+  const bannerStory = document.querySelector('#live-banner-story')
+  const bannerLink = document.querySelector('#live-banner-link')
+  const frontList = document.querySelector('#live-front-stories')
+
+  if (heroTitle) heroTitle.textContent = lead.title
+  if (heroDeck) heroDeck.textContent = lead.summary
+  if (heroSource) heroSource.textContent = lead.source
+  if (heroTime) heroTime.textContent = lead.timeLabel
+  if (heroLink) heroLink.href = lead.url
+  if (bannerStory) bannerStory.textContent = lead.title
+  if (bannerLink) bannerLink.href = lead.url
+
+  if (frontList) {
+    const cards = [lead, ...rest].slice(0, 3)
+    frontList.innerHTML = cards.map((story, index) => `
+      <a href="${escapeHtml(story.url)}" class="group grid grid-cols-[2.5rem_1fr] gap-4 py-6 sm:grid-cols-[4rem_1fr_auto] sm:items-center">
+        <span class="font-display text-3xl font-black text-stone-400">0${index + 1}</span>
+        <span>
+          <span class="mb-2 inline-flex items-center gap-2 text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600"><span class="rounded-md border px-1.5 py-0.5 text-[0.58rem] ${story.sourceTone}">${escapeHtml(story.sourceBadge)}</span>${escapeHtml(story.category)}</span>
+          <span class="font-display text-2xl font-black leading-tight tracking-[-0.03em] transition group-hover:text-red-600 sm:text-3xl">${escapeHtml(story.title)}</span>
+        </span>
+        <span class="hidden text-sm font-bold text-stone-500 sm:block">${escapeHtml(story.timeLabel)}</span>
+      </a>
+    `).join('')
+  }
+}
+
+const fetchLiveNews = async (topic) => {
+  const endpoint = `${LIVE_NEWS_ENDPOINT}?query=${encodeURIComponent(topic)}&tags=story&hitsPerPage=18`
+  const response = await fetch(endpoint, {
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  })
+  if (!response.ok) throw new Error(`Live news API returned ${response.status}`)
+  const data = await response.json()
+  const hits = Array.isArray(data?.hits) ? data.hits : []
+  return hits
+    .filter((item) => item?.title && item?.url)
+    .slice(0, 6)
+    .map((item) => {
+      const source = sourceMeta(item.url)
+      return {
+        title: item.title,
+        summary: `From ${source.label}: ${item.title}`,
+        source: item.author ? `${source.label} · @${item.author}` : source.label,
+        sourceBadge: source.badge,
+        sourceTone: source.tone,
+        timeLabel: formatRelativeTime(item.created_at),
+        category: 'AI update',
+        url: item.url,
+      }
+    })
+}
+
+const renderSectionLiveFeed = (stories, state = 'ready') => {
+  const container = document.querySelector('#section-live-feed')
+  if (!container) return
+
+  if (state === 'error') {
+    container.innerHTML = `
+      <article class="px-6 py-5 sm:px-8">
+        <p class="text-sm font-semibold text-stone-900">Live feed unavailable.</p>
+        <p class="mt-1 text-sm text-stone-500">Editorial coverage is still available above.</p>
+      </article>
+    `
+    return
+  }
+
+  if (!stories.length) {
+    container.innerHTML = `
+      <article class="px-6 py-5 sm:px-8">
+        <p class="text-sm font-semibold text-stone-900">No live stories found right now.</p>
+        <p class="mt-1 text-sm text-stone-500">Try again shortly for new updates.</p>
+      </article>
+    `
+    return
+  }
+
+  container.innerHTML = stories.slice(0, 5).map((story, index) => `
+    <a href="${escapeHtml(story.url)}" class="group block px-6 py-5 transition hover:bg-blue-50 sm:px-8">
+      <p class="inline-flex items-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.18em] text-red-600"><span class="rounded-md border px-1.5 py-0.5 text-[0.58rem] ${story.sourceTone}">${escapeHtml(story.sourceBadge)}</span>${escapeHtml(story.category)} ${index + 1}</p>
+      <h3 class="mt-2 font-display text-2xl font-black leading-tight tracking-[-0.03em] transition group-hover:text-red-700">${escapeHtml(story.title)}</h3>
+      <p class="mt-1 text-xs font-semibold text-stone-500">${escapeHtml(story.source)} · ${escapeHtml(story.timeLabel)}</p>
+    </a>
+  `).join('')
+}
+
+const applySectionLeadStory = (story) => {
+  if (!story || pageKey === 'index' || pageKey === 'subscribe') return
+  const headline = document.querySelector('#section-live-headline')
+  const deck = document.querySelector('#section-live-deck')
+  const byline = document.querySelector('#section-live-byline')
+  if (headline) headline.textContent = story.title
+  if (deck) deck.textContent = story.summary
+  if (byline) byline.textContent = `${story.source} · Updated ${story.timeLabel}`
+}
+
+const fallbackStoriesForPage = () => {
+  if (pageKey === 'index') {
+    return frontStories.map(([url, category, title, time]) => ({
+      title,
+      summary: title,
+      source: 'AI News editorial desk',
+      sourceBadge: 'ED',
+      sourceTone: 'bg-blue-100 text-blue-800 border-blue-200',
+      timeLabel: time,
+      category,
+      url,
+    }))
+  }
+
+  if (sectionPages[pageKey]) {
+    return sectionPages[pageKey].updates.map(([category, title], index) => ({
+      title,
+      summary: title,
+      source: 'AI News editorial desk',
+      sourceBadge: 'ED',
+      sourceTone: 'bg-blue-100 text-blue-800 border-blue-200',
+      timeLabel: `${index + 1}h ago`,
+      category,
+      url: `${pageKey}.html`,
+    }))
+  }
+
+  return []
+}
+
+let liveRefreshTimer
+let refreshingLive = false
+
+const refreshLiveContent = async () => {
+  if (!isLivePage || refreshingLive) return
+  refreshingLive = true
+  try {
+    const stories = await fetchLiveNews(liveTopic)
+    applyLiveNews(stories)
+    applySectionLeadStory(stories[0])
+    renderSectionLiveFeed(stories)
+    updateLiveTimestamp(new Date())
+  } catch {
+    const fallbackStories = fallbackStoriesForPage()
+    applyLiveNews(fallbackStories)
+    applySectionLeadStory(fallbackStories[0])
+    renderSectionLiveFeed(fallbackStories, 'error')
+    updateLiveTimestamp(new Date())
+  } finally {
+    refreshingLive = false
+  }
+}
+
 mountSharedNav()
-initializeContentAdapter('tech')
+initializeContentAdapter('ai-news').finally(async () => {
+  updateEditionDate()
+  await refreshLiveContent()
+  if (!isLivePage) return
+  liveRefreshTimer = window.setInterval(() => {
+    if (document.hidden) return
+    refreshLiveContent()
+  }, LIVE_NEWS_REFRESH_MS)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshLiveContent()
+  })
+})
 const menuButton = document.querySelector('#menu-button')
 const mobileNav = document.querySelector('#mobile-nav')
 const appsButton = document.querySelector('#apps-button')
