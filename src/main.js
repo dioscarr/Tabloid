@@ -5,7 +5,9 @@ import { initializeContentAdapter } from './content-adapter.js'
 const LIVE_NEWS_ENDPOINT = 'https://hn.algolia.com/api/v1/search_by_date'
 const LIVE_NEWS_REFRESH_MS = 8 * 60 * 1000
 const YOUTUBE_REFRESH_MS = 10 * 60 * 1000
+const GITHUB_REFRESH_MS = 10 * 60 * 1000
 const RSS2JSON_ENDPOINT = 'https://api.rss2json.com/v1/api.json?rss_url='
+const GITHUB_PROJECTS_ENDPOINT = 'https://api.github.com/search/repositories?q=topic:artificial-intelligence+archived:false&sort=updated&order=desc&per_page=6'
 const YOUTUBE_CHANNELS = [
   { id: 'UCXZCJLdBC09xxGZ6gcdrc6A', label: 'OpenAI', topics: ['AI Tech'] },
   { id: 'UC_x5XG1OV2P6uZZ5FSM9Ttw', label: 'Google for Developers', topics: ['Programming', 'Developer Tools'] },
@@ -68,6 +70,8 @@ const features = [
   ['culture.html', 'AI Engineering', 'The practical evaluation stack behind dependable AI features.', 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=85', ''],
   ['business.html', 'Developer Tools', 'A focused toolkit for shipping faster without adding platform sprawl.', 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=85', ''],
 ]
+
+const fallbackProjects = features.map(([href, category, title, image, size]) => ({ href, category, title, image, size, description: 'Editorial project pick from the AI News desk.' }))
 
 const sectionPages = {
   news: {
@@ -261,9 +265,10 @@ const homePage = `
     <section class="border-y border-stone-300 bg-white">
       <div class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20">
         <div class="mb-8 flex items-end justify-between"><div><p class="text-xs font-black uppercase tracking-[0.2em] text-red-600">Built in public</p><h2 class="mt-2 font-display text-5xl font-black tracking-[-0.055em] sm:text-6xl">Projects worth studying.</h2></div><a href="sports.html" class="hidden items-center gap-2 text-sm font-black text-red-700 sm:flex">Explore the showcase ${arrowIcon}</a></div>
-        <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          ${features.map(([href, category, title, image, size], index) => `<a href="${href}" class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8] ${size}"><div class="overflow-hidden ${index === 0 ? 'aspect-[16/8]' : 'aspect-[4/3]'}"><img src="${image}" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" /></div><div class="p-6"><p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${category}</p><h3 class="mt-3 font-display font-black leading-[0.95] tracking-[-0.04em] transition group-hover:text-red-600 ${index === 0 ? 'text-4xl sm:text-5xl' : 'text-3xl'}">${title}</h3></div></a>`).join('')}
+        <div id="github-projects-grid" class="grid gap-5 md:grid-cols-2 lg:grid-cols-3" aria-live="polite">
+          ${fallbackProjects.map((project) => `<a href="${project.href}" class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8]"><div class="flex min-h-40 items-end bg-blue-950 p-6 text-white"><p class="text-2xl font-black">Loading GitHub projects...</p></div><div class="p-6"><p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-600">${project.category}</p><h3 class="mt-3 font-display text-3xl font-black leading-[0.95] tracking-[-0.04em]">${project.title}</h3></div></a>`).join('')}
         </div>
+        <p id="github-projects-updated" class="mt-5 text-xs font-semibold text-stone-500">Updating from GitHub...</p>
       </div>
     </section>
 
@@ -657,8 +662,68 @@ const renderTrendingYoutubeVideos = (videos) => {
   `).join('')
 }
 
+const normalizeGithubProject = (repository) => ({
+  title: repository.name,
+  fullName: repository.full_name,
+  description: repository.description || 'An actively maintained AI project worth exploring.',
+  url: repository.html_url,
+  owner: repository.owner?.login || 'GitHub creator',
+  avatar: repository.owner?.avatar_url || '',
+  language: repository.language || 'Open source',
+  stars: repository.stargazers_count || 0,
+  updatedAt: repository.updated_at,
+  topics: repository.topics || [],
+})
+
+const fetchGithubProjects = async () => {
+  const response = await fetch(GITHUB_PROJECTS_ENDPOINT, {
+    headers: { Accept: 'application/vnd.github+json' },
+    cache: 'no-store',
+  })
+  if (!response.ok) throw new Error(`GitHub API returned ${response.status}`)
+  const data = await response.json()
+  return Array.isArray(data?.items) ? data.items.map(normalizeGithubProject) : []
+}
+
+const formatCount = (value) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+
+const renderGithubProjects = (projects) => {
+  const grid = document.querySelector('#github-projects-grid')
+  if (!grid) return
+  if (!projects.length) {
+    grid.innerHTML = `<article class="rounded-[1.75rem] border border-stone-200 bg-blue-50 p-6"><p class="font-display text-2xl font-black text-stone-950">No live projects found.</p><p class="mt-2 text-sm text-stone-600">GitHub may be rate-limiting requests. Try again shortly.</p></article>`
+    return
+  }
+
+  grid.innerHTML = projects.map((project) => `
+    <a href="${escapeHtml(project.url)}" class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8] transition hover:-translate-y-1 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-100/70">
+      <div class="relative flex min-h-40 items-end overflow-hidden bg-blue-950 p-6 text-white">
+        <div class="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-950 to-slate-950 opacity-90"></div>
+        ${project.avatar ? `<img src="${escapeHtml(project.avatar)}" alt="" class="absolute right-5 top-5 size-12 rounded-full border-2 border-white/30 opacity-80" loading="lazy" />` : ''}
+        <div class="relative">
+          <p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-blue-200">Live GitHub project</p>
+          <p class="mt-2 font-display text-3xl font-black leading-none">${escapeHtml(project.title)}</p>
+        </div>
+      </div>
+      <div class="p-6">
+        <p class="text-[0.68rem] font-black uppercase tracking-[0.16em] text-red-600">${escapeHtml(project.owner)} · ${escapeHtml(project.language)}</p>
+        <p class="mt-3 min-h-12 text-sm leading-6 text-stone-600">${escapeHtml(project.description)}</p>
+        <div class="mt-5 flex items-center justify-between border-t border-stone-200 pt-4 text-xs font-bold text-stone-500"><span>${formatCount(project.stars)} stars</span><span>Updated ${escapeHtml(formatRelativeTime(project.updatedAt))}</span></div>
+      </div>
+    </a>
+  `).join('')
+}
+
+const updateGithubTimestamp = (timestamp = new Date(), failed = false) => {
+  const target = document.querySelector('#github-projects-updated')
+  if (!target) return
+  const readable = timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  target.textContent = failed ? `GitHub fallback · Updated ${readable}` : `Live from GitHub · Updated ${readable}`
+}
+
 let liveRefreshTimer
 let youtubeRefreshTimer
+let githubRefreshTimer
 let refreshingLive = false
 
 const refreshLiveContent = async () => {
@@ -742,11 +807,39 @@ const refreshYoutubeContent = async () => {
   }
 }
 
+let refreshingGithub = false
+const refreshGithubContent = async () => {
+  if (pageKey !== 'index' || refreshingGithub) return
+  refreshingGithub = true
+  try {
+    const projects = await fetchGithubProjects()
+    renderGithubProjects(projects)
+    updateGithubTimestamp(new Date())
+  } catch {
+    renderGithubProjects(fallbackProjects.map((project) => ({
+      title: project.title,
+      fullName: 'AI News editorial pick',
+      description: project.description,
+      url: project.href,
+      owner: 'AI News',
+      avatar: '',
+      language: project.category,
+      stars: 0,
+      updatedAt: new Date().toISOString(),
+      topics: [],
+    })))
+    updateGithubTimestamp(new Date(), true)
+  } finally {
+    refreshingGithub = false
+  }
+}
+
 mountSharedNav()
 initializeContentAdapter('ai-news').finally(async () => {
   updateEditionDate()
   await refreshLiveContent()
   await refreshYoutubeContent()
+  await refreshGithubContent()
   if (!isLivePage) return
   liveRefreshTimer = window.setInterval(() => {
     if (document.hidden) return
@@ -756,10 +849,15 @@ initializeContentAdapter('ai-news').finally(async () => {
     if (document.hidden) return
     refreshYoutubeContent()
   }, YOUTUBE_REFRESH_MS)
+  githubRefreshTimer = window.setInterval(() => {
+    if (document.hidden) return
+    refreshGithubContent()
+  }, GITHUB_REFRESH_MS)
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
       refreshLiveContent()
       refreshYoutubeContent()
+      refreshGithubContent()
     }
   })
 })
