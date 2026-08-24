@@ -1,10 +1,10 @@
 {
   "contractVersion": "1.0",
   "app": {
-    "id": "big-news",
-    "name": "Big News",
-    "branch": "big-news",
-    "description": "Personal technology, AI, career, and opportunity briefing."
+    "id": "big-news-dr",
+    "name": "Big News DR",
+    "branch": "apps/big-news-dr",
+    "description": "Big News DR"
   },
   "routes": [
     {
