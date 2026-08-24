@@ -3,11 +3,23 @@
 @theme {
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
   --font-display: Georgia, Cambria, "Times New Roman", serif;
+  --brand-50: #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-200: #bfdbfe;
+  --brand-300: #93c5fd;
+  --brand-400: #60a5fa;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+  --brand-800: #1e40af;
+  --brand-900: #1e3a8a;
+  --brand-950: #172554;
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
   }
 
   body {
@@ -25,7 +37,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid #dc2626;
+    outline: 2px solid var(--brand-600);
   }
 }
 
@@ -35,7 +47,7 @@
   }
 
   .eyebrow {
-    @apply text-[0.68rem] font-black uppercase tracking-[0.18em] text-red-600;
+    @apply text-[0.68rem] font-black uppercase tracking-[0.18em] text-blue-700;
   }
 
   .section-title {
@@ -45,6 +57,112 @@
   .story-card {
     @apply min-w-0;
   }
+
+  .reveal-up {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 420ms ease, transform 420ms ease;
+  }
+
+  .reveal-up.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer utilities {
+  .text-red-300,
+  .text-red-400,
+  .text-red-500,
+  .text-red-600,
+  .text-red-700 {
+    color: var(--brand-600) !important;
+  }
+
+  .text-emerald-50,
+  .text-emerald-50\/80,
+  .text-emerald-100\/60,
+  .text-emerald-100\/70,
+  .text-emerald-200,
+  .text-emerald-200\/60,
+  .text-emerald-300 {
+    color: var(--brand-100) !important;
+  }
+
+  .bg-red-50 {
+    background-color: var(--brand-50) !important;
+  }
+
+  .bg-red-600,
+  .hover\:bg-red-600:hover,
+  .hover\:bg-red-700:hover {
+    background-color: var(--brand-600) !important;
+  }
+
+  .bg-emerald-300,
+  .bg-lime-300 {
+    background-color: var(--brand-300) !important;
+  }
+
+  .bg-emerald-800,
+  .hover\:bg-emerald-800:hover,
+  .hover\:bg-emerald-900:hover {
+    background-color: var(--brand-800) !important;
+  }
+
+  .bg-emerald-950,
+  .bg-emerald-950\/95 {
+    background-color: color-mix(in srgb, var(--brand-950) 95%, transparent) !important;
+  }
+
+  .border-red-200,
+  .border-red-500,
+  .border-emerald-800,
+  .hover\:border-red-500:hover {
+    border-color: var(--brand-500) !important;
+  }
+
+  .selection\:bg-red-200::selection {
+    background-color: var(--brand-200) !important;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 300ms;
+  animation-timing-function: ease;
+}
+
+::view-transition-old(root) {
+  animation-name: page-out;
+}
+
+::view-transition-new(root) {
+  animation-name: page-in;
+}
+
+@keyframes page-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -53,5 +171,6 @@
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }

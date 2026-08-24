@@ -117,7 +117,7 @@ const mobileNavMarkup = () => navigation.map(([, label, href]) => `<a href="${hr
 const header = (active) => `
   <header class="sticky top-0 z-50 border-b border-emerald-800 bg-emerald-950/95 text-white shadow-lg shadow-emerald-950/10 backdrop-blur-xl">
     <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-      <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="Tech home">Tech<span class="text-emerald-300">.</span></a>
+      <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="AI News home">AI News<span class="text-emerald-300">.</span></a>
       <nav class="hidden items-center gap-7 md:flex" aria-label="Main navigation">${navMarkup(active)}</nav>
       <div class="flex items-center gap-2">
         <div class="relative">
@@ -140,7 +140,7 @@ const footer = `
   <footer class="border-t border-stone-200 bg-white">
     <div class="mx-auto flex max-w-7xl flex-col gap-8 px-5 py-10 sm:px-8 md:flex-row md:items-center md:justify-between">
       <div>
-        <p class="font-display text-2xl font-black">Tech<span class="text-red-600">.</span></p>
+        <p class="font-display text-2xl font-black">AI News<span class="text-red-600">.</span></p>
         <p class="mt-1 text-sm text-stone-500">Know what changed. Understand how it works. Build what matters.</p>
       </div>
       <form class="flex w-full max-w-md gap-2" aria-label="Newsletter subscription">
@@ -158,7 +158,7 @@ const homePage = `
       <div class="mx-auto max-w-7xl px-5 pb-10 pt-8 sm:px-8 sm:pb-14">
         <div class="flex items-center justify-between border-y border-stone-700 py-3 text-[0.65rem] font-black uppercase tracking-[0.22em] text-stone-300"><span>Thursday Edition</span><span>August 21, 2026</span></div>
         <div class="border-b border-stone-700 py-5 sm:py-7">
-          <p class="text-center text-[clamp(4.3rem,18vw,13rem)] font-black leading-[0.72] tracking-[-0.085em] text-red-500">TECH</p>
+          <p class="text-center text-[clamp(4.3rem,18vw,13rem)] font-black leading-[0.72] tracking-[-0.085em] text-red-500">AI NEWS</p>
         </div>
         <div class="grid gap-8 pt-8 lg:grid-cols-[1.05fr_1.45fr] lg:items-stretch">
           <article class="flex flex-col justify-between">
@@ -212,7 +212,7 @@ const sectionTemplate = (key) => {
       <main class="mx-auto max-w-4xl px-5 py-24 text-center sm:px-8">
         <p class="eyebrow">Not found</p>
         <h1 class="mt-4 font-display text-5xl font-black tracking-[-0.05em]">This page is missing.</h1>
-        <p class="mt-5 text-stone-600">Go back to the Tech briefing.</p>
+        <p class="mt-5 text-stone-600">Go back to the AI News briefing.</p>
         <a href="index.html" class="mt-8 inline-flex rounded-full bg-stone-950 px-6 py-3 text-sm font-bold text-white hover:bg-red-600">Back home</a>
       </main>
     `
@@ -243,7 +243,7 @@ const sectionTemplate = (key) => {
         <article class="rounded-3xl border border-stone-200 bg-white p-6 lg:col-span-2">
           <p class="eyebrow">Analysis</p>
           <h2 class="mt-3 font-display text-4xl font-black leading-[0.95] tracking-[-0.04em]">Why this story matters right now.</h2>
-          <p class="mt-4 leading-7 text-stone-600">Tech connects each development to implementation details, architecture choices, and working source code. Popularity alone is not enough; the project must teach or solve something useful.</p>
+          <p class="mt-4 leading-7 text-stone-600">AI News connects each development to implementation details, architecture choices, and working source code. Popularity alone is not enough; the project must teach or solve something useful.</p>
           <p class="mt-4 leading-7 text-stone-600">Every briefing is designed to end with a practical next step and a clear stopping point, so staying informed does not consume the time you are trying to protect.</p>
         </article>
         <aside class="rounded-3xl border border-stone-200 bg-stone-950 p-6 text-white">
@@ -261,7 +261,7 @@ const subscribePage = `
     <div class="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
       <section>
         <p class="eyebrow">Make the signal yours</p>
-        <h1 class="mt-4 font-display text-[clamp(2.8rem,6vw,5.8rem)] font-black leading-[0.9] tracking-[-0.055em]">Build your Tech briefing.</h1>
+        <h1 class="mt-4 font-display text-[clamp(2.8rem,6vw,5.8rem)] font-black leading-[0.9] tracking-[-0.055em]">Build your AI News briefing.</h1>
         <p class="mt-6 max-w-2xl text-lg leading-8 text-stone-600">Tell us what you build, the languages and platforms in your stack, and which engineering problems you want to understand better.</p>
         <ul class="mt-8 space-y-3 text-sm text-stone-700">
           <li>One focused daily engineering briefing</li>
@@ -305,17 +305,17 @@ if (pageKey === 'subscribe') {
 }
 
 const titleMap = {
-  index: 'Tech | Engineering intelligence for developers',
-  subscribe: 'My Stack | Tech',
-  news: 'Developer Briefing | Tech',
-  city: 'GitHub Radar | Tech',
-  politics: 'Architecture | Tech',
-  culture: 'AI Engineering | Tech',
-  business: 'Developer Tools | Tech',
-  sports: 'Project Showcase | Tech',
+  index: 'AI News | Engineering intelligence for developers',
+  subscribe: 'My Stack | AI News',
+  news: 'Developer Briefing | AI News',
+  city: 'GitHub Radar | AI News',
+  politics: 'Architecture | AI News',
+  culture: 'AI Engineering | AI News',
+  business: 'Developer Tools | AI News',
+  sports: 'Project Showcase | AI News',
 }
 
-document.title = titleMap[pageKey] || 'Tech'
+document.title = titleMap[pageKey] || 'AI News'
 
 document.querySelector('#app').innerHTML = `
   <div class="min-h-screen bg-stone-50 text-stone-950 selection:bg-red-200">
@@ -389,4 +389,34 @@ if (appsButton && appsMenu) {
 
 document.querySelectorAll('form').forEach((formElement) => {
   formElement.addEventListener('submit', (event) => event.preventDefault())
+})
+
+document.querySelectorAll('main section, main article, main aside').forEach((node, index) => {
+  node.classList.add('reveal-up')
+  node.style.transitionDelay = `${Math.min(index * 35, 220)}ms`
+})
+
+const revealObserver = new IntersectionObserver((entries, observer) => {
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return
+    entry.target.classList.add('is-visible')
+    observer.unobserve(entry.target)
+  })
+}, { threshold: 0.14 })
+
+document.querySelectorAll('.reveal-up').forEach((node) => revealObserver.observe(node))
+
+document.addEventListener('click', (event) => {
+  const link = event.target.closest('a[href]')
+  if (!link) return
+  if (link.target && link.target !== '_self') return
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  if (link.origin !== window.location.origin) return
+  if (!link.pathname.endsWith('.html')) return
+  if (!document.startViewTransition) return
+
+  event.preventDefault()
+  document.startViewTransition(() => {
+    window.location.href = link.href
+  })
 })
