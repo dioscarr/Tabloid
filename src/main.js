@@ -476,9 +476,14 @@ const updateYoutubeTimestamp = (timestamp = new Date(), failed = false) => {
   target.textContent = failed ? `Video feed fallback · Updated ${readable}` : `Updated ${readable}`
 }
 
-const applyLiveNews = (stories) => {
+const pickLeadStory = (stories) => {
+  const pool = stories.slice(0, Math.min(5, stories.length))
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
+const applyLiveNews = (stories, lead) => {
   if (!stories.length) return
-  const [lead, ...rest] = stories
+  const rest = stories.filter((story) => story !== lead)
   const heroTitle = document.querySelector('#live-hero-title')
   const heroDeck = document.querySelector('#live-hero-deck')
   const heroSource = document.querySelector('#live-hero-source')
@@ -731,14 +736,16 @@ const refreshLiveContent = async () => {
   refreshingLive = true
   try {
     const stories = await fetchLiveNews(liveTopic)
-    applyLiveNews(stories)
-    applySectionLeadStory(stories[0])
+    const lead = pickLeadStory(stories)
+    applyLiveNews(stories, lead)
+    applySectionLeadStory(lead)
     renderSectionLiveFeed(stories)
     updateLiveTimestamp(new Date())
   } catch {
     const fallbackStories = fallbackStoriesForPage()
-    applyLiveNews(fallbackStories)
-    applySectionLeadStory(fallbackStories[0])
+    const lead = pickLeadStory(fallbackStories)
+    applyLiveNews(fallbackStories, lead)
+    applySectionLeadStory(lead)
     renderSectionLiveFeed(fallbackStories, 'error')
     updateLiveTimestamp(new Date())
   } finally {
