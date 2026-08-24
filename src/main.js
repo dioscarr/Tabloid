@@ -8,6 +8,9 @@ const YOUTUBE_REFRESH_MS = 10 * 60 * 1000
 const GITHUB_REFRESH_MS = 10 * 60 * 1000
 const RSS2JSON_ENDPOINT = 'https://api.rss2json.com/v1/api.json?rss_url='
 const GITHUB_PROJECTS_ENDPOINT = 'https://api.github.com/search/repositories?q=topic:artificial-intelligence+archived:false&sort=updated&order=desc&per_page=6'
+const BRAIN_API = 'https://tabloid-brain-api.tail70b7f1.ts.net'
+const BOOKMARKS_STORAGE_KEY = 'ai-news:bookmarked-projects'
+const VISITOR_STORAGE_KEY = 'ai-news:visitor-id'
 const YOUTUBE_CHANNELS = [
   { id: 'UCXZCJLdBC09xxGZ6gcdrc6A', label: 'OpenAI', topics: ['AI Tech'] },
   { id: 'UC_x5XG1OV2P6uZZ5FSM9Ttw', label: 'Google for Developers', topics: ['Programming', 'Developer Tools'] },
@@ -72,6 +75,41 @@ const features = [
 ]
 
 const fallbackProjects = features.map(([href, category, title, image, size]) => ({ href, category, title, image, size, description: 'Editorial project pick from the AI News desk.' }))
+
+const getStoredJson = (key, fallback) => {
+  try {
+    return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback))
+  } catch {
+    return fallback
+  }
+}
+
+const getBookmarks = () => new Set(getStoredJson(BOOKMARKS_STORAGE_KEY, []))
+
+const getVisitorId = () => {
+  let visitorId = localStorage.getItem(VISITOR_STORAGE_KEY)
+  if (!visitorId) {
+    visitorId = crypto.randomUUID()
+    localStorage.setItem(VISITOR_STORAGE_KEY, visitorId)
+  }
+  return visitorId
+}
+
+const sendBrainSignal = (type, project) => {
+  const payload = JSON.stringify({
+    type,
+    visitorId: getVisitorId(),
+    appId: 'ai-news',
+    project: { name: project.fullName || project.url, url: project.url, topics: project.topics || [] },
+    occurredAt: new Date().toISOString(),
+  })
+  fetch(`${BRAIN_API}/api/v1/engagement/events`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: payload,
+    keepalive: true,
+  }).catch(() => {})
+}
 
 const sectionPages = {
   news: {
@@ -700,8 +738,9 @@ const renderGithubProjects = (projects) => {
     return
   }
 
+  const bookmarks = getBookmarks()
   grid.innerHTML = projects.map((project) => `
-    <a href="${escapeHtml(project.url)}" class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8] transition hover:-translate-y-1 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-100/70">
+    <article class="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#f3f1e8] transition hover:-translate-y-1 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-100/70">
       <div class="relative flex min-h-40 items-end overflow-hidden bg-blue-950 p-6 text-white">
         <div class="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-950 to-slate-950 opacity-90"></div>
         ${project.avatar ? `<img src="${escapeHtml(project.avatar)}" alt="" class="absolute right-5 top-5 size-12 rounded-full border-2 border-white/30 opacity-80" loading="lazy" />` : ''}
@@ -711,12 +750,35 @@ const renderGithubProjects = (projects) => {
         </div>
       </div>
       <div class="p-6">
-        <p class="text-[0.68rem] font-black uppercase tracking-[0.16em] text-red-600">${escapeHtml(project.owner)} · ${escapeHtml(project.language)}</p>
+        <div class="flex items-start justify-between gap-3"><p class="text-[0.68rem] font-black uppercase tracking-[0.16em] text-red-600">${escapeHtml(project.owner)} · ${escapeHtml(project.language)}</p><button type="button" data-bookmark-project="${escapeHtml(project.url)}" aria-label="${bookmarks.has(project.url) ? 'Remove bookmark' : 'Bookmark project'}" aria-pressed="${bookmarks.has(project.url)}" title="${bookmarks.has(project.url) ? 'Remove bookmark' : 'Bookmark project'}" class="shrink-0 rounded-lg p-1 text-stone-500 transition hover:bg-stone-200 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-400"><svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="${bookmarks.has(project.url) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-3.5L6 21V4.75Z" /></svg></button></div>
         <p class="mt-3 min-h-12 text-sm leading-6 text-stone-600">${escapeHtml(project.description)}</p>
-        <div class="mt-5 flex items-center justify-between border-t border-stone-200 pt-4 text-xs font-bold text-stone-500"><span>${formatCount(project.stars)} stars</span><span>Updated ${escapeHtml(formatRelativeTime(project.updatedAt))}</span></div>
+        <div class="mt-5 flex items-center justify-between border-t border-stone-200 pt-4 text-xs font-bold text-stone-500"><a data-project-link="${escapeHtml(project.url)}" href="${escapeHtml(project.url)}" target="_blank" rel="noreferrer" class="text-red-700 hover:underline">Open project</a><span>${formatCount(project.stars)} stars</span><span>Updated ${escapeHtml(formatRelativeTime(project.updatedAt))}</span></div>
       </div>
-    </a>
+    </article>
   `).join('')
+
+  grid.querySelectorAll('[data-bookmark-project]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const project = projects.find(({ url }) => url === button.dataset.bookmarkProject)
+      if (!project) return
+      const next = getBookmarks()
+      const bookmarked = !next.has(project.url)
+      if (bookmarked) next.add(project.url)
+      else next.delete(project.url)
+      localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify([...next]))
+      button.setAttribute('aria-pressed', String(bookmarked))
+      button.setAttribute('aria-label', bookmarked ? 'Remove bookmark' : 'Bookmark project')
+      button.title = bookmarked ? 'Remove bookmark' : 'Bookmark project'
+      button.querySelector('svg').setAttribute('fill', bookmarked ? 'currentColor' : 'none')
+      sendBrainSignal(bookmarked ? 'project_bookmark' : 'project_unbookmark', project)
+    })
+  })
+  grid.querySelectorAll('[data-project-link]').forEach((link) => {
+    link.addEventListener('click', () => {
+      const project = projects.find(({ url }) => url === link.dataset.projectLink)
+      if (project) sendBrainSignal('project_click', project)
+    })
+  })
 }
 
 const updateGithubTimestamp = (timestamp = new Date(), failed = false) => {
