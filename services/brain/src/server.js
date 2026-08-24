@@ -10,6 +10,7 @@ import { contentStore } from './content-store.js'
 import { controlStore } from './control-store.js'
 import { getLiveFeed } from './feed.js'
 import { authorize } from './authorization.js'
+import { engagementStore } from './engagement-store.js'
 
 const port = Number(process.env.PORT || 8787)
 const host = process.env.HOST || '0.0.0.0'
@@ -62,6 +63,10 @@ const apiHandler = async (request) => {
   if (url.pathname === '/api/v1/feed' && request.method === 'GET') {
     try { return json(await getLiveFeed(url.searchParams.get('channel') || 'all'), 200, cors) }
     catch (error) { return json({ error: error.message }, 503, cors) }
+  }
+  if (url.pathname === '/api/v1/engagement/events' && request.method === 'POST') {
+    try { return json(engagementStore.record(await request.json()), 201, cors) }
+    catch (error) { return json({ error: error.message }, 400, cors) }
   }
   const toolRoute = url.pathname.match(/^\/api\/v1\/tools\/([a-z0-9_-]+)$/i)
   const skillRoute = url.pathname.match(/^\/api\/v1\/skills\/([a-z0-9_-]+)$/i)
