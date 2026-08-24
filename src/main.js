@@ -4,6 +4,14 @@ import { initializeContentAdapter } from './content-adapter.js'
 
 const LIVE_NEWS_ENDPOINT = 'https://hn.algolia.com/api/v1/search_by_date'
 const LIVE_NEWS_REFRESH_MS = 8 * 60 * 1000
+const YOUTUBE_REFRESH_MS = 10 * 60 * 1000
+const RSS2JSON_ENDPOINT = 'https://api.rss2json.com/v1/api.json?rss_url='
+const YOUTUBE_CHANNELS = [
+  { id: 'UCXZCJLdBC09xxGZ6gcdrc6A', label: 'OpenAI' },
+  { id: 'UC_x5XG1OV2P6uZZ5FSM9Ttw', label: 'Google for Developers' },
+  { id: 'UCbfYPyITQ-7l4upoX8nvctg', label: 'Two Minute Papers' },
+  { id: 'UCP7jMXSY2xbc3KCAE0MHQ-A', label: 'Google DeepMind' },
+]
 const LIVE_NEWS_TOPICS = {
   index: 'artificial intelligence engineering',
   news: 'ai engineering',
@@ -36,6 +44,23 @@ const initialLiveStories = [
   ['https://news.ycombinator.com/', 'Live', 'Loading live AI headlines...', 'now'],
   ['https://news.ycombinator.com/', 'Live', 'Curating top engineering and research coverage.', 'now'],
   ['https://news.ycombinator.com/', 'Live', 'If feeds are unavailable, editorial stories stay in place.', 'now'],
+]
+
+const fallbackVideos = [
+  {
+    title: 'GPT-5 Demo and Use Cases',
+    url: 'https://www.youtube.com/watch?v=ceBruD6v5Bk',
+    channel: 'OpenAI',
+    publishedAt: new Date().toISOString(),
+    thumbnail: 'https://i4.ytimg.com/vi/ceBruD6v5Bk/hqdefault.jpg',
+  },
+  {
+    title: 'Live AI research and developer workflows',
+    url: 'https://www.youtube.com/@GoogleDevelopers/videos',
+    channel: 'Google for Developers',
+    publishedAt: new Date().toISOString(),
+    thumbnail: 'https://i4.ytimg.com/vi/ceBruD6v5Bk/hqdefault.jpg',
+  },
 ]
 
 const features = [
@@ -242,6 +267,23 @@ const homePage = `
       </div>
     </section>
 
+    <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-18">
+      <div class="overflow-hidden rounded-[2rem] border border-stone-200 bg-white">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 px-6 py-4 sm:px-8">
+          <div>
+            <p class="text-[0.68rem] font-black uppercase tracking-[0.18em] text-red-600">Trending YouTube</p>
+            <h2 class="mt-1 font-display text-3xl font-black tracking-[-0.04em] text-stone-950 sm:text-4xl">Live AI video pulse.</h2>
+          </div>
+          <p id="youtube-last-updated" class="text-xs font-semibold text-stone-500">Updating video feed...</p>
+        </div>
+        <div id="youtube-trending-grid" class="grid gap-4 p-5 sm:grid-cols-2 sm:p-8 lg:grid-cols-3">
+          <article class="rounded-2xl border border-stone-200 bg-stone-50 p-4"><p class="text-sm font-semibold text-stone-700">Loading trending videos...</p></article>
+          <article class="rounded-2xl border border-stone-200 bg-stone-50 p-4"><p class="text-sm font-semibold text-stone-700">Collecting recent uploads from top AI channels...</p></article>
+          <article class="rounded-2xl border border-stone-200 bg-stone-50 p-4"><p class="text-sm font-semibold text-stone-700">Fallback stories will appear if live feed is unavailable.</p></article>
+        </div>
+      </div>
+    </section>
+
     <section class="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:py-20"><div class="grid overflow-hidden rounded-[2rem] bg-amber-100 lg:grid-cols-[1.2fr_.8fr]"><blockquote class="p-8 sm:p-12 lg:p-16"><p class="text-xs font-black uppercase tracking-[0.2em] text-red-700">The engineering standard</p><p class="mt-5 font-display text-4xl font-black leading-[0.95] tracking-[-0.05em] text-stone-950 sm:text-6xl">“Show the code. Explain the tradeoff. Credit the builder.”</p><footer class="mt-7 max-w-xl leading-7 text-stone-600">Tech showcases work from other developers with direct source links, maintainer attribution, architecture notes, and honest lessons—not copied launch announcements.</footer></blockquote><div class="flex min-h-72 items-end bg-red-700 p-8 text-white sm:p-12"><div><p class="text-sm font-bold text-red-200">Share your work</p><a href="sports.html" class="mt-3 inline-flex items-center gap-2 font-display text-3xl font-black">Submit a project ${arrowIcon}</a></div></div></div></section>
   </main>
 `
@@ -411,6 +453,13 @@ const updateLiveTimestamp = (timestamp = new Date()) => {
   if (sectionStamp && sectionPages[pageKey]) sectionStamp.textContent = `Fresh signals for ${sectionPages[pageKey].title} · Updated ${readable}`
 }
 
+const updateYoutubeTimestamp = (timestamp = new Date(), failed = false) => {
+  const target = document.querySelector('#youtube-last-updated')
+  if (!target) return
+  const readable = timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  target.textContent = failed ? `Video feed fallback · Updated ${readable}` : `Updated ${readable}`
+}
+
 const applyLiveNews = (stories) => {
   if (!stories.length) return
   const [lead, ...rest] = stories
@@ -546,7 +595,59 @@ const fallbackStoriesForPage = () => {
   return []
 }
 
+const normalizeYoutubeVideo = (item, fallbackChannel) => ({
+  title: item?.title || 'Untitled video',
+  url: item?.link || '#',
+  channel: item?.author || fallbackChannel,
+  publishedAt: item?.pubDate || new Date().toISOString(),
+  thumbnail: item?.thumbnail || item?.enclosure?.thumbnail || '',
+})
+
+const fetchTrendingYoutubeVideos = async () => {
+  const feeds = await Promise.all(YOUTUBE_CHANNELS.map(async ({ id, label }) => {
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${id}`
+    const response = await fetch(`${RSS2JSON_ENDPOINT}${encodeURIComponent(feedUrl)}`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    })
+    if (!response.ok) throw new Error(`YouTube feed API returned ${response.status}`)
+    const data = await response.json()
+    const items = Array.isArray(data?.items) ? data.items : []
+    return items.slice(0, 4).map((item) => normalizeYoutubeVideo(item, label))
+  }))
+
+  return feeds
+    .flat()
+    .filter((video) => video.url && video.url !== '#')
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    .filter((video, index, all) => all.findIndex((item) => item.url === video.url) === index)
+    .slice(0, 6)
+}
+
+const renderTrendingYoutubeVideos = (videos) => {
+  const grid = document.querySelector('#youtube-trending-grid')
+  if (!grid) return
+  if (!videos.length) {
+    grid.innerHTML = `<article class="rounded-2xl border border-stone-200 bg-stone-50 p-5"><p class="text-sm font-semibold text-stone-900">No videos available right now.</p><p class="mt-1 text-sm text-stone-500">Try again shortly.</p></article>`
+    return
+  }
+
+  grid.innerHTML = videos.map((video) => `
+    <a href="${escapeHtml(video.url)}" class="group overflow-hidden rounded-2xl border border-stone-200 bg-white transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md hover:shadow-blue-100/70">
+      <div class="aspect-video overflow-hidden bg-stone-100">
+        <img src="${escapeHtml(video.thumbnail)}" alt="${escapeHtml(video.title)} thumbnail" class="h-full w-full object-cover transition duration-400 group-hover:scale-105" loading="lazy" />
+      </div>
+      <div class="p-4">
+        <p class="inline-flex items-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.18em] text-red-600"><span class="rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[0.58rem]">YT</span>${escapeHtml(video.channel)}</p>
+        <h3 class="mt-2 font-display text-2xl font-black leading-tight tracking-[-0.03em] text-stone-950 transition group-hover:text-red-700">${escapeHtml(video.title)}</h3>
+        <p class="mt-2 text-xs font-semibold text-stone-500">${escapeHtml(formatRelativeTime(video.publishedAt))}</p>
+      </div>
+    </a>
+  `).join('')
+}
+
 let liveRefreshTimer
+let youtubeRefreshTimer
 let refreshingLive = false
 
 const refreshLiveContent = async () => {
@@ -569,17 +670,41 @@ const refreshLiveContent = async () => {
   }
 }
 
+let refreshingYoutube = false
+const refreshYoutubeContent = async () => {
+  if (pageKey !== 'index' || refreshingYoutube) return
+  refreshingYoutube = true
+  try {
+    const videos = await fetchTrendingYoutubeVideos()
+    renderTrendingYoutubeVideos(videos)
+    updateYoutubeTimestamp(new Date())
+  } catch {
+    renderTrendingYoutubeVideos(fallbackVideos)
+    updateYoutubeTimestamp(new Date(), true)
+  } finally {
+    refreshingYoutube = false
+  }
+}
+
 mountSharedNav()
 initializeContentAdapter('ai-news').finally(async () => {
   updateEditionDate()
   await refreshLiveContent()
+  await refreshYoutubeContent()
   if (!isLivePage) return
   liveRefreshTimer = window.setInterval(() => {
     if (document.hidden) return
     refreshLiveContent()
   }, LIVE_NEWS_REFRESH_MS)
+  youtubeRefreshTimer = window.setInterval(() => {
+    if (document.hidden) return
+    refreshYoutubeContent()
+  }, YOUTUBE_REFRESH_MS)
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) refreshLiveContent()
+    if (!document.hidden) {
+      refreshLiveContent()
+      refreshYoutubeContent()
+    }
   })
 })
 const menuButton = document.querySelector('#menu-button')
