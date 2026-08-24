@@ -1,7 +1,6 @@
 const REPOSITORY = 'dioscarr/Tabloid'
 const TAILNET = 'tail70b7f1.ts.net'
 const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
-const AUTHZ_API = `https://tabloid-authorization-ca5839.${TAILNET}`
 const VIBE_URL = `https://tabloid-vibe.${TAILNET}`
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
 
@@ -89,14 +88,19 @@ class TabloidSharedNav extends HTMLElement {
         fetch(`${BRAIN_API}/api/v1/apps`).then(async (response) => {
           if (!response.ok) throw new Error(`Brain returned ${response.status}`)
           return (await response.json()).apps.map(({ id, name, branch }) => ({ id, name, branch }))
+        }),
+        fetch(`https://api.github.com/repos/${REPOSITORY}/branches?per_page=100`, { headers: { Accept: 'application/vnd.github+json' } }).then(async (response) => {
+          if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
+          return (await response.json()).map(({ name }) => ({ branch: name }))
         })
       ])
       const discovered = sources.flatMap((source) => source.status === 'fulfilled' ? source.value : [])
-      const appMap = new Map([{ id: 'app-gallery', name: 'App Gallery', branch: 'app-gallery' }, ...discovered].map((app) => [app.branch, app]))
+      if (!discovered.length) throw new Error('No application source is available.')
+      const appMap = new Map()
+      for (const app of discovered) appMap.set(app.branch, { ...appMap.get(app.branch), ...app })
       const apps = await Promise.all([...appMap.values()]
         .sort((a, b) => a.branch === 'main' ? -1 : b.branch === 'main' ? 1 : a.branch.localeCompare(b.branch))
         .map(async (app) => ({ ...app, id: app.id || app.branch, name: app.name || branchLabel(app.branch), url: await branchUrl(app.branch) })))
-      if (!apps.length) throw new Error('No application source is available.')
       const currentApp = apps.find((app) => new URL(app.url).hostname === window.location.hostname)
       const vibeHref = currentApp ? `${VIBE_URL}/?model=${encodeURIComponent(`vibe-${currentApp.id}`)}&q=${encodeURIComponent(`Help me improve ${currentApp.name}. Start by understanding this app and ask what I want to change.`)}` : VIBE_URL
       this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><div class="menu-actions"><a class="repo vibe-launch" href="${vibeHref}">Vibe ✦</a><button class="repo studio-launch" type="button">Brain Studio</button></div></div><div class="apps">${apps.map((app) => {
