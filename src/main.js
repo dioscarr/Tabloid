@@ -134,7 +134,7 @@ document.addEventListener('keydown', (event) => {
 })
 
 const branchManager = document.querySelector('#branch-manager')
-const workerBase = 'https://dio.tail70b7f1.ts.net:9443/api/v1'
+const workerBase = 'https://tabloid-brain-api.tail70b7f1.ts.net/api/v1'
 const workerRequest = async (path, options = {}) => {
   const response = await fetch(`${workerBase}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers } })
   const payload = await response.json().catch(() => ({}))
