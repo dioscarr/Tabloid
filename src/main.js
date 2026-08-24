@@ -7,10 +7,10 @@ const LIVE_NEWS_REFRESH_MS = 8 * 60 * 1000
 const YOUTUBE_REFRESH_MS = 10 * 60 * 1000
 const RSS2JSON_ENDPOINT = 'https://api.rss2json.com/v1/api.json?rss_url='
 const YOUTUBE_CHANNELS = [
-  { id: 'UCXZCJLdBC09xxGZ6gcdrc6A', label: 'OpenAI' },
-  { id: 'UC_x5XG1OV2P6uZZ5FSM9Ttw', label: 'Google for Developers' },
-  { id: 'UCbfYPyITQ-7l4upoX8nvctg', label: 'Two Minute Papers' },
-  { id: 'UCP7jMXSY2xbc3KCAE0MHQ-A', label: 'Google DeepMind' },
+  { id: 'UCXZCJLdBC09xxGZ6gcdrc6A', label: 'OpenAI', topics: ['AI Tech'] },
+  { id: 'UC_x5XG1OV2P6uZZ5FSM9Ttw', label: 'Google for Developers', topics: ['Programming', 'Developer Tools'] },
+  { id: 'UCbfYPyITQ-7l4upoX8nvctg', label: 'Two Minute Papers', topics: ['AI Research'] },
+  { id: 'UCP7jMXSY2xbc3KCAE0MHQ-A', label: 'Google DeepMind', topics: ['AI Research', 'AI Tech'] },
 ]
 const LIVE_NEWS_TOPICS = {
   index: 'artificial intelligence engineering',
@@ -275,6 +275,17 @@ const homePage = `
             <h2 class="mt-1 font-display text-3xl font-black tracking-[-0.04em] text-stone-950 sm:text-4xl">Live AI video pulse.</h2>
           </div>
           <p id="youtube-last-updated" class="text-xs font-semibold text-stone-500">Updating video feed...</p>
+        </div>
+        <div class="flex flex-col gap-4 border-b border-stone-200 px-5 py-5 sm:px-8 md:flex-row md:items-center md:justify-between">
+          <div id="youtube-topic-filters" class="flex flex-wrap gap-2" aria-label="Filter videos by topic">
+            ${['All topics', 'AI Tech', 'Programming', 'AI Research', 'Developer Tools'].map((topic, index) => `<button type="button" data-video-topic="${topic}" class="rounded-full border px-4 py-2 text-xs font-bold transition ${index === 0 ? 'border-blue-600 bg-blue-600 text-white' : 'border-stone-300 text-stone-600 hover:border-blue-400 hover:text-blue-700'}">${topic}</button>`).join('')}
+          </div>
+          <label class="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-stone-500" for="youtube-creator-filter">
+            Creator
+            <select id="youtube-creator-filter" class="rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-bold normal-case tracking-normal text-stone-800 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100">
+              <option value="all">All creators</option>
+            </select>
+          </label>
         </div>
         <div id="youtube-trending-grid" class="grid gap-4 p-5 sm:grid-cols-2 sm:p-8 lg:grid-cols-3">
           <article class="rounded-2xl border border-stone-200 bg-stone-50 p-4"><p class="text-sm font-semibold text-stone-700">Loading trending videos...</p></article>
@@ -604,7 +615,7 @@ const normalizeYoutubeVideo = (item, fallbackChannel) => ({
 })
 
 const fetchTrendingYoutubeVideos = async () => {
-  const feeds = await Promise.all(YOUTUBE_CHANNELS.map(async ({ id, label }) => {
+  const feeds = await Promise.all(YOUTUBE_CHANNELS.map(async ({ id, label, topics }) => {
     const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${id}`
     const response = await fetch(`${RSS2JSON_ENDPOINT}${encodeURIComponent(feedUrl)}`, {
       headers: { Accept: 'application/json' },
@@ -613,7 +624,7 @@ const fetchTrendingYoutubeVideos = async () => {
     if (!response.ok) throw new Error(`YouTube feed API returned ${response.status}`)
     const data = await response.json()
     const items = Array.isArray(data?.items) ? data.items : []
-    return items.slice(0, 4).map((item) => normalizeYoutubeVideo(item, label))
+    return items.slice(0, 4).map((item) => ({ ...normalizeYoutubeVideo(item, label), topics }))
   }))
 
   return feeds
@@ -671,15 +682,60 @@ const refreshLiveContent = async () => {
 }
 
 let refreshingYoutube = false
+let latestYoutubeVideos = []
+let selectedYoutubeTopic = 'All topics'
+let selectedYoutubeCreator = 'all'
+
+const setupYoutubeFilters = (videos) => {
+  const creatorFilter = document.querySelector('#youtube-creator-filter')
+  const topicFilters = document.querySelectorAll('[data-video-topic]')
+  if (!creatorFilter) return
+
+  const creators = [...new Set(videos.map((video) => video.channel))].sort()
+  creatorFilter.innerHTML = '<option value="all">All creators</option>' + creators.map((creator) => `<option value="${escapeHtml(creator)}">${escapeHtml(creator)}</option>`).join('')
+  creatorFilter.value = selectedYoutubeCreator
+  creatorFilter.onchange = () => {
+    selectedYoutubeCreator = creatorFilter.value
+    renderFilteredYoutubeVideos()
+  }
+  topicFilters.forEach((button) => {
+    button.onclick = () => {
+      selectedYoutubeTopic = button.dataset.videoTopic
+      topicFilters.forEach((item) => {
+        const active = item === button
+        item.classList.toggle('border-blue-600', active)
+        item.classList.toggle('bg-blue-600', active)
+        item.classList.toggle('text-white', active)
+        item.classList.toggle('border-stone-300', !active)
+        item.classList.toggle('text-stone-600', !active)
+      })
+      renderFilteredYoutubeVideos()
+    }
+  })
+}
+
+const renderFilteredYoutubeVideos = () => {
+  const videos = latestYoutubeVideos.filter((video) => {
+    const matchesTopic = selectedYoutubeTopic === 'All topics' || video.topics.includes(selectedYoutubeTopic)
+    const matchesCreator = selectedYoutubeCreator === 'all' || video.channel === selectedYoutubeCreator
+    return matchesTopic && matchesCreator
+  })
+  renderTrendingYoutubeVideos(videos)
+}
+
 const refreshYoutubeContent = async () => {
   if (pageKey !== 'index' || refreshingYoutube) return
   refreshingYoutube = true
   try {
     const videos = await fetchTrendingYoutubeVideos()
-    renderTrendingYoutubeVideos(videos)
+    latestYoutubeVideos = videos
+    setupYoutubeFilters(videos)
+    renderFilteredYoutubeVideos()
     updateYoutubeTimestamp(new Date())
   } catch {
-    renderTrendingYoutubeVideos(fallbackVideos)
+    latestYoutubeVideos = fallbackVideos.map((video) => ({ ...video, topics: ['AI Tech'] }))
+    setupYoutubeFilters(latestYoutubeVideos)
+    renderFilteredYoutubeVideos()
     updateYoutubeTimestamp(new Date(), true)
   } finally {
     refreshingYoutube = false
