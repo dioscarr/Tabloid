@@ -29,12 +29,19 @@ const inventory = Object.freeze([
   ['Tech', 'https://tabloid-tech-fe9bbd.tail70b7f1.ts.net/', 'tech', 'tech', 'Engineering signal'],
 ].map(([name, url, templateId, preview, headline]) => ({ name, url, templateId, preview, headline })))
 
+const hiddenPreviewStorageKey = 'tabloid-app-gallery-hidden-previews'
+const loadHiddenPreviews = () => {
+  try { return new Set(JSON.parse(localStorage.getItem(hiddenPreviewStorageKey) || '[]')) }
+  catch { return new Set() }
+}
+
 const state = {
   templates: [...localTemplates],
   selectedTemplate: localTemplates[0].id,
   templatePhase: 'loading',
   requestPhase: 'loading',
   requests: [],
+  hiddenPreviews: loadHiddenPreviews(),
   staleMessage: '',
   form: { name: '', slug: '', description: '', intent: '' },
   errors: {},
@@ -55,6 +62,7 @@ const requestStatus = (item) => String(item?.status || item?.phase || item?.requ
 const requestBranch = (item) => String(item?.branch || item?.branchName || item?.app?.branch || item?.request?.branch || '')
 const requestPreview = (item) => String(item?.previewUrl || item?.url || item?.app?.previewUrl || item?.request?.previewUrl || '')
 const idempotencyKey = () => globalThis.crypto?.randomUUID?.() || `gallery-${Date.now()}-${Math.random().toString(36).slice(2)}`
+const previewFrame = (url, name) => `<div class="live-preview" aria-label="Live first-page preview of ${escapeHtml(name)}"><iframe src="${escapeHtml(url)}" title="${escapeHtml(name)} first-page preview" loading="lazy" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer" tabindex="-1"></iframe><span class="live-preview__badge">Live preview</span></div>`
 
 class WorkerError extends Error {
   constructor(message, status = 0) {
@@ -135,15 +143,19 @@ function requestsView() {
   if (!state.requests.length) return '<section class="gallery-empty"><h2>No app requests yet</h2><p>Submitted requests will appear here when the worker returns them.</p></section>'
   return `<section class="review-summary" aria-labelledby="requests-title"><p class="eyebrow">Recent requests</p><h2 id="requests-title">Branch and preview status</h2><div class="page-list">${state.requests.map((item) => {
     const preview = requestPreview(item)
-    return `<article class="page-card"><div><h4>${escapeHtml(item.name || item.appName || requestId(item) || 'App request')}</h4><p>Status: ${escapeHtml(requestStatus(item))}${requestBranch(item) ? ` · Branch: ${escapeHtml(requestBranch(item))}` : ''}</p></div>${preview ? `<a class="secondary-button" href="${escapeHtml(preview)}" target="_blank" rel="noreferrer">Preview</a>` : '<span class="unavailable-label">Preview pending</span>'}</article>`
+    const name = item.name || item.appName || requestId(item) || 'App request'
+    const live = preview && String(item.status || item.app?.status || '').toLowerCase() === 'created'
+    return `<article class="page-card page-card--app">${live ? previewFrame(preview, name) : '<div class="live-preview live-preview--pending"><span>Preview pending</span></div>'}<div class="page-card__details"><h4>${escapeHtml(name)}</h4><p>Status: ${escapeHtml(requestStatus(item))}${requestBranch(item) ? ` · Branch: ${escapeHtml(requestBranch(item))}` : ''}</p></div>${preview ? `<a class="secondary-button" href="${escapeHtml(preview)}" target="_blank" rel="noreferrer">Open app</a>` : '<span class="unavailable-label">Preview pending</span>'}</article>`
   }).join('')}</div></section>`
 }
 
 function page() {
+  const visibleInventory = inventory.filter((item) => !state.hiddenPreviews.has(item.templateId))
+  const hiddenCount = inventory.length - visibleInventory.length
   return `<section class="gallery-home" aria-labelledby="gallery-title">
     <div class="gallery-home__heading"><div><p class="eyebrow">Application gallery</p><h1 id="gallery-title">Apps, templates, and requests</h1><p>Browse known apps immediately. Creating an app sends a small, idempotent request to the private worker; no GitHub or deployment credentials are in this browser.</p></div></div>
     ${staleNotice()}
-    <section aria-labelledby="inventory-title"><h2 id="inventory-title" class="sr-only">Known apps</h2><div class="app-gallery-grid">${inventory.map((item) => `<article class="app-gallery-card"><div class="app-gallery-card__preview app-gallery-card__preview--${escapeHtml(item.preview)}" aria-label="${escapeHtml(item.name)} visual preview"><div class="preview-browser-bar"><span></span><span></span><span></span><i></i></div><div class="preview-site"><div class="preview-site__masthead">${escapeHtml(item.name)}</div><div class="preview-site__nav"><span></span><span></span><span></span></div><div class="preview-site__content"><p>${escapeHtml(item.headline)}</p><div></div><div></div><div></div></div></div></div><div class="app-gallery-card__body"><h2>${escapeHtml(item.name)}</h2><div class="state-actions"><a class="secondary-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open app</a><button class="secondary-button" type="button" data-create-from="${escapeHtml(item.templateId)}">Create from this app</button></div></div></article>`).join('')}</div></section>
+    <section aria-labelledby="inventory-title"><div class="inventory-heading"><h2 id="inventory-title" class="sr-only">Known apps</h2>${hiddenCount ? `<p>${hiddenCount} preview${hiddenCount === 1 ? '' : 's'} hidden on this device.</p><button class="secondary-button" type="button" data-action="restore-previews">Restore hidden previews</button>` : ''}</div><div class="app-gallery-grid">${visibleInventory.map((item) => `<article class="app-gallery-card"><div class="app-gallery-card__preview"><div class="preview-browser-bar"><span></span><span></span><span></span><i></i></div>${previewFrame(item.url, item.name)}</div><div class="app-gallery-card__body"><h2>${escapeHtml(item.name)}</h2><div class="state-actions"><a class="secondary-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open app</a><button class="secondary-button" type="button" data-create-from="${escapeHtml(item.templateId)}">Create from this app</button><button class="preview-remove-button" type="button" data-remove-preview="${escapeHtml(item.templateId)}" aria-label="Remove ${escapeHtml(item.name)} from previews">Remove from previews</button></div></div></article>`).join('')}</div></section>
     <section class="gallery-layout" aria-labelledby="create-title"><div class="template-panel"><div class="panel-heading"><p class="eyebrow">Template</p><h2>Choose a starting point</h2><p>${state.templatePhase === 'loading' ? 'Loading worker templates; local choices are available now.' : 'Templates are supplied or confirmed by the worker.'}</p></div><div class="template-list" role="group" aria-label="App templates">${templateOptions()}</div>${state.errors.template ? `<p class="field-error">${escapeHtml(state.errors.template)}</p>` : ''}</div>
       <form id="create-app-form" class="provision-form" novalidate><div class="panel-heading"><p class="eyebrow">Create request</p><h2 id="create-title">Describe the new app</h2><p>The server validates authorization and performs all branch, preview, and deployment work.</p></div>
         <label class="field-label" for="name">Name <span aria-hidden="true">*</span></label><input class="field-input" id="name" name="name" required maxlength="80" value="${escapeHtml(state.form.name)}" aria-invalid="${Boolean(state.errors.name)}" aria-describedby="name-error" />${state.errors.name ? `<p id="name-error" class="field-error">${escapeHtml(state.errors.name)}</p>` : ''}
@@ -176,6 +188,16 @@ function bindEvents() {
     document.querySelector('#name')?.focus()
   }))
   document.querySelector('[data-action="refresh"]')?.addEventListener('click', refresh)
+  document.querySelector('[data-action="restore-previews"]')?.addEventListener('click', () => {
+    state.hiddenPreviews.clear()
+    localStorage.removeItem(hiddenPreviewStorageKey)
+    render()
+  })
+  document.querySelectorAll('[data-remove-preview]').forEach((button) => button.addEventListener('click', () => {
+    state.hiddenPreviews.add(button.dataset.removePreview)
+    localStorage.setItem(hiddenPreviewStorageKey, JSON.stringify([...state.hiddenPreviews]))
+    render()
+  }))
   document.querySelector('#create-app-form')?.addEventListener('submit', submit)
 }
 
