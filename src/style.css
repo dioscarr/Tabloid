@@ -26,6 +26,7 @@
     margin: 0;
     min-width: 320px;
     background: #fafaf9;
+    background-image: radial-gradient(1200px 500px at 10% -10%, color-mix(in srgb, var(--brand-100) 55%, transparent), transparent), radial-gradient(900px 400px at 90% -5%, color-mix(in srgb, var(--brand-200) 45%, transparent), transparent);
     font-family: var(--font-sans);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -56,6 +57,14 @@
 
   .story-card {
     @apply min-w-0;
+  }
+
+  a.group {
+    transition: transform 220ms ease;
+  }
+
+  a.group:hover {
+    transform: translateY(-2px);
   }
 
   .reveal-up {
