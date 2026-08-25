@@ -54,7 +54,7 @@ const apiHandler = async (request) => {
   const origin = request.headers.get('origin') || ''
   const cors = corsHeaders(origin)
   if (request.method === 'OPTIONS') return new Response(null, { status: Object.keys(cors).length ? 204 : 403, headers: cors })
-  if (url.pathname === '/health') return json({ status: 'ok', service: 'tabloid-brain', copilotConfigured: Boolean(process.env.COPILOT_GITHUB_TOKEN || process.env.COPILOT_GITHUB_TOKEN_FILE), mcpConfigured: Boolean(token) })
+  if (url.pathname === '/health') return json({ status: 'ok', service: 'tabloid-brain', openRouterConfigured: Boolean(process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY_FILE), mcpConfigured: Boolean(token) })
   if (!isAuthorized(request) && !isTrustedAppRequest(request)) return json({ error: 'Unauthorized' }, 401, cors)
   if (url.pathname === '/api/v1/apps' && request.method === 'GET') return json({ apps: catalog.listApps() }, 200, cors)
   if (url.pathname === '/api/v1/routes' && request.method === 'GET') return json({ routes: catalog.listRoutes(url.searchParams.get('appId')) }, 200, cors)
@@ -129,7 +129,7 @@ const apiHandler = async (request) => {
         return json(catalog.saveProposal({ id: randomUUID(), appId, surfaceId: pageId, intent: body.intent, content, status: 'proposed', createdAt: new Date().toISOString() }), 201, cors)
       }
     } catch (error) {
-      const generation = error.code === 'COPILOT_NOT_CONFIGURED' || error.code === 'GENERATION_FAILED'
+      const generation = error.code === 'OPENROUTER_NOT_CONFIGURED' || error.code === 'OPENROUTER_FAILED' || error.code === 'GENERATION_FAILED'
       return json({ error: error.message, code: error.code || (generation ? 'GENERATION_FAILED' : 'CONTENT_OPERATION_FAILED') }, generation ? 503 : 400, cors)
     }
   }
@@ -141,7 +141,7 @@ const apiHandler = async (request) => {
       const content = await generateWithCopilot({ appId: body.appId, surface, intent: body.intent, context: body.context })
       return json(catalog.saveProposal({ id: randomUUID(), ...body, content, status: 'proposed', createdAt: new Date().toISOString() }), 201, cors)
     } catch (error) {
-      return json({ error: error.message, code: error.code || 'GENERATION_FAILED' }, error.code === 'COPILOT_NOT_CONFIGURED' ? 503 : 500, cors)
+      return json({ error: error.message, code: error.code || 'GENERATION_FAILED' }, ['OPENROUTER_NOT_CONFIGURED', 'OPENROUTER_FAILED'].includes(error.code) ? 503 : 500, cors)
     }
   }
   return json({ error: 'Not found' }, 404, cors)

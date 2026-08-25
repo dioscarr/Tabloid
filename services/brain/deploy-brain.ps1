@@ -13,7 +13,7 @@ $serviceContainer = 'tabloid-brain-service'
 $tailscaleContainer = 'tabloid-brain-service-tailscale'
 $stateVolume = 'tabloid-brain-service-tailscale-state'
 $contentVolume = 'tabloid-brain-content'
-$copilotSecretName = 'tabloid-brain-copilot-token'
+$openRouterSecretName = 'tabloid-brain-openrouter-key'
 $mcpSecretName = 'tabloid-brain-mcp-token'
 
 if (-not (Test-Path $podman)) { throw "Podman was not found at $podman" }
@@ -33,16 +33,16 @@ function Read-PlainSecret([string]$Path) {
   finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($handle) }
 }
 
-Write-Host 'A GitHub Copilot user/OAuth token is required by the server-side SDK.'
-$copilotSecure = Read-Host 'Paste the Copilot GitHub token' -AsSecureString
-$copilotHandle = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($copilotSecure)
-$copilotToken = $null
-$tempCopilot = [IO.Path]::GetTempFileName()
+Write-Host 'An OpenRouter API key is required by the server-side Brain generator.'
+$openRouterSecure = Read-Host 'Paste the OpenRouter API key' -AsSecureString
+$openRouterHandle = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($openRouterSecure)
+$openRouterKey = $null
+$tempOpenRouter = [IO.Path]::GetTempFileName()
 $tempMcp = [IO.Path]::GetTempFileName()
 try {
-  $copilotToken = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($copilotHandle)
-  if (-not $copilotToken) { throw 'The Copilot token cannot be empty.' }
-  [IO.File]::WriteAllText($tempCopilot, $copilotToken)
+  $openRouterKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($openRouterHandle)
+  if (-not $openRouterKey) { throw 'The OpenRouter API key cannot be empty.' }
+  [IO.File]::WriteAllText($tempOpenRouter, $openRouterKey)
   $random = New-Object byte[] 48
   $generator = [Security.Cryptography.RandomNumberGenerator]::Create()
   try { $generator.GetBytes($random) } finally { $generator.Dispose() }
@@ -51,15 +51,15 @@ try {
   foreach ($container in @($tailscaleContainer, $serviceContainer)) {
     if (Invoke-Podman @('container', 'exists', $container) -AllowFailure) { Invoke-Podman @('rm', '--force', $container) | Out-Null }
   }
-  foreach ($name in @($copilotSecretName, $mcpSecretName)) {
+  foreach ($name in @($openRouterSecretName, $mcpSecretName)) {
     if (Invoke-Podman @('secret', 'exists', $name) -AllowFailure) { Invoke-Podman @('secret', 'rm', $name) | Out-Null }
   }
-  Invoke-Podman @('secret', 'create', $copilotSecretName, $tempCopilot) | Out-Null
+  Invoke-Podman @('secret', 'create', $openRouterSecretName, $tempOpenRouter) | Out-Null
   Invoke-Podman @('secret', 'create', $mcpSecretName, $tempMcp) | Out-Null
 } finally {
-  if ($copilotHandle -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($copilotHandle) }
-  $copilotToken = $null
-  Remove-Item -Force -ErrorAction SilentlyContinue $tempCopilot, $tempMcp
+  if ($openRouterHandle -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($openRouterHandle) }
+  $openRouterKey = $null
+  Remove-Item -Force -ErrorAction SilentlyContinue $tempOpenRouter, $tempMcp
 }
 
 Invoke-Podman @('build', '-t', 'localhost/tabloid-brain-service:latest', '-f', (Join-Path $serviceRoot 'Containerfile'), $serviceRoot) | Out-Null
@@ -71,8 +71,8 @@ if (-not (Invoke-Podman @('volume', 'exists', $contentVolume) -AllowFailure)) { 
 Invoke-Podman @(
   'run', '--detach', '--name', $serviceContainer, '--restart', 'unless-stopped',
   '--network', $network, '--network-alias', 'brain-service',
-  '--secret', "$copilotSecretName,target=copilot_token", '--secret', "$mcpSecretName,target=brain_mcp_token",
-  '--env', 'COPILOT_GITHUB_TOKEN_FILE=/run/secrets/copilot_token',
+  '--secret', "$openRouterSecretName,target=openrouter_api_key", '--secret', "$mcpSecretName,target=brain_mcp_token",
+  '--env', 'OPENROUTER_API_KEY_FILE=/run/secrets/openrouter_api_key',
   '--env', 'BRAIN_MCP_TOKEN_FILE=/run/secrets/brain_mcp_token',
   '--env', 'BRAIN_MCP_URL=http://127.0.0.1:8787/mcp', '--env', 'AUTHZ_API_URL=https://tabloid-authorization.tail70b7f1.ts.net', '--env', 'AUTHZ_SERVICE_TOKEN',
   '--env', 'BRAIN_CONTENT_STORE=/data/content.json', '--env', 'BRAIN_TELEMETRY_STORE=/data/telemetry.json', '--volume', "${contentVolume}:/data",
@@ -113,4 +113,4 @@ for ($attempt = 0; $attempt -lt 30; $attempt++) {
 
 $url = "https://$Hostname.$TailnetDomain/"
 Write-Host "Brain service deployed: $url"
-Write-Host 'The Copilot and MCP credentials are stored as Podman secrets, not in the repository or browser bundle.'
+Write-Host 'The OpenRouter and MCP credentials are stored as Podman secrets, not in the repository or browser bundle.'

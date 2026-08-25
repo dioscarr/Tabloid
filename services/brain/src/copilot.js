@@ -1,61 +1,49 @@
-import { CopilotClient } from '@github/copilot-sdk'
 import { readFileSync } from 'node:fs'
 
-let client
+const openRouterToken = () => process.env.OPENROUTER_API_KEY || (process.env.OPENROUTER_API_KEY_FILE ? readFileSync(process.env.OPENROUTER_API_KEY_FILE, 'utf8').trim() : '')
+const openRouterModels = () => (process.env.OPENROUTER_MODELS || 'cohere/north-mini-code:free,poolside/laguna-s-2.1:free,z-ai/glm-5.2:free,nvidia/nemotron-3-super-120b-a12b:free').split(',').map((value) => value.trim()).filter(Boolean)
+const dataCollection = () => process.env.OPENROUTER_DATA_COLLECTION === 'allow' ? 'allow' : 'deny'
+const systemMessage = 'You are Brain, the private content and productivity orchestrator. Return valid JSON only. Never publish or mutate content. Honor the requested application, surface, fields, and context.'
 
-const copilotToken = () => process.env.COPILOT_GITHUB_TOKEN || (process.env.COPILOT_GITHUB_TOKEN_FILE ? readFileSync(process.env.COPILOT_GITHUB_TOKEN_FILE, 'utf8').trim() : '')
-const brainToken = () => process.env.BRAIN_MCP_TOKEN || (process.env.BRAIN_MCP_TOKEN_FILE ? readFileSync(process.env.BRAIN_MCP_TOKEN_FILE, 'utf8').trim() : '')
-const allowedContextTools = new Set(['apps_list', 'routes_list', 'telemetry_routes', 'content_surfaces_list', 'content_read'])
-
-const approveBrainContextTools = (request) => {
-  if (request.managedApprovalRequired) return { kind: 'no-result' }
-  if (request.kind === 'mcp' && request.serverName === 'brain' && allowedContextTools.has(request.toolName)) {
-    return { kind: 'approve-once' }
-  }
-  return { kind: 'reject', feedback: 'Brain only permits its allow-listed, read-only context tools during content generation.' }
-}
-
-const requireConfiguration = () => {
-  const token = copilotToken()
-  if (!token) {
-    const error = new Error('Copilot is not configured. Set COPILOT_GITHUB_TOKEN on the Brain service; never expose it to a browser.')
-    error.code = 'COPILOT_NOT_CONFIGURED'
-    throw error
-  }
-  return token
+const parseJson = (value) => {
+  const text = String(value || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+  return JSON.parse(text || '{}')
 }
 
 export async function generateWithCopilot({ appId, surface, intent, context }) {
-  const gitHubToken = requireConfiguration()
-  client ??= new CopilotClient({ gitHubToken, useLoggedInUser: false })
-  await client.start()
-  const session = await client.createSession({
-    model: process.env.COPILOT_MODEL || 'gpt-5.4',
-    onPermissionRequest: approveBrainContextTools,
-    mcpServers: {
-      brain: {
-        type: 'http',
-        url: process.env.BRAIN_MCP_URL || 'http://127.0.0.1:8787/mcp',
-        headers: { Authorization: `Bearer ${brainToken()}` },
-        tools: ['apps_list', 'routes_list', 'telemetry_routes', 'content_surfaces_list', 'content_read']
-      }
-    },
-    systemMessage: {
-      content: 'You are Brain, the private content and productivity orchestrator. Return valid JSON only. Never publish or mutate content. Use discovered tools for application context and honor the requested surface fields.'
-    }
-  })
-  try {
-    const outputRule = surface.dynamic
-      ? `Return exactly one JSON object shaped as {"values": {"field-key": "replacement text"}}. Preserve every supplied field key and return only string values.`
-      : 'Return a concise structured proposal using the requested surface fields.'
-    const response = await session.sendAndWait({ prompt: `Create a content proposal for app "${appId}", surface "${surface.id}". Fields: ${surface.fields.join(', ')}. Intent: ${intent}. Context: ${JSON.stringify(context ?? {})}. ${outputRule}` })
-    return JSON.parse(response?.data?.content ?? response?.content ?? '{}')
-  } finally {
-    await session.disconnect()
+  const token = openRouterToken()
+  if (!token) {
+    const error = new Error('OpenRouter is not configured. Set OPENROUTER_API_KEY_FILE on the Brain service.')
+    error.code = 'OPENROUTER_NOT_CONFIGURED'
+    throw error
   }
+  const outputRule = surface.dynamic
+    ? 'Return exactly one JSON object shaped as {"values": {"field-key": "replacement text"}}. Preserve every supplied field key and return only string values.'
+    : 'Return a concise JSON object containing a structured proposal using the requested surface fields.'
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+      'content-type': 'application/json',
+      'http-referer': process.env.OPENROUTER_SITE_URL || 'https://tabloid-brain-api.tail70b7f1.ts.net',
+      'x-title': 'Tabloid Brain',
+    },
+    body: JSON.stringify({
+      model: openRouterModels()[0],
+      messages: [{ role: 'system', content: systemMessage }, { role: 'user', content: `Create a content proposal for app "${appId}", surface "${surface.id}". Fields: ${surface.fields.join(', ')}. Intent: ${intent}. Context: ${JSON.stringify(context ?? {})}. ${outputRule}` }],
+      provider: { allow_fallbacks: true, data_collection: dataCollection() },
+      temperature: 0.2,
+      stream: false,
+    }),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const error = new Error(`OpenRouter returned ${response.status}: ${payload?.error?.message || 'generation failed'}`)
+    error.code = 'OPENROUTER_FAILED'
+    error.status = response.status
+    throw error
+  }
+  return parseJson(payload?.choices?.[0]?.message?.content)
 }
 
-export async function stopCopilot() {
-  await client?.stop()
-  client = undefined
-}
+export const stopCopilot = async () => {}
