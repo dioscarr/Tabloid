@@ -3,12 +3,13 @@ const EDITABLE_SELECTOR = 'h1,h2,h3,h4,p,span,a,button,label,figcaption,li'
 
 const visibleTextNode = (element) => [...element.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim())
 const pageId = () => (window.location.pathname.split('/').pop() || 'index.html').replace(/\.html$/, '') || 'index'
-const sendTelemetrySignal = (appId) => {
+const telemetryConnectionId = `connection-${crypto.randomUUID()}`
+const sendTelemetrySignal = (appId, eventType = 'page_view') => {
   const sourceApp = appId.split('/').pop()
   fetch(`${BRAIN_API}/api/v1/telemetry/signals`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ sourceApp, targetRoute: '/api/v1/content', eventType: 'page_view', status: 200, durationMs: 0 }),
+    body: JSON.stringify({ sourceApp, targetApp: 'brain', targetRoute: '/api/v1/content', eventType, connectionId: telemetryConnectionId, status: 200, durationMs: 0 }),
     keepalive: true,
   }).catch(() => {})
 }
@@ -51,6 +52,9 @@ export async function initializeContentAdapter(appId) {
     reset: () => apply(publishedValues),
     setPublished: (nextValues) => { apply(nextValues); publishedValues = values() }
   }
+  sendTelemetrySignal(appId, 'connection_open')
   sendTelemetrySignal(appId)
+  const heartbeat = window.setInterval(() => sendTelemetrySignal(appId, 'connection_heartbeat'), 15000)
+  window.addEventListener('pagehide', () => { window.clearInterval(heartbeat); sendTelemetrySignal(appId, 'connection_close') }, { once: true })
   window.dispatchEvent(new CustomEvent('tabloid:cms-ready'))
 }
