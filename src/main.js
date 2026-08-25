@@ -68,6 +68,33 @@ const fallbackVideos = [
   },
 ]
 
+const heroVisuals = [
+  {
+    image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1800&q=90',
+    alt: 'Detailed technology circuit board',
+    caption: 'Every project is linked to source code, maintainers, and real implementation details.',
+    desk: 'Tech Engineering Desk',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1800&q=90',
+    alt: 'Satellite view of Earth at night with illuminated networks',
+    caption: 'Live coverage tracks systems, tooling, and open-source momentum across the ecosystem.',
+    desk: 'AI News Live Desk',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1800&q=90',
+    alt: 'Developers collaborating around laptops in a studio',
+    caption: 'Signals are selected for practical engineering impact, not launch-day noise.',
+    desk: 'Developer Briefing Desk',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1800&q=90',
+    alt: 'Laptop with code on screen in a modern workspace',
+    caption: 'Each cycle highlights what changed and what is worth testing in your own stack.',
+    desk: 'Systems Desk',
+  },
+]
+
 const features = [
   ['sports.html', 'Project Showcase', 'How a solo developer designed a fast, local-first knowledge engine.', 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=85', 'lg:col-span-2'],
   ['culture.html', 'AI Engineering', 'The practical evaluation stack behind dependable AI features.', 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=85', ''],
@@ -278,9 +305,9 @@ const homePage = `
             <div class="mt-8 flex flex-wrap items-center gap-4 border-t border-stone-700 pt-5 text-sm"><span id="live-hero-source" class="font-bold text-white">Curated for developers</span><span id="live-hero-time" class="text-stone-400">8 minutes</span><a id="live-hero-link" href="news.html" class="ml-auto inline-flex items-center gap-2 font-bold text-red-400">Open the briefing ${arrowIcon}</a></div>
           </article>
           <figure class="relative min-h-[420px] overflow-hidden rounded-[2rem] bg-stone-900 sm:min-h-[560px]">
-            <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1800&q=90" alt="Detailed technology circuit board" class="absolute inset-0 h-full w-full object-cover" />
+            <img id="live-hero-image" src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1800&q=90" alt="Detailed technology circuit board" class="absolute inset-0 h-full w-full object-cover" />
             <div class="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-stone-950/5 to-transparent"></div>
-            <figcaption class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-5 p-6 sm:p-8"><p class="max-w-lg text-sm leading-6 text-stone-100">Every project is linked to its source, maintainers, implementation details, and the problem it solves.</p><span class="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.17em] text-stone-300">Tech Engineering Desk</span></figcaption>
+            <figcaption class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-5 p-6 sm:p-8"><p id="live-hero-image-caption" class="max-w-lg text-sm leading-6 text-stone-100">Every project is linked to source code, maintainers, and real implementation details.</p><span id="live-hero-image-desk" class="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.17em] text-stone-300">Tech Engineering Desk</span></figcaption>
           </figure>
         </div>
       </div>
@@ -519,6 +546,21 @@ const pickLeadStory = (stories) => {
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
+const hashString = (value) => {
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) - hash) + value.charCodeAt(index)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+const pickHeroVisual = (lead) => {
+  const cycle = Math.floor(Date.now() / LIVE_NEWS_REFRESH_MS)
+  const seed = `${lead?.title || ''}|${lead?.url || ''}|${cycle}`
+  return heroVisuals[hashString(seed) % heroVisuals.length]
+}
+
 const applyLiveNews = (stories, lead) => {
   if (!stories.length) return
   const rest = stories.filter((story) => story !== lead)
@@ -527,6 +569,9 @@ const applyLiveNews = (stories, lead) => {
   const heroSource = document.querySelector('#live-hero-source')
   const heroTime = document.querySelector('#live-hero-time')
   const heroLink = document.querySelector('#live-hero-link')
+  const heroImage = document.querySelector('#live-hero-image')
+  const heroImageCaption = document.querySelector('#live-hero-image-caption')
+  const heroImageDesk = document.querySelector('#live-hero-image-desk')
   const bannerStory = document.querySelector('#live-banner-story')
   const bannerLink = document.querySelector('#live-banner-link')
   const frontList = document.querySelector('#live-front-stories')
@@ -536,6 +581,13 @@ const applyLiveNews = (stories, lead) => {
   if (heroSource) heroSource.textContent = lead.source
   if (heroTime) heroTime.textContent = lead.timeLabel
   if (heroLink) heroLink.href = lead.url
+  const heroVisual = pickHeroVisual(lead)
+  if (heroImage) {
+    heroImage.src = heroVisual.image
+    heroImage.alt = heroVisual.alt
+  }
+  if (heroImageCaption) heroImageCaption.textContent = heroVisual.caption
+  if (heroImageDesk) heroImageDesk.textContent = heroVisual.desk
   if (bannerStory) bannerStory.textContent = lead.title
   if (bannerLink) bannerLink.href = lead.url
 
