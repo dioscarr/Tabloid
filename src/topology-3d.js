@@ -7,6 +7,7 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
   camera.position.set(0, 0.2, 8.5)
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+  renderer.domElement.dataset.engine = 'three.js'
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setClearColor(0x070a11, 0)
   renderer.outputColorSpace = THREE.SRGBColorSpace
