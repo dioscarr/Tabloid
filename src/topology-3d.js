@@ -5,7 +5,7 @@ const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, v
 export function mountTopology3D({ container, apps, routes, getMetric, onSelect }) {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
-  camera.position.set(0, 0.2, 14)
+  camera.position.set(0, 0.2, 10.5)
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setClearColor(0x070a11, 0)
@@ -134,13 +134,13 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
 
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
-  let dragging = false, moved = false, lastX = 0, lastY = 0, targetZoom = 14, focusedId = null
+  let dragging = false, moved = false, lastX = 0, lastY = 0, targetZoom = 10.5, focusedId = null
   const focus = (id) => {
     focusedId = id
     const object = nodes.find((node) => node.userData.appId === id)
     if (object) {
       topology.userData.focus = object.position.clone().multiplyScalar(-0.22)
-      targetZoom = 10.5
+      targetZoom = 7.5
       onSelect(id)
     }
   }
@@ -148,7 +148,7 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
     focusedId = null
     topology.userData.focus = new THREE.Vector3()
     topology.rotation.set(0, 0, 0)
-    targetZoom = 14
+    targetZoom = 10.5
   }
   const resize = () => {
     const { width, height } = container.getBoundingClientRect()
@@ -182,7 +182,7 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
   renderer.domElement.addEventListener('pointerdown', down)
   renderer.domElement.addEventListener('pointermove', move)
   renderer.domElement.addEventListener('pointerup', up)
-  renderer.domElement.addEventListener('wheel', (event) => { event.preventDefault(); targetZoom = clamp(targetZoom + event.deltaY * 0.012, 7.5, 19) }, { passive: false })
+  renderer.domElement.addEventListener('wheel', (event) => { event.preventDefault(); targetZoom = clamp(targetZoom + event.deltaY * 0.012, 5.5, 17) }, { passive: false })
   const observer = new ResizeObserver(resize)
   observer.observe(container)
   resize()
