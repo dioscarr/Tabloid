@@ -5,6 +5,7 @@ const apps = [
   { id: 'brain', name: 'Brain', branch: 'brain', role: 'Intelligence, orchestration, and tool discovery' },
   { id: 'dashboard', name: 'Dashboard', branch: 'dashboard', role: 'Telemetry and capacity intelligence' },
   { id: 'big-news', name: 'Big News', branch: 'big-news', role: 'Personal technology briefing' },
+  { id: 'ai-news', name: 'AI News', branch: 'apps/ai-news', role: 'AI project and engineering news' },
   { id: 'tech', name: 'Tech', branch: 'tech', role: 'Engineering discovery' }
 ]
 
@@ -17,6 +18,7 @@ const surfaces = {
   production: [{ id: 'home-hero', label: 'Homepage hero', fields: ['eyebrow', 'headline', 'summary', 'callToAction'] }],
   'big-news': [{ id: 'daily-brief', label: 'Daily briefing', fields: ['headline', 'takeaways', 'whyItMatters', 'sources'] }],
   tech: [{ id: 'project-showcase', label: 'Project showcase', fields: ['title', 'summary', 'stack', 'learningValue'] }],
+  'ai-news': [{ id: 'project-showcase', label: 'Project showcase', fields: ['title', 'summary', 'stack', 'learningValue'] }],
   dashboard: [{ id: 'system-insight', label: 'System insight', fields: ['title', 'finding', 'impact', 'recommendation'] }],
   authorization: [{ id: 'policy-guidance', label: 'Policy guidance', fields: ['title', 'summary', 'risk', 'remediation'] }],
   admin: [{ id: 'operator-notice', label: 'Operator notice', fields: ['title', 'message', 'severity', 'action'] }],

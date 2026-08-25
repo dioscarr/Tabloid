@@ -7,6 +7,7 @@ const storePath = process.env.BRAIN_CONTENT_STORE || '/data/content.json'
 export const toolDefinitions = [
   { id: 'apps_list', name: 'Applications', category: 'Discovery', description: 'List applications connected to Brain.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
   { id: 'routes_list', name: 'Routes', category: 'Discovery', description: 'Trace routes and dependencies across applications.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
+  { id: 'telemetry_routes', name: 'Telemetry', category: 'Discovery', description: 'Read measured application traffic received by Brain.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
   { id: 'content_surfaces_list', name: 'Content surfaces', category: 'Content', description: 'Discover app-owned editable content surfaces.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
   { id: 'content_read', name: 'Read content', category: 'Content', description: 'Read the published content view for an app surface.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
   { id: 'content_propose', name: 'Propose content', category: 'AI workflow', description: 'Generate reviewable content without publishing.', risk: 'generative', defaultEnabled: true, approvalMode: 'review' },

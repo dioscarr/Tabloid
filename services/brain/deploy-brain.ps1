@@ -75,7 +75,7 @@ Invoke-Podman @(
   '--env', 'COPILOT_GITHUB_TOKEN_FILE=/run/secrets/copilot_token',
   '--env', 'BRAIN_MCP_TOKEN_FILE=/run/secrets/brain_mcp_token',
   '--env', 'BRAIN_MCP_URL=http://127.0.0.1:8787/mcp', '--env', 'AUTHZ_API_URL=https://tabloid-authorization.tail70b7f1.ts.net', '--env', 'AUTHZ_SERVICE_TOKEN',
-  '--env', 'BRAIN_CONTENT_STORE=/data/content.json', '--volume', "${contentVolume}:/data",
+  '--env', 'BRAIN_CONTENT_STORE=/data/content.json', '--env', 'BRAIN_TELEMETRY_STORE=/data/telemetry.json', '--volume', "${contentVolume}:/data",
   '--label', 'io.dioscarr.tabloid.service=brain',
   'localhost/tabloid-brain-service:latest'
 ) | Out-Null

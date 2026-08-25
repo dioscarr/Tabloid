@@ -11,6 +11,7 @@ import { controlStore } from './control-store.js'
 import { getLiveFeed } from './feed.js'
 import { authorize } from './authorization.js'
 import { engagementStore } from './engagement-store.js'
+import { telemetryStore } from './telemetry-store.js'
 
 const port = Number(process.env.PORT || 8787)
 const host = process.env.HOST || '0.0.0.0'
@@ -26,6 +27,7 @@ const buildMcpServer = () => {
   const register = (id, definition, handler) => { if (controlStore.isToolEnabled(id)) server.registerTool(id, definition, handler) }
   register('apps_list', { description: 'List applications connected to Brain.', annotations: readOnly }, async () => textResult({ apps: catalog.listApps() }))
   register('routes_list', { description: 'List routes and dependencies between Brain and applications.', inputSchema: z.object({ appId: z.string().optional() }), annotations: readOnly }, async ({ appId }) => textResult({ routes: catalog.listRoutes(appId) }))
+  register('telemetry_routes', { description: 'Read measured application traffic received by Brain.', inputSchema: z.object({ range: z.enum(['1h', '24h']).optional() }), annotations: readOnly }, async ({ range }) => textResult(telemetryStore.routes(range || '24h')))
   register('content_surfaces_list', { description: 'List admin-editable content surfaces for an application.', inputSchema: z.object({ appId: z.string() }), annotations: readOnly }, async ({ appId }) => textResult({ surfaces: catalog.listSurfaces(appId) }))
   register('content_read', { description: 'Read the current content adapter view for an application surface.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string() }), annotations: readOnly }, async ({ appId, surfaceId }) => textResult(catalog.readContent(appId, surfaceId)))
   register('content_propose', { description: 'Generate a reviewable content proposal. This tool does not publish.', inputSchema: z.object({ appId: z.string(), surfaceId: z.string(), intent: z.string(), context: z.record(z.string(), z.unknown()).optional() }) }, async ({ appId, surfaceId, intent, context }) => {
@@ -65,8 +67,39 @@ const apiHandler = async (request) => {
     catch (error) { return json({ error: error.message }, 503, cors) }
   }
   if (url.pathname === '/api/v1/engagement/events' && request.method === 'POST') {
-    try { return json(engagementStore.record(await request.json()), 201, cors) }
+    try {
+      const result = engagementStore.record(await request.json())
+      try { telemetryStore.record({ sourceApp: 'ai-news', targetRoute: '/api/v1/engagement/events', eventType: 'engagement', status: 201, durationMs: 0 }) } catch { /* Engagement remains available if telemetry storage is unavailable. */ }
+      return json(result, 201, cors)
+    }
     catch (error) { return json({ error: error.message }, 400, cors) }
+  }
+  if (url.pathname === '/api/v1/telemetry/signals' && request.method === 'POST') {
+    try { return json(telemetryStore.record(await request.json()), 202, cors) }
+    catch (error) { return json({ error: error.message }, 400, cors) }
+  }
+  if (url.pathname === '/api/v1/telemetry/routes' && request.method === 'GET') {
+    return json(telemetryStore.routes(url.searchParams.get('range') || '24h'), 200, cors)
+  }
+  if (url.pathname === '/api/v1/telemetry/stream' && request.method === 'GET') {
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        const send = (message) => controller.enqueue(encoder.encode(message))
+        let unsubscribe
+        try {
+          unsubscribe = telemetryStore.subscribe(send)
+          send(`event: snapshot\ndata: ${JSON.stringify(telemetryStore.routes('24h'))}\n\n`)
+        } catch (error) {
+          controller.error(error)
+          return
+        }
+        const heartbeat = setInterval(() => send(': heartbeat\n\n'), 25000)
+        controller._cleanup = () => { clearInterval(heartbeat); unsubscribe?.() }
+      },
+      cancel() { this._cleanup?.() },
+    })
+    return new Response(stream, { status: 200, headers: { ...cors, 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' } })
   }
   const toolRoute = url.pathname.match(/^\/api\/v1\/tools\/([a-z0-9_-]+)$/i)
   const skillRoute = url.pathname.match(/^\/api\/v1\/skills\/([a-z0-9_-]+)$/i)

@@ -12,6 +12,7 @@ const apps = [
   ['dashboard','Dashboard','System telemetry',81,23,'#2dd4bf','healthy','Static gateway'],
   ['main','Daily Echo','Production experience',87,65,'#fbbf24','healthy','Dedicated runtime'],
   ['big-news','Big News','Personal intelligence',67,86,'#fb7185','healthy','Static gateway'],
+  ['ai-news','AI News','AI project intelligence',86,48,'#fb7185','healthy','Static gateway'],
   ['tech','Tech','Developer intelligence',33,86,'#a3e635','healthy','Static gateway'],
   ['logging','Logging','Event pipeline',13,65,'#fb923c','warning','Static gateway'],
 ].map(([id,name,role,x,y,color,status,runtime])=>({id,name,role,x,y,color,status,runtime}))
@@ -21,6 +22,9 @@ const routes = [
   ['brain','dashboard','HTTPS','/?app=:branch','healthy',27,'842','Application telemetry'],
   ['brain','main','HTTPS','/','healthy',41,'2.8k','Production surface'],
   ['brain','big-news','HTTPS','/feed','healthy',56,'1.7k','Intelligence feed'],
+  ['admin','brain','HTTPS','/api/v1/content','healthy',31,'Unknown','Content Studio'],
+  ['ai-news','brain','HTTPS','/api/v1/content','healthy',39,'Unknown','Content Studio'],
+  ['ai-news','brain','HTTPS','/api/v1/engagement/events','healthy',72,'Unknown','Learning signals'],
   ['brain','tech','HTTPS','/discover','healthy',38,'2.1k','Project discovery'],
   ['brain','logging','OTLP','/v1/logs','warning',94,'9.4k','Event observability'],
   ['admin','auth','OIDC','/oauth/callback','healthy',51,'214','Admin access'],
@@ -30,6 +34,10 @@ const routes = [
 const getApp=id=>apps.find(x=>x.id===id)
 let selected='brain', filter='all'
 let tools=[],skills=[],activity=[]
+let telemetry=null
+const routeMetric=route=>{const sourceApp=route.to==='brain'?route.from:'brain';return telemetry?.routes?.find(metric=>metric.sourceApp===sourceApp&&metric.targetRoute===route.path)}
+const routeLatency=route=>routeMetric(route)?.averageLatencyMs??'Unknown'
+const routeTraffic=route=>routeMetric(route)?.requests??'Unknown'
 
 document.title='Brain | Tabloid'
 document.querySelector('#app').innerHTML=`<div class="shell"><header class="topbar"><a class="brand" href="#top"><span class="brand-mark">B</span><span><b>Brain</b><small>Intelligence control plane</small></span></a><nav class="primary-nav" aria-label="Brain sections"><a href="#top">Overview</a><a href="#tools">Tools</a><a href="#skills">Skills</a><a href="#routes">Routes</a></nav><div class="top-actions"><span class="live"><i></i> Brain API connected</span><span data-shared-nav-slot></span><button class="avatar" aria-label="Operator profile">DR</button></div></header><main id="top">
@@ -44,18 +52,18 @@ mountSharedNav()
 initializeContentAdapter('brain')
 
 function renderGraph(){
-  document.querySelector('#lines').innerHTML=routes.map((r,i)=>{const a=getApp(r.from),b=getApp(r.to),visible=filter==='all'||r.health===filter,related=selected===r.from||selected===r.to;return `<line x1="${a.x*10}" y1="${a.y*6.2}" x2="${b.x*10}" y2="${b.y*6.2}" class="edge ${r.health} ${related?'related':''} ${visible?'':'hidden'}"/><circle class="packet ${r.health} ${visible?'':'hidden'}" r="4"><animateMotion dur="${3+i%4}s" repeatCount="indefinite" path="M ${a.x*10} ${a.y*6.2} L ${b.x*10} ${b.y*6.2}"/></circle>`}).join('')
+  document.querySelector('#lines').innerHTML=routes.map((r,i)=>{const a=getApp(r.from),b=getApp(r.to),metric=routeMetric(r),visible=filter==='all'||r.health===filter,related=selected===r.from||selected===r.to,packetSize=metric?Math.min(9,4+Math.log10(metric.requests+1)):2;return `<line x1="${a.x*10}" y1="${a.y*6.2}" x2="${b.x*10}" y2="${b.y*6.2}" class="edge ${r.health} ${related?'related':''} ${visible?'':'hidden'}"/><circle class="packet ${r.health} ${visible?'':'hidden'}" r="${packetSize}"><animateMotion dur="${3+i%4}s" repeatCount="indefinite" path="M ${a.x*10} ${a.y*6.2} L ${b.x*10} ${b.y*6.2}"/></circle>`}).join('')
   document.querySelector('#nodes').innerHTML=apps.map(a=>{const related=routes.some(r=>(r.from===selected&&r.to===a.id)||(r.to===selected&&r.from===a.id));return `<button class="node ${a.id===selected?'selected':''} ${a.id!==selected&&!related?'dim':''}" style="--x:${a.x}%;--y:${a.y}%;--node:${a.color}" data-node="${a.id}" aria-pressed="${a.id===selected}"><span class="node-core">${a.name.slice(0,2).toUpperCase()}</span><span class="node-copy"><b>${a.name}</b><small>${a.role}</small></span></button>`}).join('')
   document.querySelectorAll('[data-node]').forEach(b=>b.onclick=()=>select(b.dataset.node))
 }
 function renderInspector(){
-  const a=getApp(selected), connected=routes.filter(r=>r.from===selected||r.to===selected),avg=Math.round(connected.reduce((s,r)=>s+r.latency,0)/(connected.length||1))
-  document.querySelector('#inspector').innerHTML=`<div class="inspector-top"><span class="detail-icon" style="--node:${a.color}">${a.name.slice(0,2).toUpperCase()}</span><div><small>Selected node</small><h3>${a.name}</h3><p>${a.role}</p></div><span class="status ${a.status}">${a.status==='healthy'?'Healthy':'Attention'}</span></div><div class="detail-stats"><div><span>Connections</span><strong>${connected.length}</strong></div><div><span>Avg latency</span><strong>${avg} ms</strong></div><div><span>Runtime</span><strong>${a.runtime}</strong></div></div><h4>Connected routes</h4><div class="connected-list">${connected.map(r=>{const incoming=r.to===selected,p=getApp(incoming?r.from:r.to);return `<button data-peer="${p.id}"><span class="peer-icon" style="--node:${p.color}">${p.name[0]}</span><span><b>${incoming?'←':'→'} ${p.name}</b><small>${r.protocol} · ${r.path}</small></span><i class="route-dot ${r.health}"></i></button>`}).join('')||'<p>No registered routes.</p>'}</div><div class="insight"><span>✦</span><div><b>Topology insight</b><p>${selected==='brain'?'Brain reaches every core product directly. Logging is the only degraded path and adds 47 ms above median.':`${a.name} has ${connected.length} registered connection${connected.length===1?'':'s'}. Select a peer to continue tracing the graph.`}</p></div></div>`
+  const a=getApp(selected), connected=routes.filter(r=>r.from===selected||r.to===selected),measured=connected.map(routeMetric).filter(Boolean),avg=measured.length?Math.round(measured.reduce((sum,metric)=>sum+metric.averageLatencyMs,0)/measured.length):'Unknown',traffic=measured.length?measured.reduce((sum,metric)=>sum+metric.requests,0):'Unknown'
+  document.querySelector('#inspector').innerHTML=`<div class="inspector-top"><span class="detail-icon" style="--node:${a.color}">${a.name.slice(0,2).toUpperCase()}</span><div><small>Selected node</small><h3>${a.name}</h3><p>${a.role}</p></div><span class="status ${a.status}">${a.status==='healthy'?'Healthy':'Attention'}</span></div><div class="detail-stats"><div><span>Connections</span><strong>${connected.length}</strong></div><div><span>Measured latency</span><strong>${avg==='Unknown'?'Unknown':`${avg} ms`}</strong></div><div><span>Measured requests</span><strong>${traffic}</strong></div></div><h4>Connected routes</h4><div class="connected-list">${connected.map(r=>{const incoming=r.to===selected,p=getApp(incoming?r.from:r.to);return `<button data-peer="${p.id}"><span class="peer-icon" style="--node:${p.color}">${p.name[0]}</span><span><b>${incoming?'←':'→'} ${p.name}</b><small>${r.protocol} · ${r.path} · ${routeTraffic(r)} requests</small></span><i class="route-dot ${r.health}"></i></button>`}).join('')||'<p>No registered routes.</p>'}</div><div class="insight"><span>✦</span><div><b>Topology insight</b><p>${telemetry?'Measured traffic reflects signals received by Brain in the selected window.':'Waiting for measured traffic from connected applications.'}</p></div></div>`
   document.querySelectorAll('[data-peer]').forEach(b=>b.onclick=()=>select(b.dataset.peer))
 }
 function renderRoutes(q=''){
   const needle=q.toLowerCase(),list=routes.filter(r=>filter==='all'||r.health===filter).filter(r=>`${getApp(r.from).name} ${getApp(r.to).name} ${r.protocol} ${r.path} ${r.dependency}`.toLowerCase().includes(needle))
-  document.querySelector('#route-body').innerHTML=list.map(r=>`<tr class="${r.from===selected||r.to===selected?'selected-row':''}"><td><div class="connection"><span style="--node:${getApp(r.from).color}">${getApp(r.from).name[0]}</span><b>${getApp(r.from).name}</b><i>→</i><span style="--node:${getApp(r.to).color}">${getApp(r.to).name[0]}</span><b>${getApp(r.to).name}</b></div></td><td><strong class="protocol">${r.protocol}</strong><code>${r.path}</code></td><td>${r.dependency}</td><td><span class="status ${r.health}">${r.health==='healthy'?'Healthy':'Attention'}</span></td><td><b>${r.latency} ms</b></td><td>${r.traffic}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No routes match this view.</td></tr>'
+  document.querySelector('#route-body').innerHTML=list.map(r=>`<tr class="${r.from===selected||r.to===selected?'selected-row':''}"><td><div class="connection"><span style="--node:${getApp(r.from).color}">${getApp(r.from).name[0]}</span><b>${getApp(r.from).name}</b><i>→</i><span style="--node:${getApp(r.to).color}">${getApp(r.to).name[0]}</span><b>${getApp(r.to).name}</b></div></td><td><strong class="protocol">${r.protocol}</strong><code>${r.path}</code></td><td>${r.dependency}</td><td><span class="status ${r.health}">${r.health==='healthy'?'Healthy':'Attention'}</span></td><td><b>${routeLatency(r)==='Unknown'?'Unknown':`${routeLatency(r)} ms`}</b></td><td>${routeTraffic(r)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No routes match this view.</td></tr>'
 }
 function select(id){selected=id;renderGraph();renderInspector();renderRoutes(document.querySelector('#search').value)}
 function notify(message,error=false){const toast=document.querySelector('#toast');toast.textContent=message;toast.classList.toggle('error',error);toast.classList.add('show');clearTimeout(notify.timer);notify.timer=setTimeout(()=>toast.classList.remove('show'),3200)}
@@ -87,6 +95,23 @@ async function refreshActivity(){const response=await fetch(`${BRAIN_API}/api/v1
 async function loadControlPlane(){
   try{const [toolResponse,skillResponse,activityResponse]=await Promise.all([fetch(`${BRAIN_API}/api/v1/tools`,{cache:'no-store'}),fetch(`${BRAIN_API}/api/v1/skills`,{cache:'no-store'}),fetch(`${BRAIN_API}/api/v1/activity`,{cache:'no-store'})]);if(!toolResponse.ok||!skillResponse.ok||!activityResponse.ok)throw new Error('Brain control API is unavailable');tools=(await toolResponse.json()).tools;skills=(await skillResponse.json()).skills;activity=(await activityResponse.json()).activity;renderTools();renderSkills();renderActivity();document.querySelector('#health-score').textContent='99.2';document.querySelector('#health-copy').textContent=`Healthy · ${tools.filter(tool=>tool.enabled).length} tools ready`;document.querySelector('.live').innerHTML='<i></i> Brain API connected'}catch(error){document.querySelector('#health-score').textContent='—';document.querySelector('#health-copy').textContent=error.message;document.querySelector('.live').innerHTML='<i></i> Control API unavailable';document.querySelector('.live').classList.add('offline');notify(error.message,true)}
 }
+async function loadTelemetry(){
+  try{
+    const response=await fetch(`${BRAIN_API}/api/v1/telemetry/routes?range=24h`,{cache:'no-store'})
+    if(!response.ok)throw new Error(`Telemetry returned ${response.status}`)
+    telemetry=await response.json()
+    renderGraph();renderInspector();renderRoutes(document.querySelector('#search').value)
+    const measured=telemetry.routes||[],requests=measured.reduce((sum,metric)=>sum+metric.requests,0)
+    document.querySelector('#latency-count').textContent=measured.length?`${Math.round(measured.reduce((sum,metric)=>sum+metric.averageLatencyMs,0)/measured.length)} ms`:'Unknown'
+    document.querySelector('#health-copy').textContent=`Healthy · ${requests.toLocaleString()} measured requests`
+  }catch(error){telemetry=null;renderGraph();renderInspector();renderRoutes(document.querySelector('#search').value);document.querySelector('#latency-count').textContent='Unknown'}
+}
+function connectTelemetryStream(){
+  if(!window.EventSource)return
+  const stream=new EventSource(`${BRAIN_API}/api/v1/telemetry/stream`)
+  stream.onmessage=loadTelemetry
+  stream.onerror=()=>{ stream.close(); window.setTimeout(connectTelemetryStream,10000) }
+}
 document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));renderGraph();renderRoutes(document.querySelector('#search').value)})
 document.querySelector('#search').oninput=e=>renderRoutes(e.target.value)
-renderGraph();renderInspector();renderRoutes();loadControlPlane()
+renderGraph();renderInspector();renderRoutes();loadControlPlane();loadTelemetry();connectTelemetryStream()

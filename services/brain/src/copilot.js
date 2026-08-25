@@ -5,7 +5,7 @@ let client
 
 const copilotToken = () => process.env.COPILOT_GITHUB_TOKEN || (process.env.COPILOT_GITHUB_TOKEN_FILE ? readFileSync(process.env.COPILOT_GITHUB_TOKEN_FILE, 'utf8').trim() : '')
 const brainToken = () => process.env.BRAIN_MCP_TOKEN || (process.env.BRAIN_MCP_TOKEN_FILE ? readFileSync(process.env.BRAIN_MCP_TOKEN_FILE, 'utf8').trim() : '')
-const allowedContextTools = new Set(['apps_list', 'routes_list', 'content_surfaces_list', 'content_read'])
+const allowedContextTools = new Set(['apps_list', 'routes_list', 'telemetry_routes', 'content_surfaces_list', 'content_read'])
 
 const approveBrainContextTools = (request) => {
   if (request.managedApprovalRequired) return { kind: 'no-result' }
@@ -37,7 +37,7 @@ export async function generateWithCopilot({ appId, surface, intent, context }) {
         type: 'http',
         url: process.env.BRAIN_MCP_URL || 'http://127.0.0.1:8787/mcp',
         headers: { Authorization: `Bearer ${brainToken()}` },
-        tools: ['apps_list', 'routes_list', 'content_surfaces_list', 'content_read']
+        tools: ['apps_list', 'routes_list', 'telemetry_routes', 'content_surfaces_list', 'content_read']
       }
     },
     systemMessage: {

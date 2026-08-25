@@ -20,6 +20,13 @@
       "protocol": "mcp",
       "path": "/mcp",
       "purpose": "Expose Brain productivity tools to an authenticated server-side agent host."
+    },
+    {
+      "id": "brain-telemetry",
+      "direction": "inbound",
+      "protocol": "https",
+      "path": "/api/v1/telemetry/signals",
+      "purpose": "Receive sanitized application traffic signals for topology statistics."
     }
   ],
   "content": {
