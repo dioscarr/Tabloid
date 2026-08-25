@@ -69,7 +69,7 @@ const apiHandler = async (request) => {
   if (url.pathname === '/api/v1/engagement/events' && request.method === 'POST') {
     try {
       const result = engagementStore.record(await request.json())
-      try { telemetryStore.record({ sourceApp: 'ai-news', targetRoute: '/api/v1/engagement/events', eventType: 'engagement', status: 201, durationMs: 0 }) } catch { /* Engagement remains available if telemetry storage is unavailable. */ }
+      try { telemetryStore.record({ sourceApp: 'ai-news', targetApp: 'brain', targetRoute: '/api/v1/engagement/events', eventType: 'engagement', status: 201, durationMs: 0 }) } catch { /* Engagement remains available if telemetry storage is unavailable. */ }
       return json(result, 201, cors)
     }
     catch (error) { return json({ error: error.message }, 400, cors) }
