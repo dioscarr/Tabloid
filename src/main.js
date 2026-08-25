@@ -6,16 +6,17 @@ import { mountTopology3D } from './topology-3d.js'
 const BRAIN_API='https://tabloid-brain-api.tail70b7f1.ts.net'
 const escapeHtml=value=>String(value).replace(/[&<>'"]/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[character])
 
+const GRAPH_WIDTH=1000,GRAPH_HEIGHT=620
 const apps = [
-  ['brain','Brain','Topology intelligence',50,48,'#a78bfa','healthy','Static gateway'],
-  ['admin','Admin','Identity & control',19,23,'#38bdf8','healthy','Static gateway'],
-  ['auth','Auth','Authentication provider',50,13,'#f472b6','healthy','Static gateway'],
-  ['dashboard','Dashboard','System telemetry',81,23,'#2dd4bf','healthy','Static gateway'],
-  ['main','Daily Echo','Production experience',87,65,'#fbbf24','healthy','Dedicated runtime'],
-  ['big-news','Big News','Personal intelligence',67,86,'#fb7185','healthy','Static gateway'],
-  ['ai-news','AI News','AI project intelligence',86,48,'#fb7185','healthy','Static gateway'],
-  ['tech','Tech','Developer intelligence',33,86,'#a3e635','healthy','Static gateway'],
-  ['logging','Logging','Event pipeline',13,65,'#fb923c','warning','Static gateway'],
+  ['brain','Brain','Topology intelligence',500,310,'#a78bfa','healthy','Static gateway'],
+  ['admin','Admin','Identity & control',190,145,'#38bdf8','healthy','Static gateway'],
+  ['auth','Auth','Authentication provider',500,85,'#f472b6','healthy','Static gateway'],
+  ['dashboard','Dashboard','System telemetry',810,145,'#2dd4bf','healthy','Static gateway'],
+  ['main','Daily Echo','Production experience',845,405,'#fbbf24','healthy','Dedicated runtime'],
+  ['big-news','Big News','Personal intelligence',650,535,'#fb7185','healthy','Static gateway'],
+  ['ai-news','AI News','AI project intelligence',820,310,'#fb7185','healthy','Static gateway'],
+  ['tech','Tech','Developer intelligence',350,535,'#a3e635','healthy','Static gateway'],
+  ['logging','Logging','Event pipeline',130,405,'#fb923c','warning','Static gateway'],
 ].map(([id,name,role,x,y,color,status,runtime])=>({id,name,role,x,y,color,status,runtime}))
 const routes = [
   ['brain','admin','HTTPS','/api/v1/branches','healthy',34,'1.2k','Branch inventory'],
@@ -54,8 +55,9 @@ mountSharedNav()
 initializeContentAdapter('brain')
 
 function renderGraph(){
-  document.querySelector('#lines').innerHTML=routes.map((r,i)=>{const a=getApp(r.from),b=getApp(r.to),metric=routeMetric(r),visible=filter==='all'||r.health===filter,related=selected===r.from||selected===r.to;if(!metric)return `<line x1="${a.x*10}" y1="${a.y*6.2}" x2="${b.x*10}" y2="${b.y*6.2}" class="edge ${r.health} ${related?'related':''} ${visible?'':'hidden'}"/>`;const packetCount=Math.min(12,metric.activeConnections||0);const duration=`${3+i%4}s`,path=`M ${a.x*10} ${a.y*6.2} L ${b.x*10} ${b.y*6.2}`;return `<line x1="${a.x*10}" y1="${a.y*6.2}" x2="${b.x*10}" y2="${b.y*6.2}" class="edge ${r.health} ${related?'related':''} ${visible?'':'hidden'}"/>${Array.from({length:packetCount},(_,packetIndex)=>{const delay=`-${(packetIndex/Math.max(packetCount,1))*3}s`;return `<circle class="packet-ring ${r.health} ${visible?'':'hidden'}" r="3"><animate attributeName="r" values="3;11;3" dur="${duration}" begin="${delay}" repeatCount="indefinite"/><animate attributeName="opacity" values=".8;0;.8" dur="${duration}" begin="${delay}" repeatCount="indefinite"/><animateMotion dur="${duration}" begin="${delay}" repeatCount="indefinite" path="${path}"/></circle><circle class="packet ${r.health} ${visible?'':'hidden'}" r="3"><animateMotion dur="${duration}" begin="${delay}" repeatCount="indefinite" path="${path}"/></circle>`}).join('')}`}).join('')
-  document.querySelector('#nodes').innerHTML=apps.map(a=>{const related=routes.some(r=>(r.from===selected&&r.to===a.id)||(r.to===selected&&r.from===a.id));return `<button class="node ${a.id===selected?'selected':''} ${a.id!==selected&&!related?'dim':''}" style="--x:${a.x}%;--y:${a.y}%;--node:${a.color}" data-node="${a.id}" aria-pressed="${a.id===selected}"><span class="node-core">${a.name.slice(0,2).toUpperCase()}</span><span class="node-copy"><b>${a.name}</b><small>${a.role}</small></span></button>`}).join('')
+  document.querySelector('#lines').setAttribute('viewBox',`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`)
+  document.querySelector('#lines').innerHTML=routes.map((r,i)=>{const a=getApp(r.from),b=getApp(r.to),metric=routeMetric(r),visible=filter==='all'||r.health===filter,related=selected===r.from||selected===r.to;if(!metric)return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="edge ${r.health} ${related?'related':''} ${visible?'':'hidden'}"/>`;const packetCount=Math.min(12,metric.activeConnections||0);const duration=`${3+i%4}s`,path=`M ${a.x} ${a.y} L ${b.x} ${b.y}`;return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="edge ${r.health} ${related?'related':''} ${visible?'':'hidden'}"/>${Array.from({length:packetCount},(_,packetIndex)=>{const delay=`-${(packetIndex/Math.max(packetCount,1))*3}s`;return `<circle class="packet-ring ${r.health} ${visible?'':'hidden'}" r="3"><animate attributeName="r" values="3;11;3" dur="${duration}" begin="${delay}" repeatCount="indefinite"/><animate attributeName="opacity" values=".8;0;.8" dur="${duration}" begin="${delay}" repeatCount="indefinite"/><animateMotion dur="${duration}" begin="${delay}" repeatCount="indefinite" path="${path}"/></circle><circle class="packet ${r.health} ${visible?'':'hidden'}" r="3"><animateMotion dur="${duration}" begin="${delay}" repeatCount="indefinite" path="${path}"/></circle>`}).join('')}`}).join('')
+  document.querySelector('#nodes').innerHTML=apps.map(a=>{const related=routes.some(r=>(r.from===selected&&r.to===a.id)||(r.to===selected&&r.from===a.id));return `<button class="node ${a.id===selected?'selected':''} ${a.id!==selected&&!related?'dim':''}" style="--x:${a.x/GRAPH_WIDTH*100}%;--y:${a.y/GRAPH_HEIGHT*100}%;--node:${a.color}" data-node="${a.id}" aria-pressed="${a.id===selected}"><span class="node-core">${a.name.slice(0,2).toUpperCase()}</span><span class="node-copy"><b>${a.name}</b><small>${a.role}</small></span></button>`}).join('')
   document.querySelectorAll('[data-node]').forEach(b=>b.onclick=()=>select(b.dataset.node))
 }
 function renderTopologyView(){
