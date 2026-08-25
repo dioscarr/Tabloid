@@ -1,9 +1,8 @@
 import './style.css'
 import { mountSharedNav } from './shared-nav.js'
 import { initializeContentAdapter } from './content-adapter.js'
+import { fetchLiveNews, LIVE_NEWS_REFRESH_MS, LIVE_NEWS_TOPICS } from './live-news.js'
 
-const LIVE_NEWS_ENDPOINT = 'https://hn.algolia.com/api/v1/search_by_date'
-const LIVE_NEWS_REFRESH_MS = 8 * 60 * 1000
 const YOUTUBE_REFRESH_MS = 10 * 60 * 1000
 const GITHUB_REFRESH_MS = 10 * 60 * 1000
 const RSS2JSON_ENDPOINT = 'https://api.rss2json.com/v1/api.json?rss_url='
@@ -17,16 +16,6 @@ const YOUTUBE_CHANNELS = [
   { id: 'UCbfYPyITQ-7l4upoX8nvctg', label: 'Two Minute Papers', topics: ['AI Research'] },
   { id: 'UCP7jMXSY2xbc3KCAE0MHQ-A', label: 'Google DeepMind', topics: ['AI Research', 'AI Tech'] },
 ]
-const LIVE_NEWS_TOPICS = {
-  index: 'artificial intelligence engineering',
-  news: 'ai engineering',
-  city: 'open source ai github',
-  politics: 'software architecture distributed systems',
-  culture: 'llm evaluation agents prompts',
-  business: 'developer tools ai coding',
-  sports: 'indie hacker open source project',
-}
-
 const arrowIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-4" fill="none"><path d="M4 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>`
 const appsIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-5" fill="currentColor"><circle cx="4" cy="4" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="16" cy="4" r="1.5"/><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/><circle cx="4" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg>`
 
@@ -221,7 +210,7 @@ const sectionPages = {
 
 const fileName = window.location.pathname.split('/').pop() || 'index.html'
 const pageKey = fileName.replace('.html', '')
-const liveTopic = LIVE_NEWS_TOPICS[pageKey] || LIVE_NEWS_TOPICS.index
+const liveTopics = LIVE_NEWS_TOPICS[pageKey] || LIVE_NEWS_TOPICS.index
 const isLivePage = pageKey !== 'subscribe'
 
 const escapeHtml = (value) => String(value ?? '')
@@ -230,20 +219,6 @@ const escapeHtml = (value) => String(value ?? '')
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;')
-
-const sourceMeta = (url) => {
-  try {
-    const hostname = new URL(url).hostname.replace(/^www\./, '')
-    if (hostname.includes('news.ycombinator.com')) return { label: 'Hacker News', badge: 'HN', tone: 'bg-orange-100 text-orange-800 border-orange-200' }
-    if (hostname.includes('github.com')) return { label: 'GitHub', badge: 'GH', tone: 'bg-slate-200 text-slate-800 border-slate-300' }
-    if (hostname.includes('arxiv.org')) return { label: 'arXiv', badge: 'AX', tone: 'bg-sky-100 text-sky-800 border-sky-200' }
-    if (hostname.includes('openai.com')) return { label: 'OpenAI', badge: 'OA', tone: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
-    if (hostname.includes('anthropic.com')) return { label: 'Anthropic', badge: 'AN', tone: 'bg-indigo-100 text-indigo-800 border-indigo-200' }
-    return { label: hostname, badge: 'WEB', tone: 'bg-blue-100 text-blue-800 border-blue-200' }
-  } catch {
-    return { label: 'Web', badge: 'WEB', tone: 'bg-blue-100 text-blue-800 border-blue-200' }
-  }
-}
 
 const navMarkup = (active) => navigation.map(([key, label, href]) => `<a href="${href}" class="text-sm font-semibold transition hover:text-emerald-200 ${key === active ? 'text-emerald-300' : 'text-emerald-50/80'}">${label}</a>`).join('')
 
@@ -504,19 +479,6 @@ document.querySelector('#app').innerHTML = `
   </div>
 `
 
-const formatRelativeTime = (isoDate) => {
-  if (!isoDate) return 'just now'
-  const delta = Date.now() - new Date(isoDate).getTime()
-  if (Number.isNaN(delta)) return 'just now'
-  const minutes = Math.round(delta / 60000)
-  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
-  if (Math.abs(minutes) < 60) return rtf.format(-minutes, 'minute')
-  const hours = Math.round(minutes / 60)
-  if (Math.abs(hours) < 24) return rtf.format(-hours, 'hour')
-  const days = Math.round(hours / 24)
-  return rtf.format(-days, 'day')
-}
-
 const updateEditionDate = () => {
   const label = document.querySelector('#edition-label')
   const date = document.querySelector('#edition-date')
@@ -604,33 +566,6 @@ const applyLiveNews = (stories, lead) => {
       </a>
     `).join('')
   }
-}
-
-const fetchLiveNews = async (topic) => {
-  const endpoint = `${LIVE_NEWS_ENDPOINT}?query=${encodeURIComponent(topic)}&tags=story&hitsPerPage=18`
-  const response = await fetch(endpoint, {
-    headers: { Accept: 'application/json' },
-    cache: 'no-store',
-  })
-  if (!response.ok) throw new Error(`Live news API returned ${response.status}`)
-  const data = await response.json()
-  const hits = Array.isArray(data?.hits) ? data.hits : []
-  return hits
-    .filter((item) => item?.title && item?.url)
-    .slice(0, 6)
-    .map((item) => {
-      const source = sourceMeta(item.url)
-      return {
-        title: item.title,
-        summary: `From ${source.label}: ${item.title}`,
-        source: item.author ? `${source.label} · @${item.author}` : source.label,
-        sourceBadge: source.badge,
-        sourceTone: source.tone,
-        timeLabel: formatRelativeTime(item.created_at),
-        category: 'AI update',
-        url: item.url,
-      }
-    })
 }
 
 const renderSectionLiveFeed = (stories, state = 'ready') => {
@@ -849,7 +784,7 @@ const refreshLiveContent = async () => {
   if (!isLivePage || refreshingLive) return
   refreshingLive = true
   try {
-    const stories = await fetchLiveNews(liveTopic)
+    const stories = await fetchLiveNews(liveTopics)
     const lead = pickLeadStory(stories)
     applyLiveNews(stories, lead)
     applySectionLeadStory(lead)
