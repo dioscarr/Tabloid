@@ -144,6 +144,12 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
       onSelect(id)
     }
   }
+  const reset = () => {
+    focusedId = null
+    topology.userData.focus = new THREE.Vector3()
+    topology.rotation.set(0, 0, 0)
+    targetZoom = 14
+  }
   const resize = () => {
     const { width, height } = container.getBoundingClientRect()
     camera.aspect = width / Math.max(height, 1)
@@ -221,5 +227,6 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
       container.replaceChildren()
     },
     focus,
+    reset,
   }
 }
