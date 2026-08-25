@@ -1,6 +1,7 @@
 import './style.css'
 import { mountSharedNav } from './shared-nav.js'
 import { initializeContentAdapter } from './content-adapter.js'
+import { mountTopology3D } from './topology-3d.js'
 
 const BRAIN_API='https://tabloid-brain-api.tail70b7f1.ts.net'
 const escapeHtml=value=>String(value).replace(/[&<>'"]/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[character])
@@ -35,6 +36,7 @@ const getApp=id=>apps.find(x=>x.id===id)
 let selected='brain', filter='all'
 let tools=[],skills=[],activity=[]
 let telemetry=null
+let topologyMode='2d', topology3d=null
 const routeMetric=route=>telemetry?.routes?.find(metric=>metric.sourceApp===route.from&&metric.targetApp===route.to&&metric.targetRoute===route.path)
 const routeLatency=route=>routeMetric(route)?.averageLatencyMs??'Unknown'
 const routeTraffic=route=>routeMetric(route)?.requests??'Unknown'
@@ -43,7 +45,7 @@ document.title='Brain | Tabloid'
 document.querySelector('#app').innerHTML=`<div class="shell"><header class="topbar"><a class="brand" href="#top"><span class="brand-mark">B</span><span><b>Brain</b><small>Intelligence control plane</small></span></a><nav class="primary-nav" aria-label="Brain sections"><a href="#top">Overview</a><a href="#tools">Tools</a><a href="#skills">Skills</a><a href="#routes">Routes</a></nav><div class="top-actions"><span class="live"><i></i> Brain API connected</span><span data-shared-nav-slot></span><button class="avatar" aria-label="Operator profile">DR</button></div></header><main id="top">
 <section class="hero"><div><p class="kicker">Your AI operating layer</p><h1>See it. Govern it.<br><span>Put it to work.</span></h1><p class="intro">Manage every MCP tool, skill, permission, and application route from one living control plane.</p><div class="hero-actions"><a href="#tools">Manage tools</a><a class="secondary" href="#skills">Explore skills</a></div></div><div class="pulse-card"><span class="pulse-orb"><i></i></span><div><small>Brain status</small><strong id="health-score">—</strong><p id="health-copy">Connecting to control plane…</p></div></div></section>
 <section class="metrics" aria-label="Control plane summary">${[['Connected apps','8','All discovered','app-count'],['Enabled tools','—','MCP registry','tool-count'],['Active skills','—','Reusable workflows','skill-count'],['Median latency','47 ms','Prototype telemetry','latency-count']].map(x=>`<article><span>${x[0]}</span><strong id="${x[3]}">${x[1]}</strong><small>${x[2]}</small></article>`).join('')}</section>
-<section class="workspace"><div class="section-head"><div><p class="kicker">Neural topology</p><h2>Connection map</h2><p>Select a node to trace every route in and out.</p></div><div class="filters" role="group"><button data-filter="all" class="active">All</button><button data-filter="healthy">Healthy</button><button data-filter="warning">Attention</button></div></div><div class="map-grid"><div class="graph"><div class="graph-toolbar"><span><i class="legend healthy"></i> Healthy</span><span><i class="legend warning"></i> Attention</span><span class="prototype">Prototype telemetry</span></div><svg id="lines" class="lines" viewBox="0 0 1000 620" preserveAspectRatio="none"></svg><div id="nodes" class="nodes"></div></div><aside id="inspector" class="inspector" aria-live="polite"></aside></div></section>
+<section class="workspace"><div class="section-head"><div><p class="kicker">Neural topology</p><h2>Connection map</h2><p>Select a node to trace every route in and out.</p></div><div class="topology-controls"><div class="view-switch" role="group" aria-label="Topology view"><button data-topology-view="2d" class="active">2D map</button><button data-topology-view="3d">3D brain</button></div><div class="filters" role="group"><button data-filter="all" class="active">All</button><button data-filter="healthy">Healthy</button><button data-filter="warning">Attention</button></div></div></div><div id="topology-2d" class="map-grid"><div class="graph"><div class="graph-toolbar"><span><i class="legend healthy"></i> Healthy</span><span><i class="legend warning"></i> Attention</span><span class="prototype">Prototype telemetry</span></div><svg id="lines" class="lines" viewBox="0 0 1000 620" preserveAspectRatio="none"></svg><div id="nodes" class="nodes"></div></div><aside id="inspector" class="inspector" aria-live="polite"></aside></div><div id="topology-3d" class="topology-3d" hidden><div id="topology-3d-scene"></div><div class="topology-3d-hint">Drag to rotate · scroll to zoom · select a node for detail</div></div></section>
 <section id="tools" class="control-section"><div class="section-head"><div><p class="kicker">MCP capability registry</p><h2>Tools</h2><p>Control what Brain exposes to connected agents and how every call is approved.</p></div><div class="section-badge"><span id="enabled-tools">0</span> enabled</div></div><div id="tool-grid" class="tool-grid"><div class="loading-card">Loading tools from Brain…</div></div></section>
 <section id="skills" class="control-section"><div class="section-head"><div><p class="kicker">Reusable intelligence</p><h2>Skills</h2><p>Purpose-built workflows combine approved tools, context, and product-specific instructions.</p></div><div class="section-badge"><span id="enabled-skills">0</span> active</div></div><div id="skill-grid" class="skill-grid"><div class="loading-card">Loading skills…</div></div></section>
 <section id="routes" class="routes"><div class="section-head compact"><div><p class="kicker">Route registry</p><h2>How everything connects</h2></div><label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search app, path, or protocol" aria-label="Search routes"></label></div><div class="table-wrap"><table><thead><tr><th>Connection</th><th>Protocol & path</th><th>Dependency</th><th>Health</th><th>Latency</th><th>Traffic · 24h</th></tr></thead><tbody id="route-body"></tbody></table></div></section>
@@ -56,6 +58,12 @@ function renderGraph(){
   document.querySelector('#nodes').innerHTML=apps.map(a=>{const related=routes.some(r=>(r.from===selected&&r.to===a.id)||(r.to===selected&&r.from===a.id));return `<button class="node ${a.id===selected?'selected':''} ${a.id!==selected&&!related?'dim':''}" style="--x:${a.x}%;--y:${a.y}%;--node:${a.color}" data-node="${a.id}" aria-pressed="${a.id===selected}"><span class="node-core">${a.name.slice(0,2).toUpperCase()}</span><span class="node-copy"><b>${a.name}</b><small>${a.role}</small></span></button>`}).join('')
   document.querySelectorAll('[data-node]').forEach(b=>b.onclick=()=>select(b.dataset.node))
 }
+function renderTopologyView(){
+  const twoD=document.querySelector('#topology-2d'),threeD=document.querySelector('#topology-3d')
+  twoD.hidden=topologyMode!=='2d';threeD.hidden=topologyMode!=='3d'
+  document.querySelectorAll('[data-topology-view]').forEach(button=>{button.classList.toggle('active',button.dataset.topologyView===topologyMode)})
+  if(topologyMode==='3d'&&!topology3d){topology3d=mountTopology3D({container:document.querySelector('#topology-3d-scene'),apps,routes,getMetric:routeMetric,onSelect:select})}
+}
 function renderInspector(){
   const a=getApp(selected), connected=routes.filter(r=>r.from===selected||r.to===selected),measured=connected.map(routeMetric).filter(Boolean),avg=measured.length?Math.round(measured.reduce((sum,metric)=>sum+metric.averageLatencyMs,0)/measured.length):'Unknown',traffic=measured.length?measured.reduce((sum,metric)=>sum+metric.requests,0):'Unknown'
   document.querySelector('#inspector').innerHTML=`<div class="inspector-top"><span class="detail-icon" style="--node:${a.color}">${a.name.slice(0,2).toUpperCase()}</span><div><small>Selected node</small><h3>${a.name}</h3><p>${a.role}</p></div><span class="status ${a.status}">${a.status==='healthy'?'Healthy':'Attention'}</span></div><div class="detail-stats"><div><span>Connections</span><strong>${connected.length}</strong></div><div><span>Measured latency</span><strong>${avg==='Unknown'?'Unknown':`${avg} ms`}</strong></div><div><span>Measured requests</span><strong>${traffic}</strong></div></div><h4>Connected routes</h4><div class="connected-list">${connected.map(r=>{const incoming=r.to===selected,p=getApp(incoming?r.from:r.to);return `<button data-peer="${p.id}"><span class="peer-icon" style="--node:${p.color}">${p.name[0]}</span><span><b>${incoming?'←':'→'} ${p.name}</b><small>${r.protocol} · ${r.path} · ${routeTraffic(r)} requests</small></span><i class="route-dot ${r.health}"></i></button>`}).join('')||'<p>No registered routes.</p>'}</div><div class="insight"><span>✦</span><div><b>Topology insight</b><p>${telemetry?'Measured traffic reflects signals received by Brain in the selected window.':'Waiting for measured traffic from connected applications.'}</p></div></div>`
@@ -65,7 +73,7 @@ function renderRoutes(q=''){
   const needle=q.toLowerCase(),list=routes.filter(r=>filter==='all'||r.health===filter).filter(r=>`${getApp(r.from).name} ${getApp(r.to).name} ${r.protocol} ${r.path} ${r.dependency}`.toLowerCase().includes(needle))
   document.querySelector('#route-body').innerHTML=list.map(r=>`<tr class="${r.from===selected||r.to===selected?'selected-row':''}"><td><div class="connection"><span style="--node:${getApp(r.from).color}">${getApp(r.from).name[0]}</span><b>${getApp(r.from).name}</b><i>→</i><span style="--node:${getApp(r.to).color}">${getApp(r.to).name[0]}</span><b>${getApp(r.to).name}</b></div></td><td><strong class="protocol">${r.protocol}</strong><code>${r.path}</code></td><td>${r.dependency}</td><td><span class="status ${r.health}">${r.health==='healthy'?'Healthy':'Attention'}</span></td><td><b>${routeLatency(r)==='Unknown'?'Unknown':`${routeLatency(r)} ms`}</b></td><td>${routeTraffic(r)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No routes match this view.</td></tr>'
 }
-function select(id){selected=id;renderGraph();renderInspector();renderRoutes(document.querySelector('#search').value)}
+function select(id){selected=id;renderGraph();renderInspector();renderRoutes(document.querySelector('#search').value);topology3d?.focus(id)}
 function notify(message,error=false){const toast=document.querySelector('#toast');toast.textContent=message;toast.classList.toggle('error',error);toast.classList.add('show');clearTimeout(notify.timer);notify.timer=setTimeout(()=>toast.classList.remove('show'),3200)}
 function renderTools(){
   const enabled=tools.filter(tool=>tool.enabled).length
@@ -100,7 +108,7 @@ async function loadTelemetry(){
     const response=await fetch(`${BRAIN_API}/api/v1/telemetry/routes?range=24h`,{cache:'no-store'})
     if(!response.ok)throw new Error(`Telemetry returned ${response.status}`)
     telemetry=await response.json()
-    renderGraph();renderInspector();renderRoutes(document.querySelector('#search').value)
+    renderGraph();renderInspector();renderRoutes(document.querySelector('#search').value);if(topology3d){topology3d.destroy();topology3d=null};renderTopologyView()
     const measured=telemetry.routes||[],requests=measured.reduce((sum,metric)=>sum+metric.requests,0)
     document.querySelector('#latency-count').textContent=measured.length?`${Math.round(measured.reduce((sum,metric)=>sum+metric.averageLatencyMs,0)/measured.length)} ms`:'Unknown'
     document.querySelector('#health-copy').textContent=`Healthy · ${requests.toLocaleString()} measured requests`
@@ -113,5 +121,6 @@ function connectTelemetryStream(){
   stream.onerror=()=>{ stream.close(); window.setTimeout(connectTelemetryStream,10000) }
 }
 document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));renderGraph();renderRoutes(document.querySelector('#search').value)})
+document.querySelectorAll('[data-topology-view]').forEach(b=>b.onclick=()=>{topologyMode=b.dataset.topologyView;renderTopologyView()})
 document.querySelector('#search').oninput=e=>renderRoutes(e.target.value)
-renderGraph();renderInspector();renderRoutes();loadControlPlane();loadTelemetry();connectTelemetryStream()
+renderGraph();renderInspector();renderRoutes();renderTopologyView();loadControlPlane();loadTelemetry();connectTelemetryStream()
