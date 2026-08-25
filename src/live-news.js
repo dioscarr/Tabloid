@@ -11,7 +11,7 @@ export const LIVE_NEWS_TOPICS = {
   sports: ['open source AI project', 'indie hacker AI', 'local AI project'],
 }
 
-const formatRelativeTime = (isoDate) => {
+export const formatRelativeTime = (isoDate) => {
   if (!isoDate) return 'just now'
   const delta = Date.now() - new Date(isoDate).getTime()
   if (Number.isNaN(delta)) return 'just now'

@@ -1,7 +1,7 @@
 import './style.css'
 import { mountSharedNav } from './shared-nav.js'
 import { initializeContentAdapter } from './content-adapter.js'
-import { fetchLiveNews, LIVE_NEWS_REFRESH_MS, LIVE_NEWS_TOPICS } from './live-news.js'
+import { fetchLiveNews, formatRelativeTime, LIVE_NEWS_REFRESH_MS, LIVE_NEWS_TOPICS } from './live-news.js'
 
 const YOUTUBE_REFRESH_MS = 10 * 60 * 1000
 const GITHUB_REFRESH_MS = 10 * 60 * 1000
