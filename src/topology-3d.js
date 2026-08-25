@@ -151,10 +151,15 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
     targetZoom = 15
   }
   const resize = () => {
-    const { width, height } = container.getBoundingClientRect()
+    const viewport = container.parentElement?.getBoundingClientRect()
+    const bounds = container.getBoundingClientRect()
+    const width = viewport?.width || bounds.width || window.innerWidth
+    const height = viewport?.height || bounds.height || window.innerHeight * 0.94
     camera.aspect = width / Math.max(height, 1)
     camera.updateProjectionMatrix()
     renderer.setSize(width, height, false)
+    renderer.domElement.style.width = '100%'
+    renderer.domElement.style.height = '100%'
   }
   const positionLabels = () => {
     for (const label of labels) {
@@ -194,6 +199,7 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
   const observer = new ResizeObserver(resize)
   observer.observe(container)
   resize()
+  requestAnimationFrame(resize)
 
   let frame
   const animate = (time) => {
