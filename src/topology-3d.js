@@ -5,7 +5,7 @@ const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, v
 export function mountTopology3D({ container, apps, routes, getMetric, onSelect }) {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
-  camera.position.set(0, 0.2, 8.5)
+  camera.position.set(0, 0.2, 15)
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
   renderer.domElement.dataset.engine = 'three.js'
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -133,13 +133,14 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
 
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
-  let dragging = false, moved = false, lastX = 0, lastY = 0, targetZoom = 5.8, focusedId = null
+  const projectedPosition = new THREE.Vector3()
+  let dragging = false, moved = false, lastX = 0, lastY = 0, targetZoom = 15, focusedId = null
   const focus = (id) => {
     focusedId = id
     const object = nodes.find((node) => node.userData.appId === id)
     if (object) {
       topology.userData.focus = object.position.clone().multiplyScalar(-0.22)
-      targetZoom = 4.0
+      targetZoom = 10
       onSelect(id)
     }
   }
@@ -147,13 +148,21 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
     focusedId = null
     topology.userData.focus = new THREE.Vector3()
     topology.rotation.set(0, 0, 0)
-    targetZoom = 5.8
+    targetZoom = 15
   }
   const resize = () => {
     const { width, height } = container.getBoundingClientRect()
     camera.aspect = width / Math.max(height, 1)
     camera.updateProjectionMatrix()
     renderer.setSize(width, height, false)
+  }
+  const positionLabels = () => {
+    for (const label of labels) {
+      projectedPosition.copy(label.object.position).applyMatrix4(topology.matrixWorld).project(camera)
+      label.element.style.left = `${(projectedPosition.x + 1) * 50}%`
+      label.element.style.top = `${(1 - projectedPosition.y) * 50}%`
+      label.element.hidden = projectedPosition.z < -1 || projectedPosition.z > 1
+    }
   }
   const pointerPosition = (event) => {
     const bounds = renderer.domElement.getBoundingClientRect()
@@ -202,6 +211,8 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
     topology.position.lerp(topology.userData.focus || new THREE.Vector3(), 0.045)
     camera.position.z += (targetZoom - camera.position.z) * 0.06
     for (const particle of particles) particle.position.copy(particle.userData.curve.getPointAt((time * particle.userData.speed + particle.userData.offset) % 1))
+    topology.updateMatrixWorld()
+    positionLabels()
     renderer.render(scene, camera)
   }
   animate(0)

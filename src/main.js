@@ -67,12 +67,14 @@ function renderTopologyView(){
   if(topologyMode==='3d'){
     document.querySelector('#topology-3d').classList.add('fullscreen')
     document.body.style.overflow = 'hidden'
-    if(!topology3d){topology3d=mountTopology3D({container:document.querySelector('#topology-3d-scene'),apps,routes,getMetric:routeMetric,onSelect:select});document.querySelector('#topology-3d-reset').onclick=()=>{topologyMode='2d';renderTopologyView()}}
+    if(!topology3d){topology3d=mountTopology3D({container:document.querySelector('#topology-3d-scene'),apps,routes,getMetric:routeMetric,onSelect:select})}
   } else {
     document.querySelector('#topology-3d').classList.remove('fullscreen')
     document.body.style.overflow = ''
   }
 }
+document.querySelector('#topology-3d-reset').onclick=()=>{topologyMode='2d';renderTopologyView()}
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&topologyMode==='3d'){topologyMode='2d';renderTopologyView()}})
 function renderInspector(){
   const a=getApp(selected), connected=routes.filter(r=>r.from===selected||r.to===selected),measured=connected.map(routeMetric).filter(Boolean),avg=measured.length?Math.round(measured.reduce((sum,metric)=>sum+metric.averageLatencyMs,0)/measured.length):'Unknown',traffic=measured.length?measured.reduce((sum,metric)=>sum+metric.requests,0):'Unknown'
   document.querySelector('#inspector').innerHTML=`<div class="inspector-top"><span class="detail-icon" style="--node:${a.color}">${a.name.slice(0,2).toUpperCase()}</span><div><small>Selected node</small><h3>${a.name}</h3><p>${a.role}</p></div><span class="status ${a.status}">${a.status==='healthy'?'Healthy':'Attention'}</span></div><div class="detail-stats"><div><span>Connections</span><strong>${connected.length}</strong></div><div><span>Measured latency</span><strong>${avg==='Unknown'?'Unknown':`${avg} ms`}</strong></div><div><span>Measured requests</span><strong>${traffic}</strong></div></div><h4>Connected routes</h4><div class="connected-list">${connected.map(r=>{const incoming=r.to===selected,p=getApp(incoming?r.from:r.to);return `<button data-peer="${p.id}"><span class="peer-icon" style="--node:${p.color}">${p.name[0]}</span><span><b>${incoming?'←':'→'} ${p.name}</b><small>${r.protocol} · ${r.path} · ${routeTraffic(r)} requests</small></span><i class="route-dot ${r.health}"></i></button>`}).join('')||'<p>No registered routes.</p>'}</div><div class="insight"><span>✦</span><div><b>Topology insight</b><p>${telemetry?'Measured traffic reflects signals received by Brain in the selected window.':'Waiting for measured traffic from connected applications.'}</p></div></div>`
