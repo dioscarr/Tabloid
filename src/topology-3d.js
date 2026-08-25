@@ -17,6 +17,7 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
   scene.add(topology)
   const points = new Map()
   const nodes = []
+  const labels = []
   const particles = []
   const energyRings = []
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
