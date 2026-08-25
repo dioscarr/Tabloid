@@ -3,6 +3,15 @@ const EDITABLE_SELECTOR = 'h1,h2,h3,h4,p,span,a,button,label,figcaption,li'
 
 const visibleTextNode = (element) => [...element.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim())
 const pageId = () => (window.location.pathname.split('/').pop() || 'index.html').replace(/\.html$/, '') || 'index'
+const sendTelemetrySignal = (appId) => {
+  const sourceApp = appId.split('/').pop()
+  fetch(`${BRAIN_API}/api/v1/telemetry/signals`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sourceApp, targetRoute: '/api/v1/content', eventType: 'page_view', status: 200, durationMs: 0 }),
+    keepalive: true,
+  }).catch(() => {})
+}
 
 export async function initializeContentAdapter(appId) {
   const elements = [...document.querySelectorAll(`#app ${EDITABLE_SELECTOR}`)].filter((element) => {
@@ -42,5 +51,6 @@ export async function initializeContentAdapter(appId) {
     reset: () => apply(publishedValues),
     setPublished: (nextValues) => { apply(nextValues); publishedValues = values() }
   }
+  sendTelemetrySignal(appId)
   window.dispatchEvent(new CustomEvent('tabloid:cms-ready'))
 }
