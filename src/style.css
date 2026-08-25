@@ -1,5 +1,5 @@
 @import "tailwindcss";
-.workspace .topology-3d{min-height:94vh}.topology-3d-scene canvas[data-engine="three.js"]{min-height:94vh}
+.workspace .topology-3d{min-height:94vh}.topology-3d-scene{height:94vh;min-height:94vh}.topology-3d.fullscreen .topology-3d-scene{height:100vh;min-height:100vh}.topology-3d-scene canvas[data-engine="three.js"]{min-height:94vh}
 .packet-ring{fill:none;stroke:var(--health);stroke-width:1.4;filter:drop-shadow(0 0 6px var(--health))}
 .topology-controls{display:flex;align-items:center;gap:12px}.view-switch{display:flex;gap:3px;padding:4px;border:1px solid #ffffff12;border-radius:12px;background:#05070c}.view-switch button{border:0;border-radius:9px;padding:8px 11px;background:transparent;color:#687388;cursor:pointer;font-size:10px;font-weight:800}.view-switch button.active{background:#242035;color:#c4b5fd}.topology-3d{position:relative;min-height:620px;overflow:hidden;border:1px solid #ffffff10;border-radius:21px;background:radial-gradient(circle at 50% 45%,#24134a 0,#0b0b18 38%,#070a11 76%);cursor:grab}
 .topology-3d.fullscreen{position:fixed;inset:0;z-index:9999;height:100vh;margin:0;border-radius:0}
