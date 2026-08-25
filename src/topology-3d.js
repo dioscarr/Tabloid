@@ -5,7 +5,7 @@ const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, v
 export function mountTopology3D({ container, apps, routes, getMetric, onSelect }) {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
-  camera.position.set(0, 0.2, 5.8)
+  camera.position.set(0, 0.2, 8.5)
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setClearColor(0x070a11, 0)
@@ -16,7 +16,6 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
   scene.add(topology)
   const points = new Map()
   const nodes = []
-  const labels = []
   const particles = []
   const energyRings = []
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -201,14 +200,6 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
     topology.position.lerp(topology.userData.focus || new THREE.Vector3(), 0.045)
     camera.position.z += (targetZoom - camera.position.z) * 0.06
     for (const particle of particles) particle.position.copy(particle.userData.curve.getPointAt((time * particle.userData.speed + particle.userData.offset) % 1))
-    for (const label of labels) {
-      const position = new THREE.Vector3()
-      label.object.getWorldPosition(position).project(camera)
-      const visible = position.z < 1 && position.z > -1
-      label.element.hidden = !visible
-      label.element.style.transform = `translate(${(position.x * 0.5 + 0.5) * container.clientWidth}px,${(-position.y * 0.5 + 0.5) * container.clientHeight}px)`
-      label.element.classList.toggle('selected', label.object.userData.appId === focusedId)
-    }
     renderer.render(scene, camera)
   }
   animate(0)
