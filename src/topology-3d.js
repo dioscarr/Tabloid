@@ -5,7 +5,7 @@ const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, v
 export function mountTopology3D({ container, apps, routes, getMetric, onSelect }) {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
-  camera.position.set(0, 0.2, 10.5)
+  camera.position.set(0, 0.2, 5.8)
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setClearColor(0x070a11, 0)
@@ -25,7 +25,7 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
     [-3.2, -0.15, -0.2], [-1.35, -0.7, 0.9], [1.35, -0.7, 0.4], [3.2, -0.15, -0.4],
     [-2.15, -2.1, -0.2], [0, -2.5, 0.7], [2.15, -2.1, 0],
   ]
-  const byId = new Map(apps.map((app, index) => [app.id, { app, position: positions[index % positions.length] }]))
+  const byId = new Map(apps.map((app, index) => [app.id, { app, position: positions[index % positions.length].map(v => v * 1.8) }]))
 
   scene.add(new THREE.AmbientLight(0x899cff, 1.4))
   const key = new THREE.DirectionalLight(0xd8d2ff, 3.2)
@@ -36,13 +36,13 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
   scene.add(rim)
 
   const core = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.2, 2),
+    new THREE.IcosahedronGeometry(2.1, 3),
     new THREE.MeshStandardMaterial({ color: 0x8b5cf6, emissive: 0x4c1d95, emissiveIntensity: 0.7, roughness: 0.3, metalness: 0.35, transparent: true, opacity: 0.48 }),
   )
   topology.add(core)
-  const halo = new THREE.Mesh(new THREE.SphereGeometry(1.7, 32, 20), new THREE.MeshBasicMaterial({ color: 0x8b5cf6, transparent: true, opacity: 0.045, side: THREE.BackSide }))
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(3.0, 32, 20), new THREE.MeshBasicMaterial({ color: 0x8b5cf6, transparent: true, opacity: 0.045, side: THREE.BackSide }))
   topology.add(halo)
-  for (const [tilt, color, radius] of [[0.25, 0x8b5cf6, 2.1], [-0.4, 0x22d3ee, 2.35], [0.95, 0xfb7185, 2.6]]) {
+  for (const [tilt, color, radius] of [[0.25, 0x8b5cf6, 3.8], [-0.4, 0x22d3ee, 4.2], [0.95, 0xfb7185, 4.6]]) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.022, 8, 128), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.38 }))
     ring.rotation.set(tilt, tilt * 0.7, tilt * 0.35)
     topology.add(ring)
@@ -98,9 +98,7 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
     label.setAttribute('aria-label', `Focus ${app.name}, ${app.role}`)
     const name = document.createElement('strong')
     name.textContent = app.name
-    const role = document.createElement('small')
-    role.textContent = app.role
-    label.replaceChildren(name, role)
+    label.replaceChildren(name)
     label.addEventListener('click', () => focus(app.id))
     container.append(label)
     label.classList.toggle('inactive', !active)
@@ -134,13 +132,13 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
 
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
-  let dragging = false, moved = false, lastX = 0, lastY = 0, targetZoom = 10.5, focusedId = null
+  let dragging = false, moved = false, lastX = 0, lastY = 0, targetZoom = 5.8, focusedId = null
   const focus = (id) => {
     focusedId = id
     const object = nodes.find((node) => node.userData.appId === id)
     if (object) {
       topology.userData.focus = object.position.clone().multiplyScalar(-0.22)
-      targetZoom = 7.5
+      targetZoom = 4.0
       onSelect(id)
     }
   }
@@ -148,7 +146,7 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
     focusedId = null
     topology.userData.focus = new THREE.Vector3()
     topology.rotation.set(0, 0, 0)
-    targetZoom = 10.5
+    targetZoom = 5.8
   }
   const resize = () => {
     const { width, height } = container.getBoundingClientRect()
@@ -182,7 +180,7 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
   renderer.domElement.addEventListener('pointerdown', down)
   renderer.domElement.addEventListener('pointermove', move)
   renderer.domElement.addEventListener('pointerup', up)
-  renderer.domElement.addEventListener('wheel', (event) => { event.preventDefault(); targetZoom = clamp(targetZoom + event.deltaY * 0.012, 5.5, 17) }, { passive: false })
+  renderer.domElement.addEventListener('wheel', (event) => { event.preventDefault(); targetZoom = clamp(targetZoom + event.deltaY * 0.012, 3.5, 12) }, { passive: false })
   const observer = new ResizeObserver(resize)
   observer.observe(container)
   resize()
