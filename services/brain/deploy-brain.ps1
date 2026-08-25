@@ -72,7 +72,7 @@ Invoke-Podman @(
   'run', '--detach', '--name', $serviceContainer, '--restart', 'unless-stopped',
   '--network', $network, '--network-alias', 'brain-service',
   '--secret', "$openRouterSecretName,target=openrouter_api_key", '--secret', "$mcpSecretName,target=brain_mcp_token",
-  '--env', 'OPENROUTER_API_KEY_FILE=/run/secrets/openrouter_api_key',
+  '--env', 'OPENROUTER_API_KEY_FILE=/run/secrets/openrouter_api_key', '--env', 'GENERATION_PRIMARY=openrouter',
   '--env', 'BRAIN_MCP_TOKEN_FILE=/run/secrets/brain_mcp_token',
   '--env', 'BRAIN_MCP_URL=http://127.0.0.1:8787/mcp', '--env', 'AUTHZ_API_URL=https://tabloid-authorization.tail70b7f1.ts.net', '--env', 'AUTHZ_SERVICE_TOKEN',
   '--env', 'BRAIN_CONTENT_STORE=/data/content.json', '--env', 'BRAIN_TELEMETRY_STORE=/data/telemetry.json', '--volume', "${contentVolume}:/data",
