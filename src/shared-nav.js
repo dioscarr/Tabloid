@@ -114,7 +114,7 @@ class TabloidSharedNav extends HTMLElement {
   async loadBranches() {
     this.loaded = true
     try {
-      const sources = await Promise.allSettled([
+      const [brainSource, githubSource] = await Promise.allSettled([
         fetch(`${BRAIN_API}/api/v1/apps`).then(async (response) => {
           if (!response.ok) throw new Error(`Brain returned ${response.status}`)
           return (await response.json()).apps.map(({ id, name, branch }) => ({ id, name, branch }))
@@ -124,10 +124,17 @@ class TabloidSharedNav extends HTMLElement {
           return (await response.json()).map(({ name }) => ({ branch: name }))
         })
       ])
-      const discovered = sources.flatMap((source) => source.status === 'fulfilled' ? source.value : [])
-      if (!discovered.length) throw new Error('No application source is available.')
       const appMap = new Map()
-      for (const app of discovered) appMap.set(app.branch, { ...appMap.get(app.branch), ...app })
+      const brainApps = brainSource.status === 'fulfilled' ? brainSource.value : []
+      if (githubSource.status === 'fulfilled') {
+        for (const app of githubSource.value) appMap.set(app.branch, app)
+        for (const app of brainApps) {
+          if (appMap.has(app.branch)) appMap.set(app.branch, { ...appMap.get(app.branch), ...app })
+        }
+      } else {
+        for (const app of brainApps) appMap.set(app.branch, app)
+      }
+      if (!appMap.size) throw new Error('No application source is available.')
       const apps = await Promise.all([...appMap.values()]
         .sort((a, b) => a.branch === 'main' ? -1 : b.branch === 'main' ? 1 : a.branch.localeCompare(b.branch))
         .map(async (app) => ({ ...app, id: app.id || app.branch, name: app.name || branchLabel(app.branch), url: await branchUrl(app.branch) })))
