@@ -42,6 +42,22 @@ function Wait-ForHealthy {
   throw "Container '$Container' did not become healthy within $TimeoutSeconds seconds."
 }
 
+function Remove-LegacyApplicationContainer {
+  $project = & podman inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' 'tabloid' 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    return
+  }
+
+  if ([string]::IsNullOrWhiteSpace($project)) {
+    Write-Host "Migrating legacy 'tabloid' container into the Compose-managed stack."
+    & podman rm --force 'tabloid'
+    if ($LASTEXITCODE -ne 0) {
+      throw "Could not remove the legacy 'tabloid' container."
+    }
+  }
+}
+
+Remove-LegacyApplicationContainer
 Invoke-Compose @('pull')
 Invoke-Compose @('up', '--detach')
 
