@@ -749,3 +749,4 @@ span.flatpickr-weekday,
   opacity: 0.8;
   cursor: grabbing; /* Changes the cursor to indicate dragging */
 }
+.tabloid-launcher-slot{margin-left:auto;display:flex;align-items:center;padding:0 1rem}.tabloid-launcher-slot tabloid-shared-nav{display:block}@media(max-width:640px){.tabloid-launcher-slot{padding:0 .5rem}}

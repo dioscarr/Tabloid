@@ -1,7 +1,7 @@
 import "jsvectormap/dist/jsvectormap.min.css";
 import "flatpickr/dist/flatpickr.min.css";
 import "dropzone/dist/dropzone.css";
-import "../css/style.css";
+import "../css/style.css";`r`nimport "./shared-nav.js";
 
 import Alpine from "alpinejs";
 import persist from "@alpinejs/persist";
@@ -116,3 +116,4 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 });
+
