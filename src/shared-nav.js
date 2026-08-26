@@ -16,6 +16,7 @@ const APP_LOGOS = Object.freeze({
   Authorization: 'authorization',
   'ai-news': 'ai-news',
   'apps/big-news-dr': 'astropaper',
+  AstroPaper: 'astropaper',
 })
 
 const appLogo = (branch, name) => {
