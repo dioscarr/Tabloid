@@ -3,6 +3,25 @@ const TAILNET = 'tail70b7f1.ts.net'
 const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
 const AUTHZ_API = `https://tabloid-authorization.${TAILNET}`
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
+const APP_LOGOS = Object.freeze({
+  main: 'daily-echo',
+  admin: 'admin',
+  api: 'admin',
+  'app-gallery': 'gallery',
+  'big-news': 'big-news',
+  tech: 'tech',
+  dashboard: 'dashboard',
+  brain: 'brain',
+  Authorization: 'authorization',
+  'ai-news': 'ai-news',
+  'apps/big-news-dr': 'astropaper',
+})
+
+const appLogo = (branch, name) => {
+  const logo = APP_LOGOS[branch]
+  if (!logo) return `<span class="icon monogram" aria-hidden="true">${escapeHtml(name[0] || '?')}</span>`
+  return `<span class="icon logo logo-${logo}" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="/app-icons.svg#${logo}"></use></svg></span>`
+}
 
 const previewId = async (branch) => {
   let slug = branch.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'branch'
@@ -45,7 +64,17 @@ class TabloidSharedNav extends HTMLElement {
         .app:hover { transform:translateY(-1px); border-color:#334155; background:#1e293b; }
         .app.current { border-color:#4d7c0f; background:linear-gradient(145deg,rgba(77,124,15,.27),rgba(30,41,59,.76)); }
         .icon { display:grid; flex:0 0 auto; place-items:center; width:42px; height:42px; border-radius:13px; background:linear-gradient(145deg,#334155,#1e293b); color:#cbd5e1; font-size:15px; font-weight:900; box-shadow:inset 0 1px rgba(255,255,255,.06); }
-        .current .icon { background:linear-gradient(145deg,#bef264,#84cc16); color:#1a2e05; }
+        .icon svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.9; }
+        .logo-daily-echo { background:linear-gradient(145deg,#e2e8f0,#94a3b8); color:#0f172a; }
+        .logo-admin,.logo-authorization { background:linear-gradient(145deg,#c4b5fd,#7c3aed); color:#1e1b4b; }
+        .logo-gallery { background:linear-gradient(145deg,#f9a8d4,#ec4899); color:#500724; }
+        .logo-big-news { background:linear-gradient(145deg,#fb7185,#e11d48); color:#4c0519; }
+        .logo-tech { background:linear-gradient(145deg,#67e8f9,#0891b2); color:#083344; }
+        .logo-dashboard { background:linear-gradient(145deg,#a5f3fc,#06b6d4); color:#083344; }
+        .logo-brain { background:linear-gradient(145deg,#c4b5fd,#8b5cf6); color:#2e1065; }
+        .logo-ai-news { background:linear-gradient(145deg,#fde68a,#f59e0b); color:#451a03; }
+        .logo-astropaper { background:linear-gradient(145deg,#fef3c7,#fb923c); color:#431407; }
+        .current .icon { box-shadow:0 0 0 2px #bef264, inset 0 1px rgba(255,255,255,.18); }
         .name,.branch { display:block; }
         .name { overflow:hidden; color:#f8fafc; font-size:13px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
         .branch { overflow:hidden; margin-top:4px; color:#64748b; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
@@ -104,7 +133,7 @@ class TabloidSharedNav extends HTMLElement {
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
       this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><button class="repo studio-launch" type="button">Brain Studio ✦</button></div><div class="apps">${apps.map((app) => {
         const current = new URL(app.url).hostname === window.location.hostname
-        return `<a class="app${current ? ' current' : ''}" href="${app.url}"><span class="icon">${escapeHtml(app.name[0])}</span><span><span class="name">${escapeHtml(app.name)}</span><span class="branch">${escapeHtml(app.branch)}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
+        return `<a class="app${current ? ' current' : ''}" href="${app.url}">${appLogo(app.branch, app.name)}<span><span class="name">${escapeHtml(app.name)}</span><span class="branch">${escapeHtml(app.branch)}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
       }).join('')}</div><a class="status" style="display:block;text-decoration:none" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage repository branches ↗</a>`
       this.menu.querySelector('.studio-launch')?.addEventListener('click', () => {
         this.close()
@@ -112,7 +141,7 @@ class TabloidSharedNav extends HTMLElement {
       })
     } catch {
       this.loaded = false
-      this.menu.innerHTML = `<div class="heading">Live repository branches</div><a class="app" href="https://tabloid.${TAILNET}/"><span class="icon">P</span><span><span class="name">Production</span><span class="branch">main</span></span></a><div class="status">New branches could not be loaded. Try again shortly.</div>`
+      this.menu.innerHTML = `<div class="heading">Live repository branches</div><a class="app" href="https://tabloid.${TAILNET}/">${appLogo('main', 'Production')}<span><span class="name">Production</span><span class="branch">main</span></span></a><div class="status">New branches could not be loaded. Try again shortly.</div>`
     }
   }
 }
