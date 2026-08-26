@@ -115,14 +115,26 @@ class TabloidSharedNav extends HTMLElement {
   async loadBranches() {
     this.loaded = true
     try {
-      const sources = await Promise.allSettled([
+      const [brainSource, githubSource] = await Promise.allSettled([
         fetch(`${BRAIN_API}/api/v1/apps`).then(async (response) => {
           if (!response.ok) throw new Error(`Brain returned ${response.status}`)
           return (await response.json()).apps.map(({ id, name, branch }) => ({ id, name, branch }))
+        }),
+        fetch(`https://api.github.com/repos/${REPOSITORY}/branches?per_page=100`, { headers: { Accept: 'application/vnd.github+json' } }).then(async (response) => {
+          if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
+          return (await response.json()).map(({ name }) => ({ branch: name }))
         })
       ])
-      const discovered = sources.flatMap((source) => source.status === 'fulfilled' ? source.value : [])
-      const appMap = new Map([{ id: 'app-gallery', name: 'App Gallery', branch: 'app-gallery' }, ...discovered].map((app) => [app.branch, app]))
+      const appMap = new Map()
+      const brainApps = brainSource.status === 'fulfilled' ? brainSource.value : []
+      if (githubSource.status === 'fulfilled') {
+        for (const app of githubSource.value) appMap.set(app.branch, app)
+        for (const app of brainApps) {
+          if (appMap.has(app.branch)) appMap.set(app.branch, { ...appMap.get(app.branch), ...app })
+        }
+      } else {
+        for (const app of [{ id: 'app-gallery', name: 'App Gallery', branch: 'app-gallery' }, ...brainApps]) appMap.set(app.branch, app)
+      }
       const apps = await Promise.all([...appMap.values()]
         .sort((a, b) => a.branch === 'main' ? -1 : b.branch === 'main' ? 1 : a.branch.localeCompare(b.branch))
         .map(async (app) => ({ ...app, id: app.id || app.branch, name: app.name || branchLabel(app.branch), url: await branchUrl(app.branch) })))
