@@ -4,7 +4,6 @@ import { initializeContentAdapter } from './content-adapter.js'
 import { initializeLiveFeed } from './live-feed.js'
 
 const arrowIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-4" fill="none"><path d="M4 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>`
-const appsIcon = `<svg aria-hidden="true" viewBox="0 0 20 20" class="size-5" fill="currentColor"><circle cx="4" cy="4" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="16" cy="4" r="1.5"/><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/><circle cx="4" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg>`
 
 const navigation = [
   ['news', 'AI Radar', 'news.html'],
@@ -111,29 +110,22 @@ const sectionPages = {
 const fileName = window.location.pathname.split('/').pop() || 'index.html'
 const pageKey = fileName.replace('.html', '')
 
-const navMarkup = (active) => navigation.map(([key, label, href]) => `<a href="${href}" class="text-sm font-semibold transition hover:text-emerald-200 ${key === active ? 'text-emerald-300' : 'text-emerald-50/80'}">${label}</a>`).join('')
+const navMarkup = (active) => navigation.map(([key, label, href]) => `<a href="${href}" class="border-b-2 py-5 text-sm font-semibold transition hover:text-lime-300 ${key === active ? 'border-lime-300 text-white' : 'border-transparent text-slate-300'}">${label}</a>`).join('')
 
-const mobileNavMarkup = () => navigation.map(([, label, href]) => `<a href="${href}" class="rounded-xl px-4 py-3 text-sm font-semibold text-emerald-50 hover:bg-emerald-800">${label}</a>`).join('')
+const mobileNavMarkup = () => navigation.map(([, label, href]) => `<a href="${href}" class="rounded-lg px-4 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-800">${label}</a>`).join('')
 
 const header = (active) => `
-  <header class="sticky top-0 z-50 border-b border-emerald-800 bg-emerald-950/95 text-white shadow-lg shadow-emerald-950/10 backdrop-blur-xl">
-    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-      <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="Big News home">Big News<span class="text-emerald-300">.</span></a>
-      <nav class="hidden items-center gap-7 md:flex" aria-label="Main navigation">${navMarkup(active)}</nav>
+  <header class="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/95 text-white shadow-xl shadow-slate-950/10 backdrop-blur-xl">
+    <div class="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-5 px-5 sm:px-8">
+      <a href="index.html" class="font-display text-xl font-black tracking-tight sm:text-2xl" aria-label="Big News home">Big News<span class="text-lime-300">.</span></a>
+      <nav class="hidden items-center gap-6 self-stretch md:flex" aria-label="Main navigation">${navMarkup(active)}</nav>
       <div class="flex items-center gap-2">
-        <div class="relative">
-          <button id="apps-button" class="inline-grid size-10 place-items-center rounded-full text-emerald-50 transition hover:bg-emerald-800" type="button" aria-label="Open app switcher" aria-expanded="false" aria-controls="apps-menu">${appsIcon}</button>
-          <div id="apps-menu" class="absolute right-0 top-12 hidden w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-emerald-800 bg-emerald-950 text-white shadow-2xl shadow-black/30">
-            <div class="border-b border-emerald-800 px-5 py-4"><p class="text-[0.65rem] font-black uppercase tracking-[0.18em] text-emerald-300">Tabloid apps</p><p class="mt-1 text-sm text-emerald-100/70">Switch between live editions</p></div>
-            <div id="apps-list" class="max-h-80 overflow-y-auto p-2" role="menu"><p class="px-3 py-4 text-sm text-emerald-100/60">Loading live branches…</p></div>
-            <a href="https://github.com/dioscarr/Tabloid/branches" class="flex items-center justify-between border-t border-emerald-800 px-5 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-900 hover:text-white">View repository branches ${arrowIcon}</a>
-          </div>
-        </div>
-        <a href="subscribe.html" class="hidden rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-white sm:inline-flex">Your Briefing</a>
-        <button id="menu-button" class="inline-grid size-10 place-items-center rounded-full text-emerald-50 transition hover:bg-emerald-800 md:hidden" type="button" aria-label="Open navigation" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+        <div data-shared-nav-slot></div>
+        <a href="subscribe.html" class="hidden rounded-full bg-lime-300 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-white sm:inline-flex">Your Briefing</a>
+        <button id="menu-button" class="inline-grid size-10 place-items-center rounded-full text-slate-200 transition hover:bg-slate-800 md:hidden" type="button" aria-label="Open navigation" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
       </div>
     </div>
-    <nav id="mobile-nav" class="hidden border-t border-emerald-800 px-5 py-4 md:hidden" aria-label="Mobile navigation"><div class="mx-auto grid max-w-7xl grid-cols-2 gap-2">${mobileNavMarkup()}</div></nav>
+    <nav id="mobile-nav" class="hidden border-t border-slate-800 px-5 py-4 md:hidden" aria-label="Mobile navigation"><div class="mx-auto grid max-w-7xl grid-cols-2 gap-2">${mobileNavMarkup()}</div></nav>
   </header>
 `
 
