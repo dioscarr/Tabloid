@@ -4,6 +4,27 @@ This repository builds several branch-based web applications from one Vite and T
 
 The brand-independent `src/shared-nav.js` shell is mandatory on every branch. Rebrands may change the product header and page navigation, but must preserve the `mountSharedNav()` import and call. `npm run check:shared-nav` and preview publishing enforce this contract so every live or newly created branch remains reachable from the repository app switcher.
 
+## Branch independence
+
+- `main`, `big-news`, `tech`, and `admin` are independent product applications, not stages of one application.
+- Do not merge one product branch into another. Changes intended for more than one product must be applied independently, preferably by cherry-picking a focused commit and then reviewing the result in each branch.
+- Keep each branch's brand, content model, routes, and product behavior independent unless a change is explicitly documented as shared infrastructure.
+- The shared launcher, deployment files, preview automation, and required Copilot instructions are cross-branch infrastructure. Preserve them on every maintained product branch.
+- Temporary workspace, feature, and synchronization branches are not product branches and must not be used as propagation targets unless explicitly requested.
+
+## Template rebrand direction
+
+The approved starting point for the next visual exploration is [AstroPaper](https://github.com/satnaing/astro-paper), an MIT-licensed Astro/Tailwind editorial theme. Use it as a design and component reference, or port selected patterns into this Vite/Tailwind codebase; do not replace the repository's deployment architecture with Astro without an explicit decision.
+
+Any AstroPaper-inspired rebrand must preserve:
+
+- `src/shared-nav.js` and the `mountSharedNav()` import/call in `src/main.js`.
+- The existing HTML entry pages and branch-aware relative asset paths.
+- The live-feed, content-adapter, and Brain Studio integration points required by the current product.
+- `vite.config.js`, `Containerfile`, Nginx, Tailscale, GitHub Actions, and branch-preview behavior unless the change is separately approved.
+
+Before copying code, fonts, images, icons, or other assets from a template, verify the upstream license and the license of each bundled asset. Prefer original brand assets and local or explicitly licensed media.
+
 ## Commands
 
 - Install exactly: `npm ci`
