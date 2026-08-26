@@ -11,17 +11,22 @@ contract intact while the template is integrated in follow-up work.
 
 ## Production data plane
 
-`compose.yaml` provisions `tabloid-db`, a PostgreSQL 17 database with:
+The production Podman host already runs the managed `tabloid-data-postgres`
+PostgreSQL 17 service. It has:
 
-- a persistent `tabloid-postgres` Podman volume;
-- a health check before dependent services use it;
-- no published host port and an internal-only `tabloid-private` network;
-- Tailscale attached only to `tabloid-edge`, where it can serve `tabloid`.
+- a persistent `tabloid-data-postgres` Podman volume;
+- a Podman-managed `tabloid-data-postgres-password` secret;
+- no published host port and the private `tabloid-data-platform` network.
+
+`compose.yaml` attaches only the web application to that private network. The
+Tailscale sidecar remains solely on `tabloid-edge`, so it can serve the web app
+but never publishes PostgreSQL. A future server API can connect to
+`data-postgres:5432` using the Podman-managed secret; the static browser bundle
+never receives database credentials.
 
 Copy `.env.production.example` to a host-only deployment environment, replace
-the placeholder values there, and never commit that generated environment file.
-The database password must be a unique random value kept only on the Podman
-host or in the deployment secret store.
+the Tailscale placeholder there, and never commit that generated environment
+file. The database password is not represented in this file.
 
 ## Automated images and deployment
 
@@ -37,6 +42,6 @@ reconciler once from an interactive account that owns the rootless Podman state:
   -EnvironmentFile C:\path\to\host-only-production.env
 ```
 
-The task runs every five minutes by default. It is idempotent: it retains the
-database volume and Tailscale state, starts PostgreSQL on the private network,
-and exposes only the application through the Tailscale sidecar.
+The task runs every five minutes by default. It is idempotent: it checks the
+managed PostgreSQL instance, retains Tailscale state, and exposes only the
+application through the Tailscale sidecar.

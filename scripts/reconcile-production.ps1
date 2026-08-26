@@ -44,7 +44,12 @@ function Wait-ForHealthy {
 
 Invoke-Compose @('pull')
 Invoke-Compose @('up', '--detach')
-Wait-ForHealthy -Container 'tabloid-db'
+
+& podman exec 'tabloid-data-postgres' pg_isready -U 'tabloid_admin' -d 'tabloid'
+if ($LASTEXITCODE -ne 0) {
+  throw "Managed PostgreSQL container 'tabloid-data-postgres' is not ready."
+}
+
 Wait-ForHealthy -Container 'tabloid'
 
 $tailscaleState = & podman inspect --format '{{.State.Status}}' 'tabloid-tailscale'
