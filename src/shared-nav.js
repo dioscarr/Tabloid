@@ -17,6 +17,7 @@ const APP_LOGOS = Object.freeze({
   'apps/big-news-dr': 'astropaper',
   AstroPaper: 'astropaper',
 })
+const FALLBACK_BRANCHES = Object.freeze(['main', 'admin', 'ai-news', 'api', 'app-gallery', 'big-news', 'brain', 'dashboard', 'Authorization', 'AstroPaper', 'tech'])
 
 const appLogo = (branch, name) => {
   const logo = APP_LOGOS[branch]
@@ -128,14 +129,12 @@ class TabloidSharedNav extends HTMLElement {
         })
       ])
       const authorized = sources[0].status === 'fulfilled'
-      const githubBranches = sources[2].status === 'fulfilled' ? new Set(sources[2].value) : null
+      const githubBranches = sources[2].status === 'fulfilled'
+        ? new Set(sources[2].value)
+        : new Set(FALLBACK_BRANCHES)
       const discovered = authorized
-        ? sources[0].value.filter((branch) => !githubBranches || githubBranches.has(branch))
-        : githubBranches
-          ? [...githubBranches]
-          : sources[1].status === 'fulfilled'
-            ? sources[1].value
-            : []
+        ? sources[0].value.filter((branch) => githubBranches.has(branch))
+        : [...githubBranches]
       const branches = [...new Set(discovered)]
       if (!branches.length) throw new Error('No application source is available.')
       branches.sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
