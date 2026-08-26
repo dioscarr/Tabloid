@@ -2,7 +2,6 @@ const REPOSITORY = 'dioscarr/Tabloid'
 const TAILNET = 'tail70b7f1.ts.net'
 const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
 const AUTHZ_API = `https://tabloid-authorization.${TAILNET}`
-const VIBE_URL = `https://tabloid-vibe.${TAILNET}`
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
 const APP_LOGOS = Object.freeze({
   main: 'daily-echo',
@@ -59,7 +58,6 @@ class TabloidSharedNav extends HTMLElement {
         .menu-head { display:flex; align-items:center; justify-content:space-between; padding:9px 10px 14px; }
         .heading { color:#f8fafc; font-size:15px; font-weight:850; letter-spacing:-.01em; }
         .subheading { margin-top:4px; color:#64748b; font-size:11px; }
-        .menu-actions { display:flex; align-items:center; gap:10px; }
         .repo { border:0; padding:0; background:none; color:#94a3b8; font-size:11px; text-decoration:none; }
         .repo:hover { color:#bef264; }
         .apps { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
@@ -144,9 +142,7 @@ class TabloidSharedNav extends HTMLElement {
       const apps = await Promise.all([...appMap.values()]
         .sort((a, b) => a.branch === 'main' ? -1 : b.branch === 'main' ? 1 : a.branch.localeCompare(b.branch))
         .map(async (app) => ({ ...app, id: app.branch, name: branchLabel(app.branch), url: await branchUrl(app.branch) })))
-      const currentApp = apps.find((app) => new URL(app.url).hostname === window.location.hostname)
-      const vibeHref = currentApp ? `${VIBE_URL}/?model=${encodeURIComponent(`vibe-${currentApp.id}`)}&q=${encodeURIComponent(`Help me improve ${currentApp.name}. Start by understanding this app and ask what I want to change.`)}` : VIBE_URL
-      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><div class="menu-actions"><a class="repo vibe-launch" href="${vibeHref}">Vibe ✦</a><button class="repo studio-launch" type="button">Brain Studio</button></div></div><div class="apps">${apps.map((app) => {
+      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><button class="repo studio-launch" type="button">Brain Studio ✦</button></div><div class="apps">${apps.map((app) => {
         const current = new URL(app.url).hostname === window.location.hostname
         return `<a class="app${current ? ' current' : ''}" href="${app.url}">${appLogo(app.branch, app.name)}<span><span class="name">${escapeHtml(app.name)}</span><span class="branch">${escapeHtml(app.branch)}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
       }).join('')}</div><a class="status" style="display:block;text-decoration:none" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage repository branches ↗</a>`
