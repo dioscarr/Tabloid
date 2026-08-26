@@ -2,10 +2,137 @@ import './style.css'
 import { mountSharedNav } from './shared-nav.js'
 import { initializeContentAdapter } from './content-adapter.js'
 
-const decisions=[['MC','Maya Chen','Read production logs','Logging','SRE observer','Low','Allowed','12 sec'],['BI','svc-brain-indexer','Invoke route graph API','Brain','Workload mesh','Low','Allowed','44 sec'],['JB','Jon Bell','Change OAuth provider','Auth','Step-up required','Medium','Challenged','3 min'],['?','Unknown device','Export user directory','Admin','Exfiltration guard','High','Denied','8 min'],['DD','deploy-dashboard','Publish app image','Dashboard','Protected branch','Low','Allowed','14 min']]
-const apps=[['A','Admin','8 identities · 4 roles','100%','Restricted'],['B','Brain','12 identities · 3 roles','92%','Service-first'],['D','Dashboard','24 identities · 5 roles','96%','Internal'],['L','Logging','7 identities · 4 roles','100%','Privileged']]
-document.title='Authorization · Tabloid Control Plane'
-document.querySelector('#app').innerHTML=`<div class="shell"><aside><a class="brand" href="#">⬡ <span>Authorization<small>Access control plane</small></span></a><nav><p>Control plane</p><a class="active" href="#overview">⌂ Overview</a><a href="#decisions">⌁ Policy decisions <b>LIVE</b></a><a href="#applications">▦ Applications</a><a href="#">♙ Identities</a><a href="#">◇ Roles & policies</a><p>Governance</p><a href="#approvals">✓ Access requests <em>2</em></a><a href="#">≡ Audit trail</a><a href="#">⚙ Settings</a></nav><div class="health"><i></i><span>Policy engine healthy<small>All regions · 36ms p95</small></span></div><div class="profile"><span>DO</span><div>Diego Ortiz<small>Platform owner</small></div></div></aside><main><header><label class="search">⌕ <input placeholder="Search users, apps, policies…"><kbd>⌘ K</kbd></label><button>♢</button><div data-shared-nav-slot></div><button class="primary" id="new-policy">＋ New policy</button></header><div class="content" id="overview"><section class="hero"><div><p class="eyebrow">● Authorization posture</p><h1>Every access decision.<br><em>Visible and governed.</em></h1><p>One control plane for people, services, and permissions across the Tabloid application ecosystem.</p></div><div class="posture"><strong>94</strong><span>Strong posture<small>↑ 3 points this month</small></span></div></section><div class="prototype"><b>Interactive product prototype</b> Representative data until policy and identity APIs are connected.<button>×</button></div><section class="metrics"><article><i>⌁</i><div><small>Decisions · 24h</small><strong>24,891</strong><p class="good">↑ 12.4% from yesterday</p></div></article><article><i>✓</i><div><small>Allow rate</small><strong>98.7%</strong><p>324 requests blocked</p></div></article><article><i>♙</i><div><small>Active identities</small><strong>1,248</strong><p>38 service identities</p></div></article><article><i>!</i><div><small>Needs attention</small><strong>6</strong><p class="warn">2 overdue reviews</p></div></article></section><section class="panel" id="decisions"><div class="panel-head"><div><p class="eyebrow">● Streaming now</p><h2>Recent policy decisions</h2></div><select><option>All decisions</option><option>Allowed</option><option>Challenged</option><option>Denied</option></select></div><div class="table-head">Identity / action　　Application　　Matched policy　　 Risk　 Decision　 Time</div><div id="rows">${decisions.map(d=>`<button class="row" data-result="${d[6]}"><span class="avatar">${d[0]}</span><span><b>${d[1]}</b><small>${d[2]}</small></span><mark>${d[3]}</mark><span>${d[4]}</span><u class="risk ${d[5]}">${d[5]}</u><strong class="${d[6]}">● ${d[6]}</strong><time>${d[7]}</time></button>`).join('')}</div></section><div class="lower"><section class="panel" id="applications"><div class="panel-head"><div><p class="eyebrow">Coverage</p><h2>Application entitlements</h2></div><button>Manage apps →</button></div><div class="apps">${apps.map(a=>`<button><span class="app-icon">${a[0]}</span><span><b>${a[1]}</b><small>${a[2]}</small></span><span class="coverage"><b>${a[3]}</b><i></i><small>${a[4]}</small></span>›</button>`).join('')}</div></section><section class="panel" id="approvals"><div class="panel-head"><div><p class="eyebrow warn">Action required</p><h2>Pending approvals</h2></div><em>2</em></div>${[['ER','Elena Ruiz','Temporary production access','Logging · Expires in 2 hours'],['TC','svc-tech-curator','GitHub metadata: write','Tech · Expires in 30 days']].map(a=>`<article class="approval"><span class="avatar">${a[0]}</span><div><b>${a[1]}</b><p>${a[2]}</p><small>${a[3]}</small></div><div><button>Deny</button><button class="approve">Approve</button></div></article>`).join('')}</section></div><section class="insight"><span>✦</span><div><small>AUTHORIZATION INSIGHT</small><b>Three dormant administrator grants can be removed safely.</b><p>Based on 30 days of access patterns across Admin and Logging.</p></div><button>Review recommendation →</button></section></div></main></div><dialog><button class="close">×</button><p class="eyebrow">Decision evidence</p><h2>Policy evaluation</h2><p>Matched rule, identity context, device trust, risk signals, and tamper-evident audit reference are available here.</p><dl><div>Policy version<b>v18.4 · signed</b></div><div>Evaluation<b>36 ms</b></div><div>Evidence ID<b>evt_7X4M2Q</b></div></dl><button class="primary">Open full evidence</button></dialog>`
+const states = {
+  sample: ['Illustrative workspace', 'Representative records only. Live authorization data is not connected.'],
+  loading: ['Loading access inventory', 'Requesting independent, read-only sources.'],
+  empty: ['No records returned', 'The connected source returned no records for this scope.'],
+  denied: ['Access not granted', 'This view requires an explicit server-side authorization decision.'],
+  stale: ['Snapshot needs refresh', 'The last successful source snapshot is older than the configured freshness window.'],
+  failure: ['Source unavailable', 'A source could not be read. No sample data is substituted for a failed response.'],
+}
+
+const sampleDecisions = [
+  ['svc-example-index', 'Read application metadata', 'Brain', 'Low', 'Allowed'],
+  ['example-editor', 'Request editorial workspace', 'Admin', 'Medium', 'Step-up required'],
+  ['unrecognized-session', 'Read protected configuration', 'Authorization', 'High', 'Denied'],
+]
+
+const sampleApps = [
+  ['Admin', 'Identity administration', 'Protected'],
+  ['Brain', 'Content operations', 'Scoped'],
+  ['Dashboard', 'Operational visibility', 'Read-only'],
+]
+
+const icon = (name) => ({
+  overview: '◈',
+  decisions: '⌁',
+  applications: '▦',
+  requests: '◌',
+  audit: '≡',
+  settings: '⚙',
+}[name])
+
+const renderDecisionRows = () => sampleDecisions.map(([subject, action, application, risk, result]) => `
+  <button class="decision-row" type="button" data-decision="${result}">
+    <span class="entity-mark" aria-hidden="true">${subject[0].toUpperCase()}</span>
+    <span><strong>${subject}</strong><small>${action}</small></span>
+    <span class="app-pill">${application}</span>
+    <span class="risk ${risk.toLowerCase()}">${risk}</span>
+    <span class="decision ${result === 'Allowed' ? 'allowed' : result === 'Denied' ? 'denied' : 'challenge'}">${result}</span>
+    <span class="row-arrow" aria-hidden="true">→</span>
+  </button>
+`).join('')
+
+const renderSample = () => `
+  <section class="metrics" aria-label="Illustrative authorization metrics">
+    <article><span class="metric-icon">⌁</span><p>Decision stream</p><strong>Sample</strong><small>No live event source</small></article>
+    <article><span class="metric-icon">◇</span><p>Applications</p><strong>3</strong><small>Illustrative inventory</small></article>
+    <article><span class="metric-icon">✓</span><p>Access reviews</p><strong>Unknown</strong><small>Awaiting source</small></article>
+    <article><span class="metric-icon">!</span><p>Attention queue</p><strong>Unknown</strong><small>Not evaluated</small></article>
+  </section>
+  <section class="workspace-grid">
+    <article class="panel decisions-panel" id="decisions">
+      <div class="panel-heading"><div><p class="eyebrow">Decision activity</p><h2>Illustrative policy evaluations</h2><p>Example records demonstrate the review layout. They are not live authorization decisions.</p></div><button class="quiet-button" type="button" data-state="loading">Refresh view</button></div>
+      <div class="table-labels"><span>Subject & action</span><span>Application</span><span>Risk</span><span>Result</span></div>
+      <div class="decision-list">${renderDecisionRows()}</div>
+      <button class="panel-footer" type="button" data-state="empty">View decision history <span>→</span></button>
+    </article>
+    <aside class="panel review-panel" id="requests">
+      <div class="panel-heading"><div><p class="eyebrow">Review queue</p><h2>Requests need a source</h2></div><span class="status neutral">Unknown</span></div>
+      <div class="empty-illustration" aria-hidden="true">◌</div>
+      <p>Server-approved requests will appear with requester context, a scoped duration, and an auditable decision path.</p>
+      <button class="secondary-button" type="button" data-state="loading">Check for requests</button>
+    </aside>
+  </section>
+  <section class="panel application-panel" id="applications">
+    <div class="panel-heading"><div><p class="eyebrow">Application inventory</p><h2>Protected application surfaces</h2><p>Application registrations are illustrative until the server API is connected.</p></div><button class="quiet-button" type="button" data-state="stale">View freshness</button></div>
+    <div class="application-list">${sampleApps.map(([name, scope, posture]) => `<article><span class="application-icon">${name[0]}</span><div><strong>${name}</strong><small>${scope}</small></div><span class="status neutral">${posture}</span><button type="button" aria-label="Inspect ${name} application" data-inspect="${name}">Inspect <span>→</span></button></article>`).join('')}</div>
+  </section>
+`
+
+const renderState = (state) => {
+  if (state === 'sample') return renderSample()
+  const [title, message] = states[state]
+  const kind = state === 'failure' || state === 'denied' ? ' critical' : ''
+  return `<section class="state-panel${kind}" role="${state === 'failure' || state === 'denied' ? 'alert' : 'status'}"><span class="state-symbol" aria-hidden="true">${state === 'loading' ? '◌' : state === 'denied' ? '⊘' : state === 'failure' ? '!' : '◇'}</span><p class="eyebrow">Authorization workspace</p><h2>${title}</h2><p>${message}</p><div><button class="secondary-button" type="button" data-state="sample">Return to sample workspace</button><button class="quiet-button" type="button" data-state="loading">Try read-only refresh</button></div></section>`
+}
+
+document.title = 'Authorization | Tabloid Control Plane'
+document.querySelector('#app').innerHTML = `
+  <div class="authorization-shell">
+    <a class="skip-link" href="#main-content">Skip to access workspace</a>
+    <aside class="sidebar" aria-label="Authorization navigation">
+      <a class="brand" href="#overview"><span aria-hidden="true">◇</span><strong>Tabloid<small>Authorization</small></strong></a>
+      <nav>
+        <p>Control plane</p>
+        ${[['overview', 'Overview'], ['decisions', 'Decisions'], ['applications', 'Applications'], ['requests', 'Access requests'], ['audit', 'Audit trail'], ['settings', 'Settings']].map(([key, label], index) => `<a href="#${key}" class="${index === 0 ? 'active' : ''}"><span aria-hidden="true">${icon(key)}</span>${label}</a>`).join('')}
+      </nav>
+      <div class="sidebar-card"><span class="status neutral">Read-only interface</span><p>Policy enforcement, identity records, and audit writes remain server-side.</p></div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <button class="menu-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+        <div class="crumb"><span>Control plane</span><strong>Authorization workspace</strong></div>
+        <label class="search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Search when a source is connected" disabled><kbd>⌘ K</kbd></label>
+        <div data-shared-nav-slot class="shared-nav-slot"></div>
+        <label class="state-select"><span class="sr-only">Workspace display state</span><select data-state-select>${Object.entries(states).map(([key, [label]]) => `<option value="${key}">${label}</option>`).join('')}</select></label>
+      </header>
+      <div class="content" id="main-content">
+        <section class="hero" id="overview"><div><p class="eyebrow">Access intelligence</p><h1>Decisions that are<br><em>clear by design.</em></h1><p>Review authorization posture without moving identity, policy evaluation, or audit writes into the browser.</p></div><div class="hero-card"><span class="hero-orbit" aria-hidden="true">◇</span><div><p>Default posture</p><strong>Deny until approved</strong><small>Enforced by the server decision layer</small></div></div></section>
+        <section class="source-banner"><div><span class="status neutral" data-state-badge>Illustrative workspace</span><p data-state-description>${states.sample[1]}</p></div><button class="quiet-button" type="button" data-state="failure">View failure handling</button></section>
+        <div data-workspace>${renderSample()}</div>
+      </div>
+    </main>
+    <dialog data-dialog><button class="dialog-close" type="button" aria-label="Close details">×</button><p class="eyebrow">Read-only detail</p><h2>Evidence is server-owned</h2><p>Policy evidence, identity context, and audit references are requested through a protected server API. This prototype does not fabricate or mutate a decision.</p><button class="secondary-button" type="button" data-dialog-close>Close</button></dialog>
+  </div>
+`
+
 mountSharedNav()
 initializeContentAdapter('authorization')
-const dialog=document.querySelector('dialog');document.querySelectorAll('.row').forEach(r=>r.onclick=()=>dialog.showModal());document.querySelector('.close').onclick=()=>dialog.close();document.querySelector('#new-policy').onclick=()=>dialog.showModal();document.querySelector('select').onchange=e=>document.querySelectorAll('.row').forEach(r=>r.hidden=e.target.value!=='All decisions'&&r.dataset.result!==e.target.value);document.querySelector('.prototype button').onclick=e=>e.target.parentElement.remove();document.querySelectorAll('.approval>div:last-child button').forEach(b=>b.onclick=()=>b.closest('.approval').innerHTML='<strong class="resolved">Decision recorded in the audit trail.</strong>')
+
+const workspace = document.querySelector('[data-workspace]')
+const selector = document.querySelector('[data-state-select]')
+const badge = document.querySelector('[data-state-badge]')
+const description = document.querySelector('[data-state-description]')
+const dialog = document.querySelector('[data-dialog]')
+const sidebar = document.querySelector('.sidebar')
+const menuToggle = document.querySelector('.menu-toggle')
+
+const setState = (state) => {
+  selector.value = state
+  workspace.innerHTML = renderState(state)
+  badge.textContent = states[state][0]
+  description.textContent = states[state][1]
+}
+
+document.addEventListener('click', (event) => {
+  const stateButton = event.target.closest('[data-state]')
+  if (stateButton) setState(stateButton.dataset.state)
+  if (event.target.closest('[data-decision],[data-inspect]')) dialog.showModal()
+  if (event.target.closest('[data-dialog-close],.dialog-close')) dialog.close()
+})
+selector.addEventListener('change', () => setState(selector.value))
+menuToggle.addEventListener('click', () => {
+  const open = sidebar.classList.toggle('open')
+  menuToggle.setAttribute('aria-expanded', String(open))
+})
