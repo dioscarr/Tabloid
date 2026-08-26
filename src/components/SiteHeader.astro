@@ -1,0 +1,44 @@
+---
+interface Props {
+  currentPath: string
+}
+
+const { currentPath } = Astro.props
+const links = [
+  { href: '/', label: 'Home' },
+  { href: '/posts/', label: 'Posts' },
+  { href: '/tags/', label: 'Tags' },
+  { href: '/search/', label: 'Search' },
+  { href: '/about/', label: 'About' },
+]
+
+const isCurrent = (href: string) => href === '/' ? currentPath === '/' : currentPath.startsWith(href)
+---
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="site-wordmark" href="/" aria-label="AstroPaper home">Astro<span>Paper</span></a>
+    <nav class="site-nav" aria-label="Primary navigation">
+      {links.map((link) => (
+        <a href={link.href} aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a>
+      ))}
+    </nav>
+    <div class="site-header__tools">
+      <div data-shared-nav-slot aria-label="Application switcher"></div>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Use dark theme" aria-pressed="false">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+          <circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+        </svg>
+      </button>
+      <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="mobile-navigation">
+        <span class="sr-only">Open navigation</span>
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+    </div>
+  </div>
+  <nav id="mobile-navigation" class="mobile-nav" aria-label="Mobile navigation" hidden>
+    {links.map((link) => (
+      <a href={link.href} aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a>
+    ))}
+  </nav>
+</header>

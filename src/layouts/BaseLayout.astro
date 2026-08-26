@@ -1,0 +1,77 @@
+---
+import '../style.css'
+import SiteFooter from '../components/SiteFooter.astro'
+import SiteHeader from '../components/SiteHeader.astro'
+
+interface Props {
+  title?: string
+  description?: string
+}
+
+const {
+  title = 'AstroPaper | Tabloid editorial notes',
+  description = 'AstroPaper is Tabloid’s clean, source-aware editorial workspace.',
+} = Astro.props
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.url)
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#fbfbfa" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <script is:inline>
+      try {
+        const savedTheme = localStorage.getItem('astropaper-theme')
+        const theme = savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        document.documentElement.dataset.theme = theme
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <SiteHeader currentPath={Astro.url.pathname} />
+    <main id="main-content">
+      <slot />
+    </main>
+    <SiteFooter />
+    <script>
+      import { mountSharedNav } from '../shared-nav.js'
+
+      mountSharedNav()
+
+      const menuButton = document.querySelector('[data-menu-toggle]')
+      const mobileNavigation = document.querySelector('#mobile-navigation')
+      menuButton?.addEventListener('click', () => {
+        const isOpen = menuButton.getAttribute('aria-expanded') === 'true'
+        menuButton.setAttribute('aria-expanded', String(!isOpen))
+        mobileNavigation.hidden = isOpen
+      })
+
+      const themeButton = document.querySelector('[data-theme-toggle]')
+      const setTheme = (theme) => {
+        document.documentElement.dataset.theme = theme
+        themeButton?.setAttribute('aria-pressed', String(theme === 'dark'))
+        themeButton?.setAttribute('aria-label', theme === 'dark' ? 'Use light theme' : 'Use dark theme')
+        try { localStorage.setItem('astropaper-theme', theme) } catch {}
+      }
+      setTheme(document.documentElement.dataset.theme || 'light')
+      themeButton?.addEventListener('click', () => {
+        setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
+      })
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || mobileNavigation.hidden) return
+        mobileNavigation.hidden = true
+        menuButton?.setAttribute('aria-expanded', 'false')
+        menuButton?.focus()
+      })
+    </script>
+  </body>
+</html>

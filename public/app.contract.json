@@ -1,10 +1,10 @@
 {
   "contractVersion": "1.0",
   "app": {
-    "id": "big-news-dr",
-    "name": "Big News DR",
+    "id": "astropaper",
+    "name": "AstroPaper",
     "branch": "apps/big-news-dr",
-    "description": "Big News DR"
+    "description": "AstroPaper is Tabloid's clean, source-aware editorial workspace."
   },
   "routes": [
     {

@@ -1,0 +1,91 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import PostCard from '../components/PostCard.astro'
+import { getPublishedPosts } from '../lib/posts'
+
+const posts = await getPublishedPosts()
+const searchIndex = posts.map((post) => ({
+  title: post.data.title,
+  description: post.data.description,
+  tags: post.data.tags,
+  href: `/posts/${post.id}/`,
+  date: new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(post.data.pubDate),
+  minutes: post.data.minutes,
+}))
+---
+
+<BaseLayout title="Search | AstroPaper" description="Search published AstroPaper notes.">
+  <section class="page-intro">
+    <p class="eyebrow">Find a note</p>
+    <h1>Search</h1>
+    <p>Search the published AstroPaper archive. Results stay in your browser; no query leaves this site.</p>
+  </section>
+  <section class="content-section content-section--compact">
+    <label class="search-control">
+      <span class="sr-only">Search posts</span>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6"></circle><path d="m16 16 4 4"></path></svg>
+      <input data-search-input type="search" placeholder="Try “deployment” or “navigation”" autocomplete="off" />
+    </label>
+    <p class="search-status" data-search-status aria-live="polite">Showing all {posts.length} posts.</p>
+    <div class="post-list" data-search-results>
+      {posts.map((post) => <PostCard post={post} />)}
+    </div>
+    <template data-empty-state>
+      <div class="empty-state">
+        <h2>No matching posts</h2>
+        <p>Try a different word, or browse the tag archive for a broader view.</p>
+        <a class="text-link" href="/tags/">Browse tags →</a>
+      </div>
+    </template>
+  </section>
+  <script define:vars={{ searchIndex }}>
+    const input = document.querySelector('[data-search-input]')
+    const results = document.querySelector('[data-search-results]')
+    const status = document.querySelector('[data-search-status]')
+    const emptyState = document.querySelector('[data-empty-state]')
+
+    const createResult = (post) => {
+      const article = document.createElement('article')
+      article.className = 'post-card'
+      const meta = document.createElement('div')
+      meta.className = 'post-card__meta'
+      meta.textContent = `${post.date} · ${post.minutes} min read`
+      const heading = document.createElement('h2')
+      const link = document.createElement('a')
+      link.href = post.href
+      link.textContent = post.title
+      heading.append(link)
+      const description = document.createElement('p')
+      description.textContent = post.description
+      const tags = document.createElement('ul')
+      tags.className = 'tag-list'
+      tags.setAttribute('aria-label', 'Post tags')
+      post.tags.forEach((tag) => {
+        const item = document.createElement('li')
+        const tagLink = document.createElement('a')
+        tagLink.href = `/tags/${tag.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`
+        tagLink.textContent = tag
+        item.append(tagLink)
+        tags.append(item)
+      })
+      article.append(meta, heading, description, tags)
+      return article
+    }
+
+    const updateResults = () => {
+      const query = input.value.trim().toLowerCase()
+      const matches = searchIndex.filter((post) => `${post.title} ${post.description} ${post.tags.join(' ')}`.toLowerCase().includes(query))
+      results.replaceChildren()
+      if (matches.length) matches.forEach((post) => results.append(createResult(post)))
+      else results.append(emptyState.content.cloneNode(true))
+      status.textContent = query
+        ? `${matches.length} ${matches.length === 1 ? 'post' : 'posts'} matching “${input.value.trim()}”.`
+        : `Showing all ${searchIndex.length} posts.`
+    }
+
+    const query = new URLSearchParams(window.location.search).get('q')
+    if (query) input.value = query
+    updateResults()
+    input.addEventListener('input', updateResults)
+  </script>
+</BaseLayout>

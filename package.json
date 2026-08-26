@@ -4,15 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "astro dev",
+    "build": "astro build",
     "check:shared-nav": "node scripts/verify-shared-nav.mjs",
-    "preview": "vite preview",
-    "serve": "vite build && vite preview --host 0.0.0.0 --port 5173 --strictPort"
+    "preview": "astro preview",
+    "serve": "astro build && astro preview --host 0.0.0.0 --port 5173"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "tailwindcss": "^4.3.3",
-    "vite": "^8.2.0"
+    "astro": "^7.2.7",
+    "tailwindcss": "^4.3.3"
   }
 }

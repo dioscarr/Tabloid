@@ -1,0 +1,12 @@
+---
+interface Props {
+  tags: string[]
+}
+
+const { tags } = Astro.props
+const slugify = (tag: string) => tag.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+---
+
+<ul class="tag-list" aria-label="Post tags">
+  {tags.map((tag) => <li><a href={`/tags/${slugify(tag)}/`}>{tag}</a></li>)}
+</ul>

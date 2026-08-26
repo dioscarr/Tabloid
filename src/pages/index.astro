@@ -1,0 +1,58 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import PostCard from '../components/PostCard.astro'
+import TagList from '../components/TagList.astro'
+import { getPublishedPosts } from '../lib/posts'
+
+const posts = await getPublishedPosts()
+const featuredPosts = posts.filter((post) => post.data.featured)
+const leadPost = featuredPosts[0] ?? posts[0]
+const recentPosts = posts.filter((post) => post.id !== leadPost?.id)
+---
+
+<BaseLayout
+  title="AstroPaper | Clear notes for branch-based products"
+  description="Original editorial notes about AstroPaper, Tabloid, and private branch previews."
+>
+  <section class="hero">
+    <p class="eyebrow">Tabloid editorial workspace</p>
+    <h1>Thoughtful notes for systems that need to stay reachable.</h1>
+    <p class="hero__lede">AstroPaper is a quiet home for original writing about branch apps, static delivery, and the practical details behind a dependable product surface.</p>
+    <div class="hero__actions">
+      <a class="button" href="/posts/">Read the posts</a>
+      <a class="text-link" href="/about/">Why AstroPaper <span aria-hidden="true">→</span></a>
+    </div>
+  </section>
+
+  {leadPost && (
+    <section class="content-section featured-section" aria-labelledby="featured-heading">
+      <div class="section-heading">
+        <p class="eyebrow">Start here</p>
+        <h2 id="featured-heading">Featured note</h2>
+      </div>
+      <PostCard post={leadPost} featured={true} />
+    </section>
+  )}
+
+  <section class="content-section" aria-labelledby="recent-heading">
+    <div class="section-heading section-heading--split">
+      <div>
+        <p class="eyebrow">From the desk</p>
+        <h2 id="recent-heading">Recent writing</h2>
+      </div>
+      <a class="text-link" href="/posts/">View all posts <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="post-grid">
+      {recentPosts.map((post) => <PostCard post={post} />)}
+    </div>
+  </section>
+
+  <section class="callout" aria-labelledby="taxonomy-heading">
+    <div>
+      <p class="eyebrow">Find a thread</p>
+      <h2 id="taxonomy-heading">A small, useful taxonomy.</h2>
+      <p>Browse writing by the decisions it helps you make—not by an endless stream of updates.</p>
+    </div>
+    <TagList tags={[...new Set(posts.flatMap((post) => post.data.tags))]} />
+  </section>
+</BaseLayout>

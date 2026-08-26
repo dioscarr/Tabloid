@@ -1,0 +1,23 @@
+---
+import TagList from './TagList.astro'
+
+interface Props {
+  post: any
+  featured?: boolean
+}
+
+const { post, featured = false } = Astro.props
+const { data, id } = post
+const date = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(data.pubDate)
+---
+
+<article class:list={['post-card', { 'post-card--featured': featured }]}>
+  <div class="post-card__meta">
+    <time datetime={data.pubDate.toISOString()}>{date}</time>
+    <span aria-hidden="true">·</span>
+    <span>{data.minutes} min read</span>
+  </div>
+  <h2><a href={`/posts/${id}/`}>{data.title}</a></h2>
+  <p>{data.description}</p>
+  <TagList tags={data.tags} />
+</article>

@@ -1,6 +1,6 @@
 # Repository instructions
 
-This repository builds several branch-based web applications from one Vite and Tailwind CSS codebase. `main` is The Daily Echo; long-lived product branches include `big-news`, `tech`, and `admin`. GitHub Actions publishes one container image per branch and a Windows scheduled task reconciles private Podman/Tailscale previews.
+This branch builds AstroPaper as an Astro and Tailwind CSS application. `main` is The Daily Echo; long-lived product branches include `big-news`, `tech`, and `admin`. GitHub Actions publishes one container image per branch and a Windows scheduled task reconciles private Podman/Tailscale previews.
 
 The brand-independent `src/shared-nav.js` shell is mandatory on every branch. Rebrands may change the product header and page navigation, but must preserve the `mountSharedNav()` import and call. `npm run check:shared-nav` and preview publishing enforce this contract so every live or newly created branch remains reachable from the repository app switcher.
 
@@ -12,16 +12,15 @@ The brand-independent `src/shared-nav.js` shell is mandatory on every branch. Re
 - The shared launcher, deployment files, preview automation, and required Copilot instructions are cross-branch infrastructure. Preserve them on every maintained product branch.
 - Temporary workspace, feature, and synchronization branches are not product branches and must not be used as propagation targets unless explicitly requested.
 
-## Template rebrand direction
+## AstroPaper implementation
 
-The approved starting point for the next visual exploration is [AstroPaper](https://github.com/satnaing/astro-paper), an MIT-licensed Astro/Tailwind editorial theme. Use it as a design and component reference, or port selected patterns into this Vite/Tailwind codebase; do not replace the repository's deployment architecture with Astro without an explicit decision.
+AstroPaper is the approved Astro/Tailwind editorial implementation for this branch. It is inspired by the MIT-licensed [AstroPaper](https://github.com/satnaing/astro-paper) theme, but uses original content and components. Do not copy template content, fonts, images, or icons without verifying their licenses.
 
-Any AstroPaper-inspired rebrand must preserve:
+The implementation must preserve:
 
-- `src/shared-nav.js` and the `mountSharedNav()` import/call in `src/main.js`.
-- The existing HTML entry pages and branch-aware relative asset paths.
-- The live-feed, content-adapter, and Brain Studio integration points required by the current product.
-- `vite.config.js`, `Containerfile`, Nginx, Tailscale, GitHub Actions, and branch-preview behavior unless the change is separately approved.
+- `src/shared-nav.js` and the `mountSharedNav()` import/call in `src/layouts/BaseLayout.astro`.
+- Astro pages in `src/pages/`, content in `src/content/posts/`, and branch-aware static routes.
+- `astro.config.mjs`, `Containerfile`, Nginx, Tailscale, GitHub Actions, and branch-preview behavior unless the change is separately approved.
 
 Before copying code, fonts, images, icons, or other assets from a template, verify the upstream license and the license of each bundled asset. Prefer original brand assets and local or explicitly licensed media.
 
@@ -35,12 +34,12 @@ Before copying code, fonts, images, icons, or other assets from a template, veri
 
 ## Frontend conventions
 
-- Entry point: `src/main.js`; styling uses Tailwind utility classes and `src/style.css`.
+- Entry points: `src/pages/`; shared rendering lives in `src/layouts/BaseLayout.astro`; styling uses Tailwind and `src/style.css`.
 - Keep JavaScript dependency-light unless a new framework is explicitly approved.
 - Preserve responsive behavior, semantic HTML, keyboard access, visible focus, and reduced motion.
 - Implement loading, empty, permission-denied, stale, and failure states for API-backed UI.
 - Never hardcode a real user identity, access decision, health claim, OAuth credential, or privileged API token.
-- Only variables prefixed with `VITE_` are browser-visible. Never place secrets in a `VITE_*` variable or generated `.env.local` file.
+- Only variables prefixed with `PUBLIC_` are browser-visible in Astro. Never place secrets in a `PUBLIC_*` variable or generated `.env` file.
 
 ## Admin architecture
 

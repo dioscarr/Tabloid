@@ -1,0 +1,26 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import { getPublishedPosts, getTags } from '../../lib/posts'
+
+const tags = getTags(await getPublishedPosts())
+---
+
+<BaseLayout title="Tags | AstroPaper" description="Browse AstroPaper's original notes by topic.">
+  <section class="page-intro">
+    <p class="eyebrow">Browse by topic</p>
+    <h1>Tags</h1>
+    <p>A compact map of the recurring questions behind this publication.</p>
+  </section>
+  <section class="content-section content-section--compact" aria-label="Tag archive">
+    <ul class="tag-directory">
+      {tags.map((tag) => (
+        <li>
+          <a href={`/tags/${tag.slug}/`}>
+            <span>{tag.name}</span>
+            <span>{tag.count} {tag.count === 1 ? 'post' : 'posts'} <span aria-hidden="true">→</span></span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</BaseLayout>

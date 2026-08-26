@@ -7,14 +7,14 @@ on:
       - '.github/workflows/publish-containers.yml'
       - 'Containerfile'
       - 'Tailscale.Containerfile'
-      - 'index.html'
+      - 'astro.config.mjs'
       - 'nginx.conf'
       - 'package-lock.json'
       - 'package.json'
       - 'public/**'
       - 'src/**'
       - 'tailscale/**'
-      - 'vite.config.js'
+      - 'tsconfig.json'
   workflow_dispatch:
 
 env:

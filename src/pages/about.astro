@@ -1,0 +1,28 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="About | AstroPaper" description="How AstroPaper provides a clean editorial layer over Tabloid's shared application shell.">
+  <section class="page-intro">
+    <p class="eyebrow">About the publication</p>
+    <h1>A clean editorial layer over a shared platform shell.</h1>
+    <p>AstroPaper is the Astro-powered publication for this Tabloid branch. It keeps reading, browsing, and searching focused while preserving the application launcher that connects live branch apps.</p>
+  </section>
+  <section class="about-grid content-section content-section--compact">
+    <div class="prose">
+      <h2>What this site is</h2>
+      <p>This is a static Astro site with original Markdown posts. It has a home page, post archive, tag archives, local search, and this short explanation of the product boundary.</p>
+      <h2>What stays shared</h2>
+      <p>The header mounts Tabloid’s shared navigation client-side. That launcher is intentionally independent from the publication, so preview deployments and future product rebrands remain reachable from the same place.</p>
+    </div>
+    <aside class="about-aside">
+      <p class="eyebrow">Principles</p>
+      <ul>
+        <li>Read quickly, with a clear stopping point.</li>
+        <li>Use original content and transparent sample data.</li>
+        <li>Keep deployment and routing contracts intact.</li>
+        <li>Respect keyboard, motion, and color preferences.</li>
+      </ul>
+    </aside>
+  </section>
+</BaseLayout>
