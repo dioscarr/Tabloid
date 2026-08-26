@@ -16,6 +16,7 @@ const APP_LOGOS = Object.freeze({
   'apps/big-news-dr': 'astropaper',
   AstroPaper: 'astropaper',
 })
+const FALLBACK_BRANCHES = Object.freeze(['main', 'admin', 'ai-news', 'api', 'app-gallery', 'big-news', 'brain', 'dashboard', 'Authorization', 'AstroPaper', 'tech'])
 
 const appLogo = (branch, name) => {
   const logo = APP_LOGOS[branch]
@@ -130,7 +131,7 @@ class TabloidSharedNav extends HTMLElement {
           if (appMap.has(app.branch)) appMap.set(app.branch, { ...appMap.get(app.branch), ...app })
         }
       } else {
-        for (const app of brainApps) appMap.set(app.branch, app)
+        for (const branch of FALLBACK_BRANCHES) appMap.set(branch, { branch })
       }
       if (!appMap.size) throw new Error('No application source is available.')
       const apps = await Promise.all([...appMap.values()]
