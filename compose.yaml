@@ -1,4 +1,24 @@
 services:
+  tabloid-db:
+    image: docker.io/library/postgres:17-alpine
+    container_name: tabloid-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${TABLOID_DB_NAME:-tabloid}
+      POSTGRES_USER: ${TABLOID_DB_USER:-tabloid}
+      POSTGRES_PASSWORD: ${TABLOID_DB_PASSWORD:?Set TABLOID_DB_PASSWORD in the host-only deployment environment}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - tabloid-postgres:/var/lib/postgresql/data
+    networks:
+      tabloid-private:
+        aliases:
+          - postgres
+
   tabloid:
     image: ghcr.io/dioscarr/tabloid:${TABLOID_IMAGE_TAG:-main}
     pull_policy: always
@@ -13,9 +33,12 @@ services:
       start_period: 5s
       retries: 3
     networks:
-      default:
+      tabloid-edge:
         aliases:
           - tabloid-app
+      tabloid-private:
+        aliases:
+          - tabloid-web
 
   tabloid-tailscale:
     image: ghcr.io/dioscarr/tabloid-tailscale:${TABLOID_IMAGE_TAG:-main}
@@ -34,6 +57,14 @@ services:
       TS_USERSPACE: "true"
     volumes:
       - tabloid-tailscale-state:/var/lib/tailscale
+    networks:
+      - tabloid-edge
 
 volumes:
   tabloid-tailscale-state:
+  tabloid-postgres:
+
+networks:
+  tabloid-edge:
+  tabloid-private:
+    internal: true
