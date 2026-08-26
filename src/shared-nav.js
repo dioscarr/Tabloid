@@ -16,6 +16,7 @@ const APP_LOGOS = Object.freeze({
   'apps/big-news-dr': 'astropaper',
   AstroPaper: 'astropaper',
 })
+const FALLBACK_BRANCHES = Object.freeze(['main', 'admin', 'ai-news', 'api', 'app-gallery', 'big-news', 'brain', 'dashboard', 'Authorization', 'AstroPaper', 'tech'])
 
 const appLogo = (branch, name) => {
   const logo = APP_LOGOS[branch]
@@ -122,13 +123,9 @@ class TabloidSharedNav extends HTMLElement {
           return (await response.json()).map(({ name }) => name)
         })
       ])
-      // GitHub is the branch lifecycle authority. Brain's app catalog can lag a
-      // deletion, so use it only when GitHub cannot be reached.
       const branches = githubSource.status === 'fulfilled'
         ? [...new Set(githubSource.value)]
-        : brainSource.status === 'fulfilled'
-          ? [...new Set(brainSource.value)]
-          : []
+        : FALLBACK_BRANCHES
       if (!branches.length) throw new Error('No application source is available.')
       branches.sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
