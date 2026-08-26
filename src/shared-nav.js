@@ -130,7 +130,14 @@ class TabloidSharedNav extends HTMLElement {
         })
       ])
       const authorized = sources[0].status === 'fulfilled'
-      const discovered = (authorized ? sources.slice(0, 1) : sources.slice(1)).flatMap((source) => source.status === 'fulfilled' ? source.value : [])
+      const githubBranches = sources[2].status === 'fulfilled' ? new Set(sources[2].value) : null
+      const discovered = authorized
+        ? sources[0].value.filter((branch) => !githubBranches || githubBranches.has(branch))
+        : githubBranches
+          ? [...githubBranches]
+          : sources[1].status === 'fulfilled'
+            ? sources[1].value
+            : []
       if (!discovered.length) throw new Error('No application source is available.')
       const appMap = new Map()
       for (const branch of discovered) appMap.set(branch, { branch })
