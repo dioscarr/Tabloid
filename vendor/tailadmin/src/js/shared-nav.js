@@ -1,7 +1,7 @@
 const REPOSITORY = 'dioscarr/Tabloid'
 const TAILNET = 'tail70b7f1.ts.net'
 const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
-const AUTHZ_API = `https://tabloid-authorization.${TAILNET}`
+const AUTHZ_API = null
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
 const APP_LOGOS = Object.freeze({
   main: 'daily-echo',
@@ -115,18 +115,12 @@ class TabloidSharedNav extends HTMLElement {
     this.loaded = true
     try {
       const sources = await Promise.allSettled([
-        fetch(`${AUTHZ_API}/api/v1/applications`).then(async (response) => {
-          if (!response.ok) throw new Error(`Authorization returned ${response.status}`)
-          return (await response.json()).applications.map(({ branch }) => branch).filter(Boolean)
-        }),
+        Promise.resolve([]),
         fetch(`${BRAIN_API}/api/v1/apps`).then(async (response) => {
           if (!response.ok) throw new Error(`Brain returned ${response.status}`)
           return (await response.json()).apps.map(({ branch }) => branch)
         }),
-        fetch(`https://api.github.com/repos/${REPOSITORY}/branches?per_page=100`, { headers: { Accept: 'application/vnd.github+json' } }).then(async (response) => {
-          if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
-          return (await response.json()).map(({ name }) => name)
-        })
+        Promise.resolve([...FALLBACK_BRANCHES])
       ])
       const authorized = sources[0].status === 'fulfilled'
       const githubBranches = sources[2].status === 'fulfilled'
@@ -297,3 +291,4 @@ export const mountSharedNav = () => {
   }
   document.body.prepend(sharedNav)
 }
+
