@@ -112,7 +112,7 @@ class TabloidSharedNav extends HTMLElement {
   async loadBranches() {
     this.loaded = true
     try {
-      const sources = await Promise.allSettled([
+      const [brainSource, githubSource] = await Promise.allSettled([
         fetch(`${BRAIN_API}/api/v1/apps`).then(async (response) => {
           if (!response.ok) throw new Error(`Brain returned ${response.status}`)
           return (await response.json()).apps.map(({ branch }) => branch)
@@ -122,7 +122,13 @@ class TabloidSharedNav extends HTMLElement {
           return (await response.json()).map(({ name }) => name)
         })
       ])
-      const branches = [...new Set(sources.flatMap((source) => source.status === 'fulfilled' ? source.value : []))]
+      // GitHub is the branch lifecycle authority. Brain's app catalog can lag a
+      // deletion, so use it only when GitHub cannot be reached.
+      const branches = githubSource.status === 'fulfilled'
+        ? [...new Set(githubSource.value)]
+        : brainSource.status === 'fulfilled'
+          ? [...new Set(brainSource.value)]
+          : []
       if (!branches.length) throw new Error('No application source is available.')
       branches.sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
