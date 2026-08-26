@@ -2,64 +2,285 @@ import './style.css'
 import { mountSharedNav } from './shared-nav.js'
 import { initializeContentAdapter } from './content-adapter.js'
 
-const glyph = (name) => ({ overview: '▦', apps: '◈', resources: '≡', activity: '∿', settings: '⚙' }[name])
-const nav = [['overview', 'Overview'], ['apps', 'Applications'], ['resources', 'Resources'], ['activity', 'Activity'], ['settings', 'Settings']]
-const metrics = [
-  ['Running containers', '12', 'Across 6 previews', '+2 today'],
-  ['Memory in use', '4.9 GB', '3.1 GB from WSL', '61% of budget'],
-  ['Healthy routes', '6 / 6', 'Tailscale HTTPS', '100% available'],
-  ['Build success', '96%', 'Last 30 builds', '+4.2% this week'],
-]
-const services = [
-  ['The Daily Echo', 'main', 'Healthy', 'Dedicated runtime', 'Private URL'],
-  ['Admin', 'admin', 'Healthy', 'Static gateway', 'Private URL'],
-  ['Big News', 'big-news', 'Healthy', 'Static gateway', 'Private URL'],
-  ['Tech', 'tech', 'Healthy', 'Static gateway', 'Private URL'],
-  ['Dashboard', 'dashboard', 'Healthy', 'Static gateway', 'Private URL'],
-]
-const events = [
-  ['Preview reconciled', 'admin', 'Image pulled and containers restarted', '2 min ago', 'bg-emerald-300'],
-  ['Workflow completed', 'dashboard', 'Branch preview image published', '6 min ago', 'bg-emerald-300'],
-  ['Workspace prepared', 'admin', 'Worktree and environment generated', '18 min ago', 'bg-cyan-300'],
-  ['Memory threshold', 'host', 'WSL usage crossed 3 GB', '1 hr ago', 'bg-amber-300'],
-]
-const appProfiles = {
-  main: { name: 'The Daily Echo', requests: '1.8k', latency: '42 ms', availability: '99.98%', memory: '8.7 MB', deployment: 'Production · main', note: 'Dedicated Nginx runtime; production migration remains separate.' },
-  admin: { name: 'Admin', requests: '486', latency: '58 ms', availability: '99.95%', memory: 'Shared', deployment: 'Static · admin', note: 'Uses the shared static gateway and private Admin worker API.' },
-  'big-news': { name: 'Big News', requests: '732', latency: '46 ms', availability: '99.97%', memory: 'Shared', deployment: 'Static · big-news', note: 'Static branch deployment served from the shared Podman volume.' },
-  tech: { name: 'Tech', requests: '614', latency: '44 ms', availability: '99.99%', memory: 'Shared', deployment: 'Static · tech', note: 'Static branch deployment with its existing Tailscale hostname.' },
-  dashboard: { name: 'System Dashboard', requests: '298', latency: '51 ms', availability: '99.96%', memory: 'Shared', deployment: 'Static · dashboard', note: 'Current values are prototype measurements until live adapters land.' },
+const scenarios = {
+  sample: {
+    label: 'Sample snapshot',
+    description: 'Illustrative records only. No dashboard API is connected.',
+  },
+  loading: {
+    label: 'Loading',
+    description: 'Waiting for a read-only dashboard API response.',
+  },
+  empty: {
+    label: 'Empty result',
+    description: 'The API responded, but there are no records for this view.',
+  },
+  error: {
+    label: 'Partial failure',
+    description: 'A source response failed. Other source groups remain independently visible.',
+  },
 }
-const requestedApp = new URLSearchParams(window.location.search).get('app')
-const selectedAppKey = Object.hasOwn(appProfiles, requestedApp) ? requestedApp : 'dashboard'
-const selectedApp = appProfiles[selectedAppKey]
 
-document.title = 'System Dashboard | Tabloid'
-document.querySelector('#app').innerHTML = `
-  <div class="min-h-screen bg-[#071019] text-slate-100 selection:bg-cyan-300/30">
-    <aside class="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-white/10 bg-[#09131e] xl:block">
-      <div class="flex h-20 items-center gap-3 border-b border-white/10 px-6"><span class="grid size-10 place-items-center rounded-xl bg-cyan-300 font-black text-slate-950">S</span><div><p class="font-black">System</p><p class="text-xs text-slate-500">Operations dashboard</p></div></div>
-      <nav class="space-y-1 p-4" aria-label="Dashboard sections">${nav.map(([key, label], index) => `<a href="#${key}" class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${index ? 'text-slate-500 hover:bg-white/5 hover:text-white' : 'bg-cyan-300/10 text-cyan-200'}"><span class="w-5 text-center">${glyph(key)}</span>${label}</a>`).join('')}</nav>
-      <div class="absolute inset-x-4 bottom-4 rounded-2xl border border-white/10 bg-white/[.025] p-4"><div class="flex items-center gap-2 text-xs font-bold text-emerald-300"><span class="size-2 rounded-full bg-emerald-300 shadow-[0_0_12px_#6ee7b7]"></span>Private control plane</div><p class="mt-2 text-xs text-slate-500">Tailscale access · local execution</p></div>
-    </aside>
-    <div class="xl:pl-64">
-      <header class="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-white/10 bg-[#071019]/90 px-5 backdrop-blur-xl sm:px-8"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-cyan-300">Control plane</p><h1 class="mt-1 text-lg font-black">Environment overview</h1></div><div class="flex items-center gap-3"><span data-shared-nav-slot class="inline-flex"></span><button class="hidden rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-bold text-slate-300 sm:block">Last 24 hours</button><span class="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-cyan-300 to-blue-500 text-xs font-black text-slate-950">DR</span></div></header>
-      <main class="mx-auto max-w-[1500px] px-5 py-8 sm:px-8">
-        <section id="overview" class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><p class="text-sm font-bold text-emerald-300">All critical systems operational</p><h2 class="mt-2 max-w-3xl text-4xl font-black tracking-[-.045em] sm:text-5xl">See the whole system.<br/><span class="text-slate-500">Act before it slows you down.</span></h2><p class="mt-4 max-w-2xl text-sm leading-6 text-slate-400">One private view of branch deployments, Podman resources, GitHub delivery, Tailscale routing, and development workspaces.</p></div><button class="w-fit rounded-xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950">Refresh live data</button></section>
-        <section class="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">${metrics.map(([label, value, detail, trend]) => `<article class="rounded-2xl border border-white/10 bg-white/[.035] p-5"><p class="text-sm font-semibold text-slate-500">${label}</p><p class="mt-5 text-3xl font-black">${value}</p><div class="mt-3 flex justify-between text-xs"><span class="text-slate-500">${detail}</span><span class="text-slate-300">${trend}</span></div></article>`).join('')}</section>
-        <section class="mt-6 grid gap-6 xl:grid-cols-[1.5fr_.8fr]">
-          <article id="resources" class="rounded-2xl border border-white/10 bg-white/[.035] p-5 sm:p-6"><div class="flex justify-between"><div><h3 class="font-black">Resource pressure</h3><p class="mt-1 text-xs text-slate-500">Observed usage with a seven-day projection</p></div><span class="h-fit rounded-full bg-emerald-300/10 px-3 py-1 text-xs font-bold text-emerald-300">Within budget</span></div><div class="mt-8 grid h-56 grid-cols-12 items-end gap-2 border-b border-l border-white/10 px-3 pt-4">${[35,42,39,47,44,53,58,55,62,67,64,72].map((height, index) => `<div class="rounded-t-md ${index > 8 ? 'bg-cyan-300/30' : 'bg-cyan-300'}" style="height:${height}%" title="${height}%"></div>`).join('')}</div><div class="mt-3 flex justify-between text-[.65rem] font-bold uppercase tracking-widest text-slate-600"><span>12 hours ago</span><span>Now</span><span>Projection</span></div><div class="mt-6 grid gap-3 sm:grid-cols-3">${[['CPU', '18%', 'Low'], ['Memory', '61%', 'Moderate'], ['Disk', '34%', 'Low']].map(([name, value, status]) => `<div class="rounded-xl bg-black/20 p-4"><div class="flex justify-between text-xs"><strong>${name}</strong><span class="text-slate-500">${status}</span></div><div class="mt-3 h-1.5 rounded-full bg-white/10"><div class="h-full rounded-full bg-cyan-300" style="width:${value}"></div></div><p class="mt-2 text-right text-xs font-bold">${value}</p></div>`).join('')}</div></article>
-          <aside class="rounded-2xl border border-white/10 bg-white/[.035] p-5 sm:p-6"><h3 class="font-black">Capacity forecast</h3><p class="mt-1 text-xs text-slate-500">Planning signal, not a guarantee</p><div class="mt-7 grid place-items-center"><div class="grid size-40 place-items-center rounded-full bg-[conic-gradient(#67e8f9_0_61%,#172334_61%)]"><div class="grid size-32 place-items-center rounded-full bg-[#0c1722] text-center"><span><strong class="block text-3xl">9 days</strong><small class="text-slate-500">to 75% memory</small></span></div></div></div><div class="mt-7 space-y-3 text-xs">${[['Projected previews','9'],['Estimated memory','6.1 GB'],['Confidence','Medium']].map(([a,b]) => `<div class="flex justify-between rounded-xl bg-black/20 p-3"><span class="text-slate-500">${a}</span><strong>${b}</strong></div>`).join('')}</div></aside>
-        </section>
-        <section id="apps" class="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/[.035]"><div class="flex items-center justify-between border-b border-white/10 px-5 py-4"><div><h3 class="font-black">Applications & branches</h3><p class="mt-1 text-xs text-slate-500">Runtime, delivery, and private routing status</p></div><a href="https://tabloid-admin-8c6976.tail70b7f1.ts.net/#apps" class="text-xs font-bold text-cyan-300">Manage in Admin →</a></div><div class="overflow-x-auto"><table class="w-full min-w-[820px] text-left text-sm"><thead class="text-[.65rem] uppercase tracking-[.15em] text-slate-600"><tr><th class="px-5 py-3">Application</th><th class="px-4 py-3">Branch</th><th class="px-4 py-3">Health</th><th class="px-4 py-3">Runtime</th><th class="px-4 py-3">Route</th><th class="px-5 py-3"></th></tr></thead><tbody class="divide-y divide-white/10">${services.map(([name, branch, status, runtime, route]) => `<tr class="${branch === selectedAppKey ? 'bg-cyan-300/[.06]' : ''}"><td class="px-5 py-4 font-bold">${name}</td><td class="px-4 py-4 font-mono text-xs text-slate-400">${branch}</td><td class="px-4 py-4 text-xs font-bold ${status === 'Healthy' ? 'text-emerald-300' : 'text-amber-300'}">● ${status}</td><td class="px-4 py-4 text-xs text-slate-400">${runtime}</td><td class="px-4 py-4 text-xs text-slate-400">${route}</td><td class="px-5 py-4 text-right"><a href="?app=${encodeURIComponent(branch)}#app-detail" class="text-xs font-bold text-cyan-300 hover:text-cyan-100">View stats →</a></td></tr>`).join('')}</tbody></table></div></section>
-        <section id="app-detail" class="mt-6 scroll-mt-24 rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-cyan-300/[.07] to-white/[.025] p-5 sm:p-7"><div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p class="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Application detail</p><h3 class="mt-2 text-3xl font-black tracking-[-.04em]">${selectedApp.name}</h3><p class="mt-2 font-mono text-xs text-slate-500">branch: ${selectedAppKey}</p></div><span class="w-fit rounded-full bg-emerald-300/10 px-3 py-1.5 text-xs font-bold text-emerald-300">● Healthy</span></div><div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">${[['Requests · 24h', selectedApp.requests], ['Median latency', selectedApp.latency], ['Availability · 30d', selectedApp.availability], ['Runtime memory', selectedApp.memory]].map(([label, value]) => `<article class="rounded-xl border border-white/10 bg-black/20 p-4"><p class="text-xs font-semibold text-slate-500">${label}</p><p class="mt-3 text-2xl font-black">${value}</p></article>`).join('')}</div><div class="mt-5 grid gap-4 lg:grid-cols-[1.25fr_.75fr]"><div class="rounded-xl border border-white/10 bg-black/20 p-5"><div class="flex items-center justify-between"><div><p class="text-sm font-bold">Request trend</p><p class="mt-1 text-xs text-slate-500">Observed requests, last 12 hours</p></div><span class="text-xs font-bold text-emerald-300">+8.4%</span></div><div class="mt-6 flex h-28 items-end gap-2">${[28,42,36,52,48,63,57,74,69,82,77,91].map((height) => `<span class="flex-1 rounded-t bg-cyan-300/70" style="height:${height}%"></span>`).join('')}</div></div><aside class="rounded-xl border border-white/10 bg-black/20 p-5"><p class="text-sm font-bold">Deployment</p><p class="mt-3 text-lg font-black">${selectedApp.deployment}</p><p class="mt-3 text-xs leading-5 text-slate-500">${selectedApp.note}</p><p class="mt-4 text-[.65rem] font-bold uppercase tracking-widest text-amber-300">Prototype data</p></aside></div></section>
-        <section id="activity" class="mt-6 rounded-2xl border border-white/10 bg-white/[.035] p-5 sm:p-6"><h3 class="font-black">System activity</h3><p class="mt-1 text-xs text-slate-500">Build, deploy, routing, and workspace events</p><div class="mt-5 divide-y divide-white/10">${events.map(([title, source, detail, time, tone]) => `<article class="grid gap-3 py-4 sm:grid-cols-[12rem_1fr_auto] sm:items-center"><div class="flex items-center gap-3"><span class="size-2 rounded-full ${tone}"></span><strong class="text-sm">${title}</strong></div><p class="text-xs text-slate-500"><span class="mr-2 rounded bg-white/5 px-2 py-1 font-mono">${source}</span>${detail}</p><time class="text-xs text-slate-600">${time}</time></article>`).join('')}</div></section>
-        <p class="mt-6 text-center text-xs text-slate-600">Prototype data · Live adapters and retention are specified in the implementation handoff.</p>
-      </main>
+const icon = (name) => ({
+  overview: '⌂',
+  applications: '◫',
+  resources: '◌',
+  delivery: '⇄',
+  activity: '≋',
+}[name])
+
+const navItems = [
+  ['overview', 'Overview'],
+  ['applications', 'Applications'],
+  ['resources', 'Resources'],
+  ['delivery', 'Delivery'],
+  ['activity', 'Activity'],
+]
+
+const metricCards = [
+  ['Published branches', '4', 'Example inventory', 'No live adapter'],
+  ['Observed capacity', '61%', 'Sample memory ratio', 'Not a health claim'],
+  ['Pending attention', '2', 'Example signals', 'Review before action'],
+  ['Latest snapshot', '—', 'No API connected', 'Unknown freshness'],
+]
+
+const appRows = [
+  ['Daily reporting', 'main', 'Sample only', 'Unknown', 'Not collected'],
+  ['Editorial tools', 'admin', 'Sample only', 'Unknown', 'Not collected'],
+  ['Special edition', 'big-news', 'Sample only', 'Unknown', 'Not collected'],
+  ['Control Center', 'dashboard', 'Sample only', 'Unknown', 'Not collected'],
+]
+
+const activity = [
+  ['Snapshot schema prepared', 'fixture adapter', 'Example event — no collector is connected.', 'Illustrative'],
+  ['Route probe awaiting source', 'network', 'A real probe result will identify its layer and observed time.', 'Unknown'],
+  ['Forecast withheld', 'projection', 'Forecasts require qualified historical samples before display.', 'Expected'],
+]
+
+const renderMetricCards = () => metricCards.map(([label, value, detail, status]) => `
+  <article class="metric-card">
+    <p>${label}</p>
+    <strong>${value}</strong>
+    <div><span>${detail}</span><span>${status}</span></div>
+  </article>
+`).join('')
+
+const renderApplications = () => `
+  <div class="table-scroll">
+    <table>
+      <caption class="sr-only">Example application inventory. Values are not connected to a live source.</caption>
+      <thead><tr><th>Application</th><th>Branch</th><th>Commit</th><th>Route probe</th><th>Freshness</th></tr></thead>
+      <tbody>${appRows.map(([name, branch, commit, route, freshness]) => `
+        <tr>
+          <td><strong>${name}</strong><small>Demonstration record</small></td>
+          <td><code>${branch}</code></td>
+          <td><span class="status neutral">◌ ${commit}</span></td>
+          <td><span class="status neutral">◌ ${route}</span></td>
+          <td>${freshness}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+`
+
+const renderSample = () => `
+  <section class="metrics-grid" aria-label="Prototype summary metrics">${renderMetricCards()}</section>
+  <section class="dashboard-grid">
+    <article class="panel resource-panel" id="resources" aria-labelledby="resource-title">
+      <div class="panel-heading">
+        <div><p class="eyebrow">Resource history</p><h2 id="resource-title">Capacity needs a live source</h2></div>
+        <span class="status neutral">◌ Unknown freshness</span>
+      </div>
+      <p class="muted">This example chart demonstrates the dashboard layout. It is not an observation of a host, VM, container runtime, or route.</p>
+      <figure class="sample-chart" aria-labelledby="chart-caption">
+        <div class="chart-bars" aria-hidden="true">${[35, 47, 38, 57, 48, 63, 52, 71, 60, 76, 68, 82].map((height, index) => `<span class="${index > 8 ? 'projected' : ''}" style="height:${height}%"></span>`).join('')}</div>
+        <figcaption id="chart-caption"><span>Example history</span><span>Now</span><span>Example projection</span></figcaption>
+      </figure>
+      <dl class="resource-list">
+        <div><dt>Windows host</dt><dd>Unknown <small>Awaiting host collector</small></dd></div>
+        <div><dt>Podman storage</dt><dd>Unknown <small>Awaiting Podman collector</small></dd></div>
+        <div><dt>Reclaimable storage</dt><dd>Unknown <small>Never removed here</small></dd></div>
+      </dl>
+    </article>
+    <article class="panel forecast-panel" aria-labelledby="forecast-title">
+      <div class="panel-heading">
+        <div><p class="eyebrow">Forecast</p><h2 id="forecast-title">Not enough evidence</h2></div>
+      </div>
+      <div class="forecast-mark" aria-hidden="true">?</div>
+      <p class="muted">A forecast appears only after enough recent samples meet the model’s confidence threshold.</p>
+      <dl class="compact-list">
+        <div><dt>Model</dt><dd>Withheld</dd></div>
+        <div><dt>Samples</dt><dd>0 available</dd></div>
+        <div><dt>Confidence</dt><dd>Unknown</dd></div>
+      </dl>
+    </article>
+  </section>
+  <section class="panel applications-panel" id="applications" aria-labelledby="applications-title">
+    <div class="panel-heading">
+      <div><p class="eyebrow">Inventory</p><h2 id="applications-title">Applications and branches</h2><p class="muted">Production data will include branch HEAD, deployed SHA, image digest, route layer, and observed time.</p></div>
+      <a class="text-link" href="#delivery">View delivery model <span aria-hidden="true">→</span></a>
     </div>
-  </div>`
+    ${renderApplications()}
+  </section>
+  <section class="activity-grid">
+    <article class="panel" id="delivery" aria-labelledby="delivery-title">
+      <div class="panel-heading"><div><p class="eyebrow">Delivery trace</p><h2 id="delivery-title">Awaiting workflow records</h2></div><span class="status neutral">◌ Not connected</span></div>
+      <ol class="delivery-path">
+        <li><span>1</span><div><strong>Build</strong><p>Workflow run and commit will appear here.</p></div></li>
+        <li><span>2</span><div><strong>Publish</strong><p>Image digest is unknown until collected.</p></div></li>
+        <li><span>3</span><div><strong>Reconcile</strong><p>Deployment age is unavailable without preview state.</p></div></li>
+        <li><span>4</span><div><strong>Probe</strong><p>Route status distinguishes DNS, Serve, sidecar, and app layers.</p></div></li>
+      </ol>
+    </article>
+    <article class="panel" id="activity" aria-labelledby="activity-title">
+      <div class="panel-heading"><div><p class="eyebrow">Activity</p><h2 id="activity-title">Example event timeline</h2></div></div>
+      <ol class="activity-list">${activity.map(([title, source, message, time]) => `
+        <li><span class="timeline-dot" aria-hidden="true"></span><div><strong>${title}</strong><p><code>${source}</code> ${message}</p></div><time>${time}</time></li>`).join('')}
+      </ol>
+    </article>
+  </section>
+`
+
+const renderState = (state) => {
+  if (state === 'loading') return `
+    <section class="state-panel" role="status" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      <h2>Loading dashboard sources</h2>
+      <p>A production dashboard will request each read-only source independently so one failure does not hide other results.</p>
+      <div class="skeleton-grid" aria-hidden="true"><span></span><span></span><span></span></div>
+    </section>`
+
+  if (state === 'empty') return `
+    <section class="state-panel" role="status">
+      <span class="state-icon" aria-hidden="true">◌</span>
+      <h2>No records in this result</h2>
+      <p>The source responded successfully but did not return records for the selected range. Unknown values remain distinct from zero.</p>
+      <button class="button secondary" type="button" data-scenario="sample">Return to sample snapshot</button>
+    </section>`
+
+  if (state === 'error') return `
+    <section class="state-panel error-state" role="alert">
+      <span class="state-icon" aria-hidden="true">!</span>
+      <h2>A source could not be read</h2>
+      <p>This is a demonstration failure state, not a live request. A production response will name the failed source, error, and last observed time without substituting fixture data.</p>
+      <div class="state-actions"><button class="button secondary" type="button" data-scenario="sample">Show sample snapshot</button><a class="text-link" href="#activity">See event model <span aria-hidden="true">→</span></a></div>
+    </section>`
+
+  return renderSample()
+}
+
+document.title = 'Dashboard | Tabloid Control Center'
+document.querySelector('#app').innerHTML = `
+  <div class="control-center">
+    <a class="skip-link" href="#main-content">Skip to dashboard content</a>
+    <div class="sidebar-backdrop" data-sidebar-backdrop hidden></div>
+    <aside class="dashboard-sidebar" aria-label="Control Center navigation" data-sidebar>
+      <div class="sidebar-brand"><span class="brand-mark" aria-hidden="true">T</span><span><strong>Tabloid</strong><small>Control Center</small></span></div>
+      <nav>${navItems.map(([key, label], index) => `<a href="#${key}" class="${index === 0 ? 'active' : ''}"><span aria-hidden="true">${icon(key)}</span>${label}</a>`).join('')}</nav>
+      <div class="sidebar-note"><span class="status neutral">◌ Prototype workspace</span><p>Read-only dashboard interface. Changes belong in Admin.</p></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-title">
+          <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="dashboard-sidebar" data-menu-button>☰</button>
+          <div><p class="eyebrow">Tabloid Control Center</p><h1>Dashboard</h1></div>
+        </div>
+        <div class="topbar-actions">
+          <span data-shared-nav-slot class="shared-nav-slot"></span>
+          <label class="sr-only" for="scenario">Dashboard demonstration state</label>
+          <select id="scenario" class="scenario-select" data-scenario-select>
+            ${Object.entries(scenarios).map(([value, { label }]) => `<option value="${value}">${label}</option>`).join('')}
+          </select>
+          <button class="icon-button" type="button" aria-label="Use light theme" aria-pressed="false" data-theme-button>◐</button>
+        </div>
+      </header>
+      <main id="main-content">
+        <section class="hero" id="overview" aria-labelledby="overview-title">
+          <div><p class="eyebrow">Read-only operational view</p><h2 id="overview-title">Clarity for every branch, without pretending to know.</h2><p>Dashboard will make system freshness, unknowns, and partial failures explicit. It explains operational signals; privileged actions remain in Admin.</p></div>
+          <div class="hero-actions"><button class="button primary" type="button" data-refresh>Refresh sample view <span aria-hidden="true">↻</span></button><a class="button secondary" href="#applications">Browse inventory <span aria-hidden="true">↓</span></a></div>
+        </section>
+        <section class="source-banner" aria-label="Data source status">
+          <div><span class="status neutral">◌ ${scenarios.sample.label}</span><p data-scenario-description>${scenarios.sample.description}</p></div>
+          <a href="#delivery">How dashboard data is collected <span aria-hidden="true">→</span></a>
+        </section>
+        <div data-dashboard-content>${renderSample()}</div>
+      </main>
+      <footer><span>Tabloid Control Center · Prototype interface</span><span>AdminToolkit-inspired layout · attribution in repository notices</span></footer>
+    </div>
+    <div class="toast" role="status" aria-live="polite" data-toast hidden></div>
+  </div>
+`
 
 mountSharedNav()
 initializeContentAdapter('dashboard')
 
-if (requestedApp) window.requestAnimationFrame(() => document.querySelector('#app-detail')?.scrollIntoView({ block: 'start' }))
+const root = document.documentElement
+const content = document.querySelector('[data-dashboard-content]')
+const selector = document.querySelector('[data-scenario-select]')
+const description = document.querySelector('[data-scenario-description]')
+const toast = document.querySelector('[data-toast]')
+const sidebar = document.querySelector('[data-sidebar]')
+const backdrop = document.querySelector('[data-sidebar-backdrop]')
+const menuButton = document.querySelector('[data-menu-button]')
+let toastTimer
+
+const showToast = (message) => {
+  toast.textContent = message
+  toast.hidden = false
+  window.clearTimeout(toastTimer)
+  toastTimer = window.setTimeout(() => { toast.hidden = true }, 4000)
+}
+
+const closeMenu = () => {
+  sidebar.classList.remove('open')
+  backdrop.hidden = true
+  menuButton.setAttribute('aria-expanded', 'false')
+}
+
+const setScenario = (state) => {
+  selector.value = state
+  content.innerHTML = renderState(state)
+  description.textContent = scenarios[state].description
+  if (state !== 'sample') document.querySelector('.source-banner .status').textContent = `◌ ${scenarios[state].label}`
+  else document.querySelector('.source-banner .status').textContent = `◌ ${scenarios.sample.label}`
+}
+
+selector.addEventListener('change', () => setScenario(selector.value))
+document.addEventListener('click', (event) => {
+  const scenarioButton = event.target.closest('[data-scenario]')
+  if (scenarioButton) setScenario(scenarioButton.dataset.scenario)
+})
+document.querySelector('[data-refresh]').addEventListener('click', () => {
+  setScenario('loading')
+  window.setTimeout(() => {
+    setScenario('sample')
+    showToast('Sample snapshot refreshed. No live dashboard API was called.')
+  }, 650)
+})
+menuButton.addEventListener('click', () => {
+  const open = !sidebar.classList.contains('open')
+  sidebar.classList.toggle('open', open)
+  backdrop.hidden = !open
+  menuButton.setAttribute('aria-expanded', String(open))
+})
+backdrop.addEventListener('click', closeMenu)
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeMenu()
+})
+
+const savedTheme = localStorage.getItem('tabloid-dashboard-theme')
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+const setTheme = (theme) => {
+  root.dataset.theme = theme
+  const isDark = theme === 'dark'
+  const button = document.querySelector('[data-theme-button]')
+  button.setAttribute('aria-label', `Use ${isDark ? 'light' : 'dark'} theme`)
+  button.setAttribute('aria-pressed', String(isDark))
+  button.textContent = isDark ? '☀' : '◐'
+}
+setTheme(savedTheme || (systemDark ? 'dark' : 'light'))
+document.querySelector('[data-theme-button]').addEventListener('click', () => {
+  const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
+  localStorage.setItem('tabloid-dashboard-theme', next)
+  setTheme(next)
+})
