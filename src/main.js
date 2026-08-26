@@ -277,7 +277,14 @@ const subscribePage = `
   </main>
 `
 
-let mainContent = homePage
+const dashboardPage = `
+  <main class="dashboard-shell">
+    <section class="dashboard-hero"><div><p class="dashboard-kicker">Operations overview</p><h1>Good evening, Daily Echo.</h1><p>Monitor publishing activity, audience signals, and the newsroom workspace from one calm control center.</p></div><button class="dashboard-primary" type="button" data-dashboard-action="report">Create report <span aria-hidden="true">+</span></button></section>
+    <section class="dashboard-metrics" aria-label="Key metrics"><article><span>Published today</span><strong>24</strong><small>+12.5%</small></article><article><span>Active readers</span><strong>18,642</strong><small>+8.2%</small></article><article><span>Newsletter signups</span><strong>1,284</strong><small>+5.7%</small></article><article><span>Review queue</span><strong>08</strong><small>Needs attention</small></article></section>
+    <section class="dashboard-grid"><article class="dashboard-card dashboard-chart"><div class="card-heading"><div><p class="dashboard-kicker">Audience</p><h2>Reader engagement</h2></div><span>Last 30 days</span></div><div class="chart-bars" aria-label="Reader engagement trend">${[42,56,48,67,62,78,72,88,81,94,86,100].map((height) => `<i style="height:${height}%"></i>`).join('')}</div><div class="chart-labels"><span>May 1</span><span>May 15</span><span>May 30</span></div></article><article class="dashboard-card"><div class="card-heading"><div><p class="dashboard-kicker">Workflow</p><h2>Editorial queue</h2></div><span class="status-pill">Live</span></div><div class="queue-list"><div><span>Transit bill explainer<small>Politics · Editing</small></span><b>Today</b></div><div><span>Weekend city guide<small>City · Scheduled</small></span><b>Tomorrow</b></div><div><span>Culture desk briefing<small>Culture · Draft</small></span><b>Friday</b></div></div></article></section>
+  </main>
+`
+let mainContent = pageKey === 'index' ? dashboardPage : homePage
 let activeSection = 'news'
 
 if (pageKey === 'subscribe') {
@@ -299,7 +306,7 @@ const titleMap = {
   sports: 'Sports | The Daily Echo',
 }
 
-document.title = titleMap[pageKey] || 'The Daily Echo'
+document.title = pageKey === 'index' ? 'Dashboard | The Daily Echo' : (titleMap[pageKey] || 'The Daily Echo')
 
 document.querySelector('#app').innerHTML = `
   <div class="min-h-screen bg-stone-50 text-stone-950 selection:bg-red-200">
@@ -310,6 +317,8 @@ document.querySelector('#app').innerHTML = `
 `
 
 mountSharedNav()
+
+document.querySelector('[data-dashboard-action]')?.addEventListener('click', (event) => { event.currentTarget.textContent = 'Report workspace ready' })
 initializeContentAdapter('production')
 const menuButton = document.querySelector('#menu-button')
 const mobileNav = document.querySelector('#mobile-nav')
@@ -374,3 +383,4 @@ if (appsButton && appsMenu) {
 document.querySelectorAll('form').forEach((formElement) => {
   formElement.addEventListener('submit', (event) => event.preventDefault())
 })
+
