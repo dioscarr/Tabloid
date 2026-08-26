@@ -128,7 +128,15 @@ class TabloidSharedNav extends HTMLElement {
         })
       ])
       const authorized = sources[0].status === 'fulfilled'
-      const branches = [...new Set((authorized ? sources.slice(0, 1) : sources).flatMap((source) => source.status === 'fulfilled' ? source.value : []))]
+      const githubBranches = sources[2].status === 'fulfilled' ? new Set(sources[2].value) : null
+      const discovered = authorized
+        ? sources[0].value.filter((branch) => !githubBranches || githubBranches.has(branch))
+        : githubBranches
+          ? [...githubBranches]
+          : sources[1].status === 'fulfilled'
+            ? sources[1].value
+            : []
+      const branches = [...new Set(discovered)]
       if (!branches.length) throw new Error('No application source is available.')
       branches.sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
