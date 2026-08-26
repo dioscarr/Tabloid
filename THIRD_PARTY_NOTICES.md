@@ -1,5 +1,12 @@
 # Third-party notices
 
+## TailAdmin
+
+The Control Center's refreshed visual system is inspired by the
+[TailAdmin React dashboard](https://github.com/TailAdmin/free-react-tailwind-admin-dashboard).
+No TailAdmin source code, components, assets, or demo data are included. The
+referenced project is licensed under the MIT License.
+
 ## AdminToolkit HTML
 
 The Tabloid Control Center’s information-dense dashboard layout is inspired by

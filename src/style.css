@@ -5,7 +5,7 @@
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 :root[data-theme="dark"] {
@@ -23,8 +23,8 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background: #f1f5f9;
-  color: #172033;
+  background: #07111f;
+  color: #e7eefb;
   font-family: var(--font-sans);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -46,36 +46,36 @@ select {
 }
 
 .control-center {
-  --canvas: #f4f7fb;
-  --surface: #fff;
-  --surface-alt: #f8fafc;
-  --ink: #172033;
-  --muted: #63718a;
-  --line: #e1e7f0;
-  --brand: #6d28d9;
-  --brand-soft: #f1eafe;
-  --sidebar: #172033;
-  --sidebar-muted: #a7b1c4;
-  --chart: #8b5cf6;
-  --shadow: 0 14px 36px rgb(27 38 59 / 7%);
+  --canvas: #07111f;
+  --surface: #0e1b2d;
+  --surface-alt: #12243b;
+  --ink: #e7eefb;
+  --muted: #9aabc2;
+  --line: #203752;
+  --brand: #5b8cff;
+  --brand-soft: #19345b;
+  --sidebar: #091626;
+  --sidebar-muted: #91a6c2;
+  --chart: #52d1bb;
+  --shadow: 0 18px 45px rgb(0 0 0 / 24%);
   min-height: 100vh;
   background: var(--canvas);
   color: var(--ink);
 }
 
 :root[data-theme="dark"] .control-center {
-  --canvas: #111827;
-  --surface: #1b2638;
-  --surface-alt: #162132;
-  --ink: #f3f5f9;
-  --muted: #adbad0;
-  --line: #2c3a50;
-  --brand: #a78bfa;
-  --brand-soft: #2d2447;
-  --sidebar: #0d1522;
-  --sidebar-muted: #a7b1c4;
-  --chart: #a78bfa;
-  --shadow: 0 14px 36px rgb(0 0 0 / 15%);
+  --canvas: #f5f8fc;
+  --surface: #fff;
+  --surface-alt: #f2f6fb;
+  --ink: #18263a;
+  --muted: #667993;
+  --line: #dbe5f0;
+  --brand: #2855d9;
+  --brand-soft: #e8efff;
+  --sidebar: #10233d;
+  --sidebar-muted: #b2c1d5;
+  --chart: #159b87;
+  --shadow: 0 18px 45px rgb(28 53 82 / 10%);
 }
 
 .sr-only {
@@ -133,8 +133,8 @@ select {
   height: 2.4rem;
   place-items: center;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, #8b5cf6, #c4b5fd);
-  color: #241348;
+  background: linear-gradient(135deg, #55d5c0, #5b8cff);
+  color: #062134;
   font-weight: 950;
 }
 
@@ -304,15 +304,17 @@ main {
   align-items: end;
   justify-content: space-between;
   padding: clamp(1.4rem, 3vw, 2.6rem);
-  border: 1px solid #7255bd;
+  border: 1px solid #315978;
   border-radius: 1rem;
-  background: linear-gradient(120deg, #27184b, #5633a2 63%, #7258c6);
+  background:
+    radial-gradient(circle at 84% 16%, rgb(82 209 187 / 28%), transparent 25%),
+    linear-gradient(120deg, #10284a, #163f6d 63%, #1f5879);
   color: #fff;
   box-shadow: var(--shadow);
 }
 
 .hero .eyebrow {
-  color: #ddd4fe;
+  color: #92e9dc;
 }
 
 .hero h2 {
@@ -324,7 +326,7 @@ main {
 .hero p:not(.eyebrow) {
   max-width: 43rem;
   margin: 1rem 0 0;
-  color: #e6e0fa;
+  color: #d2e2f3;
   line-height: 1.55;
 }
 
@@ -350,8 +352,8 @@ main {
 }
 
 .button.primary {
-  background: #fff;
-  color: #3c2477;
+  background: #54d5bd;
+  color: #052036;
 }
 
 .button.secondary {
