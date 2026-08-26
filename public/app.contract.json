@@ -3,7 +3,7 @@
   "app": {
     "id": "astropaper",
     "name": "AstroPaper",
-    "branch": "apps/big-news-dr",
+    "branch": "AstroPaper",
     "description": "AstroPaper is Tabloid's clean, source-aware editorial workspace."
   },
   "routes": [

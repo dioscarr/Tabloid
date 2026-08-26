@@ -2,7 +2,7 @@
 
 ## Decision
 
-This `apps/big-news-dr` branch is now **AstroPaper**, an Astro and Tailwind editorial application inspired by the information architecture of the MIT-licensed [AstroPaper](https://github.com/satnaing/astro-paper) theme. The implementation uses original Tabloid-focused Markdown content and locally authored components; no template content, fonts, images, or icons were copied.
+This `AstroPaper` branch is an Astro and Tailwind editorial application inspired by the information architecture of the MIT-licensed [AstroPaper](https://github.com/satnaing/astro-paper) theme. The implementation uses original Tabloid-focused Markdown content and locally authored components; no template content, fonts, images, or icons were copied.
 
 ## Product surface
 
@@ -22,7 +22,7 @@ The migration retains the existing deployment architecture:
 - `Containerfile` builds Astro's static `dist` output and serves it from unprivileged Nginx;
 - Nginx, Compose, preview Compose, Tailscale configuration, preview reconciliation, and publishing workflows remain in place;
 - the health endpoint remains `http://127.0.0.1:8080/`;
-- the branch remains `apps/big-news-dr`.
+- the branch is `AstroPaper`.
 
 The brand-independent `src/shared-nav.js` shell remains mandatory. `BaseLayout.astro` imports it, calls `mountSharedNav()`, and provides `[data-shared-nav-slot]`. `npm run check:shared-nav` verifies this contract before preview publishing.
 
