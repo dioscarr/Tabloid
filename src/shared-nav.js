@@ -293,3 +293,4 @@ export const mountSharedNav = () => {
   }
   document.body.prepend(sharedNav)
 }
+
