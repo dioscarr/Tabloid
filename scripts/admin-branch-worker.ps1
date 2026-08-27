@@ -89,7 +89,7 @@ function Get-Inventory([string]$Branch) {
     volume = if ($Branch -eq 'main') { $false } else { Test-Resource 'volume' "$project-tailscale-state" }
     workspace = Test-Workspace $id
     appUrl = if ($Branch -eq 'main') { 'https://tabloid.tail70b7f1.ts.net/' } else { "https://tabloid-$id.tail70b7f1.ts.net/" }
-    vscodeUrl = "http://tabloid-code-server.tail70b7f1.ts.net:8443/?folder=/config/workspaces/$id"
+    vscodeUrl = "https://tabloid-code-server.tail70b7f1.ts.net/?folder=/config/workspaces/$id"
   }
 }
 
@@ -163,6 +163,7 @@ while ($listener.IsListening) {
     Write-Json $context.Response 405 @{ error = 'Method not allowed' }
   } catch { Write-Json $context.Response 500 @{ error = $_.Exception.Message } }
 }
+
 
 
 
