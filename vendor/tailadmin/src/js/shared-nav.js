@@ -122,7 +122,7 @@ class TabloidSharedNav extends HTMLElement {
         }),
         Promise.resolve([...FALLBACK_BRANCHES])
       ])
-      const authorized = sources[0].status === 'fulfilled'
+      const authorized = false
       const githubBranches = sources[2].status === 'fulfilled'
         ? new Set(sources[2].value)
         : new Set(FALLBACK_BRANCHES)
@@ -291,4 +291,5 @@ export const mountSharedNav = () => {
   }
   document.body.prepend(sharedNav)
 }
+
 
