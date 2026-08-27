@@ -27,4 +27,5 @@ Start-ScheduledTask -TaskName $taskName
 $tailscale = Join-Path $env:ProgramFiles 'Tailscale\tailscale.exe'
 if (-not (Test-Path $tailscale)) { throw "Tailscale CLI was not found at $tailscale" }
 & $tailscale serve --bg --https=$HttpsPort "http://127.0.0.1:$Port"
-Write-Host "Admin worker configured for $AdminLogin at https://dio.tail70b7f1.ts.net:$HttpsPort/"
+Write-Host "Admin worker configured for $AdminLogin at https://tabloid-code-server.tail70b7f1.ts.net/"
+
