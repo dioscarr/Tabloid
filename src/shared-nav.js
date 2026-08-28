@@ -1,5 +1,7 @@
 const REPOSITORY = 'dioscarr/Tabloid'
 const TAILNET = 'tail70b7f1.ts.net'
+const STATIC_APP = Object.freeze({ name: 'vscode', branch: 'workspace', url: 'https://tabloid-code-server.tail70b7f1.ts.net/?folder=/config/workspaces' })
+const staticAppMarkup = () => `<a class="app" href="${STATIC_APP.url}" target="_blank" rel="noreferrer"><span class="icon">V</span><span><span class="name">${STATIC_APP.name}</span><span class="branch">${STATIC_APP.branch}</span></span></a>`
 
 const previewId = async (branch) => {
   let slug = branch.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'branch'
@@ -84,13 +86,13 @@ class TabloidSharedNav extends HTMLElement {
       if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
       const branches = (await response.json()).map(({ name }) => name).sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
-      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><a class="repo" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage branches ↗</a></div><div class="apps">${apps.map((app) => {
+      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><a class="repo" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage branches ↗</a></div><div class="apps">${staticAppMarkup()}${apps.map((app) => {
         const current = new URL(app.url).hostname === window.location.hostname
         return `<a class="app${current ? ' current' : ''}" href="${app.url}"><span class="icon">${app.name[0]}</span><span><span class="name">${app.name}</span><span class="branch">${app.branch}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
       }).join('')}</div>`
     } catch {
       this.loaded = false
-      this.menu.innerHTML = `<div class="heading">Live repository branches</div><a class="app" href="https://tabloid.${TAILNET}/"><span class="icon">P</span><span><span class="name">Production</span><span class="branch">main</span></span></a><div class="status">New branches could not be loaded. Try again shortly.</div>`
+      this.menu.innerHTML = `<div class="heading">Live repository branches</div>${staticAppMarkup()}<a class="app" href="https://tabloid.${TAILNET}/"><span class="icon">P</span><span><span class="name">Production</span><span class="branch">main</span></span></a><div class="status">New branches could not be loaded. Try again shortly.</div>`
     }
   }
 }
