@@ -1,5 +1,7 @@
 const REPOSITORY = 'dioscarr/Tabloid'
 const TAILNET = 'tail70b7f1.ts.net'
+const STATIC_APP = Object.freeze({ name: 'vscode', branch: 'workspace', url: 'https://tabloid-code-server.tail70b7f1.ts.net/?folder=/config/workspaces' })
+const staticAppMarkup = () => `<a class="app" href="${STATIC_APP.url}" target="_blank" rel="noreferrer"><span class="icon">V</span><span><span class="name">${STATIC_APP.name}</span><span class="branch">${STATIC_APP.branch}</span></span></a>`
 const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
 const APP_LOGOS = Object.freeze({
@@ -137,7 +139,9 @@ class TabloidSharedNav extends HTMLElement {
       const apps = await Promise.all([...appMap.values()]
         .sort((a, b) => a.branch === 'main' ? -1 : b.branch === 'main' ? 1 : a.branch.localeCompare(b.branch))
         .map(async (app) => ({ ...app, id: app.id || app.branch, name: app.name || branchLabel(app.branch), url: await branchUrl(app.branch) })))
-      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><button class="repo studio-launch" type="button">Brain Studio ✦</button></div><div class="apps">${apps.map((app) => {
+      const currentApp = apps.find((app) => new URL(app.url).hostname === window.location.hostname)
+      const vibeHref = currentApp ? `${VIBE_URL}/?model=${encodeURIComponent(`vibe-${currentApp.id}`)}&q=${encodeURIComponent(`Help me improve ${currentApp.name}. Start by understanding this app and ask what I want to change.`)}` : VIBE_URL
+      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><div class="menu-actions"><a class="repo vibe-launch" href="${vibeHref}">Vibe ✦</a><button class="repo studio-launch" type="button">Brain Studio</button></div></div><div class="apps">${staticAppMarkup()}${apps.map((app) => {
         const current = new URL(app.url).hostname === window.location.hostname
         return `<a class="app${current ? ' current' : ''}" href="${app.url}">${appLogo(app.branch, app.name)}<span><span class="name">${escapeHtml(app.name)}</span><span class="branch">${escapeHtml(app.branch)}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
       }).join('')}</div><a class="status" style="display:block;text-decoration:none" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage repository branches ↗</a>`
@@ -147,7 +151,7 @@ class TabloidSharedNav extends HTMLElement {
       })
     } catch {
       this.loaded = false
-      this.menu.innerHTML = `<div class="heading">Live repository branches</div><a class="app" href="https://tabloid.${TAILNET}/">${appLogo('main', 'Production')}<span><span class="name">Production</span><span class="branch">main</span></span></a><div class="status">New branches could not be loaded. Try again shortly.</div>`
+  this.menu.innerHTML = `<div class="heading">Live repository branches</div>${staticAppMarkup()}<a class="app" href="https://tabloid.${TAILNET}/">${appLogo('main', 'Production')}<span><span class="name">Production</span><span class="branch">main</span></span></a><div class="status">New branches could not be loaded. Try again shortly.</div>`
     }
   }
 }
