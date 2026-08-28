@@ -58,7 +58,7 @@ class TabloidSharedNav extends HTMLElement {
         .menu-head { display:flex; align-items:center; justify-content:space-between; padding:9px 10px 14px; }
         .heading { color:#f8fafc; font-size:15px; font-weight:850; letter-spacing:-.01em; }
         .subheading { margin-top:4px; color:#64748b; font-size:11px; }
-        .repo { color:#94a3b8; font-size:11px; text-decoration:none; }
+        .repo { border:0; padding:0; background:none; color:#94a3b8; font-size:11px; text-decoration:none; }
         .repo:hover { color:#bef264; }
         .apps { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
         .app { position:relative; display:flex; align-items:center; gap:11px; min-width:0; padding:12px; border:1px solid transparent; border-radius:14px; color:#e2e8f0; text-decoration:none; transition:background .15s,border-color .15s,transform .15s; }
@@ -116,19 +116,27 @@ class TabloidSharedNav extends HTMLElement {
       const [brainSource, githubSource] = await Promise.allSettled([
         fetch(`${BRAIN_API}/api/v1/apps`).then(async (response) => {
           if (!response.ok) throw new Error(`Brain returned ${response.status}`)
-          return (await response.json()).apps.map(({ branch }) => branch)
+          return (await response.json()).apps.map(({ id, name, branch }) => ({ id, name, branch }))
         }),
         fetch(`https://api.github.com/repos/${REPOSITORY}/branches?per_page=100`, { headers: { Accept: 'application/vnd.github+json' } }).then(async (response) => {
           if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
-          return (await response.json()).map(({ name }) => name)
+          return (await response.json()).map(({ name }) => ({ branch: name }))
         })
       ])
-      const branches = githubSource.status === 'fulfilled'
-        ? [...new Set(githubSource.value)]
-        : FALLBACK_BRANCHES
-      if (!branches.length) throw new Error('No application source is available.')
-      branches.sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
-      const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
+      const appMap = new Map()
+      const brainApps = brainSource.status === 'fulfilled' ? brainSource.value : []
+      if (githubSource.status === 'fulfilled') {
+        for (const app of githubSource.value) appMap.set(app.branch, app)
+        for (const app of brainApps) {
+          if (appMap.has(app.branch)) appMap.set(app.branch, { ...appMap.get(app.branch), ...app })
+        }
+      } else {
+        for (const branch of FALLBACK_BRANCHES) appMap.set(branch, { branch })
+      }
+      if (!appMap.size) throw new Error('No application source is available.')
+      const apps = await Promise.all([...appMap.values()]
+        .sort((a, b) => a.branch === 'main' ? -1 : b.branch === 'main' ? 1 : a.branch.localeCompare(b.branch))
+        .map(async (app) => ({ ...app, id: app.id || app.branch, name: app.name || branchLabel(app.branch), url: await branchUrl(app.branch) })))
       this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><button class="repo studio-launch" type="button">Brain Studio ✦</button></div><div class="apps">${apps.map((app) => {
         const current = new URL(app.url).hostname === window.location.hostname
         return `<a class="app${current ? ' current' : ''}" href="${app.url}">${appLogo(app.branch, app.name)}<span><span class="name">${escapeHtml(app.name)}</span><span class="branch">${escapeHtml(app.branch)}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
@@ -285,3 +293,4 @@ export const mountSharedNav = () => {
   }
   document.body.prepend(sharedNav)
 }
+
