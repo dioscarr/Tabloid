@@ -138,7 +138,10 @@ const workerBase = String(
   import.meta.env.VITE_ADMIN_WORKER_URL || 'https://dio.tail70b7f1.ts.net:9443/api/v1',
 ).trim().replace(/\/+$/, '')
 const workerRequest = async (path, options = {}) => {
-  const response = await fetch(`${workerBase}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers } })
+  const method = String(options.method || 'GET').toUpperCase()
+  const headers = { ...options.headers }
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !Object.keys(headers).some((key) => key.toLowerCase() === 'content-type')) headers['Content-Type'] = 'application/json'
+  const response = await fetch(`${workerBase}${path}`, { ...options, headers })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(payload.error || `Admin worker returned ${response.status}`)
   return payload
