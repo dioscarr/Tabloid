@@ -3,6 +3,7 @@ const TAILNET = 'tail70b7f1.ts.net'
 const STATIC_APP = Object.freeze({ name: 'vscode', branch: 'workspace', url: 'https://tabloid-code-server.tail70b7f1.ts.net/?folder=/config/workspaces' })
 const staticAppMarkup = () => `<a class="app" href="${STATIC_APP.url}" target="_blank" rel="noreferrer"><span class="icon">V</span><span><span class="name">${STATIC_APP.name}</span><span class="branch">${STATIC_APP.branch}</span></span></a>`
 const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
+const VIBE_URL = `https://tabloid-vibe.${TAILNET}`
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
 const APP_LOGOS = Object.freeze({
   main: 'daily-echo',
@@ -151,7 +152,11 @@ class TabloidSharedNav extends HTMLElement {
       })
     } catch {
       this.loaded = false
-  this.menu.innerHTML = `<div class="heading">Live repository branches</div>${staticAppMarkup()}<a class="app" href="https://tabloid.${TAILNET}/">${appLogo('main', 'Production')}<span><span class="name">Production</span><span class="branch">main</span></span></a><div class="status">New branches could not be loaded. Try again shortly.</div>`
+      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Live repository branches</div><div class="subheading">Branch discovery is temporarily unavailable</div></div><div class="menu-actions"><a class="repo vibe-launch" href="${VIBE_URL}">Vibe ✦</a><button class="repo studio-launch" type="button">Brain Studio</button></div></div><div class="apps">${staticAppMarkup()}<a class="app" href="https://tabloid.${TAILNET}/">${appLogo('main', 'Production')}<span><span class="name">Production</span><span class="branch">main</span></span></a></div><div class="status">New branches could not be loaded. Try again shortly.</div>`
+      this.menu.querySelector('.studio-launch')?.addEventListener('click', () => {
+        this.close()
+        document.querySelector('tabloid-brain-studio')?.open()
+      })
     }
   }
 }
