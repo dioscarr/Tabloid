@@ -8,6 +8,7 @@ $podman = Join-Path $env:LOCALAPPDATA 'Programs\Podman\podman.exe'
 $tombstonePath = Join-Path $stateDirectory 'preview-tombstones.json'
 $previewStatePath = Join-Path $stateDirectory 'preview-state.json'
 $branchCachePath = Join-Path $stateDirectory 'admin-branch-cache.json'
+$githubTokenPath = if ($config.githubTokenPath) { [string]$config.githubTokenPath } else { Join-Path $stateDirectory 'github-token.txt' }
 $staticVolume = 'tabloid-static-deployments'
 $staticGatewayImage = 'localhost/tabloid-static-gateway:latest'
 $listener = [Net.HttpListener]::new()
@@ -113,6 +114,21 @@ function Add-Tombstone([string]$Branch) {
   $records | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 $tombstonePath
 }
 
+function Remove-GitHubBranch([string]$Branch) {
+  $token = if ($env:GITHUB_TOKEN) { $env:GITHUB_TOKEN } elseif (Test-Path $githubTokenPath) { (Get-Content -Raw $githubTokenPath).Trim() } else { '' }
+  if (-not $token) { return @{ attempted = $false; deleted = $false; reason = 'GitHub token is not configured.' } }
+  $headers = @{ Accept = 'application/vnd.github+json'; Authorization = "Bearer $token"; 'User-Agent' = 'tabloid-admin-worker' }
+  try {
+    $escapedBranch = ($Branch -split '/' | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/'
+    Invoke-RestMethod -Method Delete -Headers $headers -Uri "https://api.github.com/repos/dioscarr/Tabloid/git/refs/heads/$escapedBranch" -TimeoutSec 20
+    return @{ attempted = $true; deleted = $true }
+  } catch {
+    $status = $_.Exception.Response.StatusCode.value__
+    if ($status -eq 404) { return @{ attempted = $true; deleted = $true; alreadyAbsent = $true } }
+    throw "GitHub branch deletion failed with HTTP $status."
+  }
+}
+
 function Remove-Preview([string]$Branch, [bool]$PurgeVolume) {
   Assert-Branch $Branch
   if ($Branch -eq 'main') { throw 'Production cannot be removed by this worker' }
@@ -125,7 +141,8 @@ function Remove-Preview([string]$Branch, [bool]$PurgeVolume) {
     Invoke-Podman @('run', '--rm', '--user', '0', '--entrypoint', '/bin/sh', '--volume', "${staticVolume}:/deployments", $staticGatewayImage, '-c', "rm -rf /deployments/$($item.id)") -AllowFailure | Out-Null
   }
   Invoke-Podman @('image', 'rm', $item.image) -AllowFailure | Out-Null
-  Get-Inventory $Branch
+  $github = try { Remove-GitHubBranch $Branch } catch { @{ attempted = $true; deleted = $false; reason = $_.Exception.Message } }
+  [ordered]@{ branch = $Branch; github = $github; inventory = Get-Inventory $Branch }
 }
 
 function Write-Json($Response, [int]$Status, $Body) {
@@ -163,7 +180,3 @@ while ($listener.IsListening) {
     Write-Json $context.Response 405 @{ error = 'Method not allowed' }
   } catch { Write-Json $context.Response 500 @{ error = $_.Exception.Message } }
 }
-
-
-
-

@@ -139,10 +139,13 @@ class TabloidSharedNav extends HTMLElement {
       const apps = await Promise.all([...appMap.values()]
         .sort((a, b) => a.branch === 'main' ? -1 : b.branch === 'main' ? 1 : a.branch.localeCompare(b.branch))
         .map(async (app) => ({ ...app, id: app.id || app.branch, name: app.name || branchLabel(app.branch), url: await branchUrl(app.branch) })))
+      const currentApp = apps.find((app) => new URL(app.url).hostname === window.location.hostname)
+      const currentWorkspace = currentApp ? await previewId(currentApp.branch) : ''
+      const vscodeUrl = `https://tabloid-code-server.tail70b7f1.ts.net/?folder=/config/workspaces/${currentWorkspace}`
       this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><button class="repo studio-launch" type="button">Brain Studio ✦</button></div><div class="apps">${staticAppMarkup()}${apps.map((app) => {
         const current = new URL(app.url).hostname === window.location.hostname
         return `<a class="app${current ? ' current' : ''}" href="${app.url}">${appLogo(app.branch, app.name)}<span><span class="name">${escapeHtml(app.name)}</span><span class="branch">${escapeHtml(app.branch)}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
-      }).join('')}</div><a class="status" style="display:block;text-decoration:none" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage repository branches ↗</a>`
+      }).join('')}</div><div class="menu-head"><div><div class="heading">Tools</div><div class="subheading">Open the shared development environment</div></div></div><div class="apps"><a class="app" href="${vscodeUrl}" target="_blank" rel="noreferrer"><span class="icon logo logo-tech" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="/app-icons.svg#tech"></use></svg></span><span><span class="name">VS Code workspace</span><span class="branch">${escapeHtml(currentApp?.branch || 'current app')}</span></span></a><button class="app repo studio-launch" type="button"><span class="icon logo logo-brain" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="/app-icons.svg#brain"></use></svg></span><span><span class="name">Brain Studio</span><span class="branch">Content tools</span></span></button></div><a class="status" style="display:block;text-decoration:none" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage repository branches ↗</a>`
       this.menu.querySelector('.studio-launch')?.addEventListener('click', () => {
         this.close()
         document.querySelector('tabloid-brain-studio')?.open()
@@ -295,4 +298,3 @@ export const mountSharedNav = () => {
   }
   document.body.prepend(sharedNav)
 }
-

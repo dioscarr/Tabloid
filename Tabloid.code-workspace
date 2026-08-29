@@ -1,0 +1,21 @@
+{
+  "folders": [
+    { "name": "Admin", "path": "." },
+    { "name": "AI News", "path": "Tabloid/ai-news" },
+    { "name": "App Gallery", "path": "Tabloid/Tabloid-app-gallery" },
+    { "name": "AstroPaper", "path": "Tabloid/AstroPaper" },
+    { "name": "Authorization", "path": "Tabloid/Authorization" },
+    { "name": "Big News", "path": "Tabloid/big-news" },
+    { "name": "Big News DR", "path": "Tabloid/big-news-dr" },
+    { "name": "Brain", "path": "../Tabloid-brain-production" },
+    { "name": "Dashboard", "path": "../Tabloid-dashboard" },
+    { "name": "Main Production", "path": "../Tabloid-main-production" },
+    { "name": "Tech", "path": "Tabloid/tech" }
+  ],
+  "settings": {
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true
+    }
+  }
+}

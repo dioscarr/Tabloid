@@ -3,6 +3,7 @@ param(
   [Parameter(Mandatory)] [string]$AdminLogin,
   [string]$AdminOrigin = 'https://tabloid-admin-8c6976.tail70b7f1.ts.net',
   [string]$GalleryOrigin = 'https://tabloid-app-gallery-0f8e89.tail70b7f1.ts.net',
+  [string]$GitHubTokenPath = '',
   [int]$Port = 8790,
   [int]$HttpsPort = 9443
 )
@@ -13,7 +14,8 @@ $runner = Join-Path $PSScriptRoot 'run-admin-branch-worker.ps1'
 $stateDirectory = Join-Path $env:LOCALAPPDATA 'Tabloid'
 $configPath = Join-Path $stateDirectory 'admin-worker.json'
 New-Item -ItemType Directory -Force -Path $stateDirectory | Out-Null
-[ordered]@{ adminLogin = $AdminLogin.ToLowerInvariant(); adminOrigin = $AdminOrigin; allowedOrigins = @($AdminOrigin, $GalleryOrigin); port = $Port } | ConvertTo-Json | Set-Content -Encoding utf8 $configPath
+$tokenPath = if ($GitHubTokenPath) { $GitHubTokenPath } else { Join-Path $stateDirectory 'github-token.txt' }
+[ordered]@{ adminLogin = $AdminLogin.ToLowerInvariant(); adminOrigin = $AdminOrigin; allowedOrigins = @($AdminOrigin, $GalleryOrigin); port = $Port; githubTokenPath = $tokenPath } | ConvertTo-Json | Set-Content -Encoding utf8 $configPath
 
 $taskName = 'Tabloid Admin Branch Worker'
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$runner`""
@@ -28,4 +30,3 @@ $tailscale = Join-Path $env:ProgramFiles 'Tailscale\tailscale.exe'
 if (-not (Test-Path $tailscale)) { throw "Tailscale CLI was not found at $tailscale" }
 & $tailscale serve --bg --https=$HttpsPort "http://127.0.0.1:$Port"
 Write-Host "Admin worker configured for $AdminLogin at https://tabloid-code-server.tail70b7f1.ts.net/"
-

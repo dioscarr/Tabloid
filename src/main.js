@@ -134,7 +134,9 @@ document.addEventListener('keydown', (event) => {
 })
 
 const branchManager = document.querySelector('#branch-manager')
-const workerBase = 'https://tabloid-brain-api.tail70b7f1.ts.net/api/v1'
+const workerBase = String(
+  import.meta.env.VITE_ADMIN_WORKER_URL || 'https://dio.tail70b7f1.ts.net:9443/api/v1',
+).trim().replace(/\/+$/, '')
 const workerRequest = async (path, options = {}) => {
   const response = await fetch(`${workerBase}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers } })
   const payload = await response.json().catch(() => ({}))
@@ -148,7 +150,7 @@ const renderBranches = (branches) => {
   branchManager.innerHTML = `<div class="grid gap-3">${branches.map((branch) => `
     <article class="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-950/50 p-4 lg:flex-row lg:items-center lg:justify-between">
       <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><h4 class="truncate font-mono text-sm font-bold">${escapeHtml(branch.branch)}</h4><span class="rounded-full px-2 py-1 text-[0.65rem] font-bold ${branch.appContainer ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'}">${branch.staticHosting ? 'Static deployment' : branch.appContainer ? 'Preview running' : 'No preview'}</span><span class="rounded-full px-2 py-1 text-[0.65rem] font-bold ${branch.workspace ? 'bg-indigo-500/10 text-indigo-300' : 'bg-slate-800 text-slate-400'}">${branch.workspace ? 'Workspace ready' : 'Workspace not prepared'}</span></div><p class="mt-2 text-xs text-slate-500">${[branch.staticHosting ? 'shared gateway' : branch.appContainer && 'app', branch.tailscaleContainer && 'Tailscale', branch.network && 'network', branch.volume && 'state volume'].filter(Boolean).join(' · ') || 'No Podman resources'}</p></div>
-      <div class="flex flex-wrap gap-2"><a href="${branch.appUrl}" target="_blank" rel="noreferrer" class="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800">Open app</a>${branch.workspace ? `<a href="${branch.vscodeUrl}" target="_blank" rel="noreferrer" class="rounded-xl bg-indigo-500 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-400">Open VS Code</a>` : `<button data-workspace="${encodeURIComponent(branch.branch)}" class="rounded-xl bg-indigo-500 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-400">Prepare VS Code</button>`}${branch.branch === 'main' ? '' : `<button data-remove="${encodeURIComponent(branch.branch)}" data-purge="${branch.volume && !branch.appContainer ? 'true' : 'false'}" class="rounded-xl border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/10">${branch.volume && !branch.appContainer ? 'Purge storage' : 'Remove preview'}</button>`}</div>
+      <div class="flex flex-wrap gap-2"><a href="${branch.appUrl}" target="_blank" rel="noreferrer" class="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800">Open app</a>${branch.workspace ? `<a href="${branch.vscodeUrl}" target="_blank" rel="noreferrer" class="rounded-xl bg-indigo-500 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-400">Open VS Code</a>` : `<button data-workspace="${encodeURIComponent(branch.branch)}" class="rounded-xl bg-indigo-500 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-400">Prepare VS Code</button>`}${branch.branch === 'main' ? '' : `<button data-remove="${encodeURIComponent(branch.branch)}" class="rounded-xl border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/10">Delete branch & clean up</button>`}</div>
     </article>`).join('')}</div>`
 }
 
@@ -178,13 +180,14 @@ branchManager?.addEventListener('click', async (event) => {
   const removeButton = event.target.closest('[data-remove]')
   if (!removeButton) return
   const branch = decodeURIComponent(removeButton.dataset.remove)
-  const purge = removeButton.dataset.purge === 'true'
-  const phrase = purge ? `Permanently remove the retained state volume for ${branch}?` : `Stop and remove the preview resources for ${branch}? The state volume will be retained for recovery.`
+  const purge = true
+  const phrase = `Permanently remove ${branch} from GitHub and delete its preview, Tailscale state, and retained storage?`
   if (!window.confirm(phrase)) return
   removeButton.disabled = true
   try {
-    await workerRequest(`/branches/${removeButton.dataset.remove}/preview?purgeVolume=${purge}`, { method: 'DELETE' })
-    announce(`${branch} cleanup completed.`, 'success')
+    const result = await workerRequest(`/branches/${removeButton.dataset.remove}/preview?purgeVolume=${purge}`, { method: 'DELETE' })
+    const githubMessage = result.github?.deleted ? ' GitHub branch deleted.' : ` Preview cleaned; GitHub branch was not deleted: ${result.github?.reason || 'unknown reason'}`
+    announce(`${branch} cleanup completed.${githubMessage}`, result.github?.deleted ? 'success' : 'warning')
     await loadBranches()
   } catch (error) { announce(error.message); removeButton.disabled = false }
 })
