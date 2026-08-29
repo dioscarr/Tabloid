@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "check:shared-nav": "node scripts/verify-shared-nav.mjs",
-    "precommit": "npm run check:shared-nav",
+    "check:vibe-handoff": "node scripts/verify-vibe-handoff.mjs",
+    "precommit": "npm run check:shared-nav && npm run check:vibe-handoff",
     "preview": "vite preview",
     "serve": "vite build && vite preview --host 0.0.0.0 --port 5173 --strictPort",
     "env:branch": "node scripts/generate-branch-env.mjs"

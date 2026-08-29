@@ -1,8 +1,9 @@
+import { buildVibeHref } from './vibe-handoff.js'
+
 const REPOSITORY = 'dioscarr/Tabloid'
 const TAILNET = 'tail70b7f1.ts.net'
 const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
 const AUTHZ_API = `https://tabloid-authorization.${TAILNET}`
-const VIBE_URL = `https://tabloid-vibe.${TAILNET}`
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
 
 const previewId = async (branch) => {
@@ -104,7 +105,7 @@ class TabloidSharedNav extends HTMLElement {
       branches.sort((a, b) => a === 'main' ? -1 : b === 'main' ? 1 : a.localeCompare(b))
       const apps = await Promise.all(branches.map(async (branch) => ({ branch, name: branchLabel(branch), url: await branchUrl(branch) })))
       const currentApp = apps.find((app) => new URL(app.url).hostname === window.location.hostname)
-      const vibeHref = currentApp ? `${VIBE_URL}/?model=${encodeURIComponent(`vibe-${currentApp.branch}`)}&q=${encodeURIComponent(`Help me improve ${currentApp.name}. Start by understanding this app and ask what I want to change.`)}` : VIBE_URL
+      const vibeHref = buildVibeHref(currentApp ? { ...currentApp, id: currentApp.branch } : undefined)
       this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><div><a class="repo vibe-launch" href="${vibeHref}">Vibe ✦</a> <button class="repo studio-launch" type="button">Brain Studio ✦</button></div></div><div class="apps">${apps.map((app) => {
         const current = new URL(app.url).hostname === window.location.hostname
         return `<a class="app${current ? ' current' : ''}" href="${app.url}"><span class="icon">${escapeHtml(app.name[0])}</span><span><span class="name">${escapeHtml(app.name)}</span><span class="branch">${escapeHtml(app.branch)}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
