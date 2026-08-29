@@ -52,6 +52,8 @@ Before copying code, fonts, images, icons, or other assets from a template, veri
 ## Delivery
 
 - Work on the issue's branch and open a pull request; do not modify unrelated product branches.
+- Always work on and commit to the existing named application branch. Do not create or use duplicate `workspace/*` branches unless the user explicitly requests it, creates it manually, or App Gallery creates it during provisioning.
+- The full workspace includes the nested app repositories under `Tabloid/` plus `../Tabloid-brain-production`, `../Tabloid-dashboard`, and `../Tabloid-main-production`. Inspect the owning repository before editing; do not assume cross-service code belongs to Admin.
 - Keep changes scoped to the issue and document assumptions.
 - Include tests proportional to risk and list commands executed in the pull request.
 - Never delete containers, networks, volumes, branches, or user data as a troubleshooting shortcut.
