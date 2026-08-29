@@ -77,14 +77,39 @@ test('browser origins are limited to read-only requests and CORS excludes POST',
     headers: { origin: browserOrigin, 'content-type': 'application/json' },
     body: JSON.stringify({ enabled: false })
   })
+
   assert.equal(mutation.response.status, 403)
 
   const preflight = await fetch(`${baseUrl}/api/v1/tools/apps_list`, {
     method: 'OPTIONS',
     headers: { origin: browserOrigin, 'access-control-request-method': 'POST' }
   })
+
   assert.equal(preflight.status, 204)
   assert.equal(preflight.headers.get('access-control-allow-methods'), 'GET, HEAD, OPTIONS')
+})
+
+test('capability discovery returns a validated, read-only MCP contract', async () => {
+  const discovered = await jsonRequest('/api/v1/capabilities', { headers: { origin: 'https://tabloid-brain.tail70b7f1.ts.net' } })
+  assert.equal(discovered.response.status, 200)
+  assert.equal(discovered.body.contractVersion, '1.0')
+  assert.deepEqual(discovered.body.app, { id: 'brain', name: 'Brain', branch: 'brain' })
+  assert.ok(discovered.body.capabilities.length > 0)
+  assert.ok(discovered.body.capabilities.every((capability) => capability.protocol === 'mcp' && capability.endpoint === '/mcp'))
+  assert.ok(discovered.body.capabilities.every((capability) => capability.risk !== 'destructive'))
+
+  const alias = await jsonRequest('/api/v1/tools/discovery', { headers: { origin: 'https://tabloid-brain.tail70b7f1.ts.net' } })
+  assert.deepEqual(alias.body, discovered.body)
+})
+
+test('developer endpoints expose read-only sanitized metadata', async () => {
+  for (const path of ['/api/v1/developer/branch', '/api/v1/developer/workspace', '/api/v1/developer/preview', '/api/v1/developer/git', '/api/v1/developer/code-server']) {
+    const result = await jsonRequest(path, { headers: { origin: 'https://tabloid-brain.tail70b7f1.ts.net' } })
+    assert.equal(result.response.status, 200)
+    assert.equal(result.response.headers.get('access-control-allow-origin'), 'https://tabloid-brain.tail70b7f1.ts.net')
+  }
+  const mutation = await jsonRequest('/api/v1/developer/git', { method: 'POST', headers: adminHeaders(), body: '{}' })
+  assert.equal(mutation.response.status, 405)
 })
 
 test('Admin mutations require the distinct token, trusted origin, and header actor', async () => {

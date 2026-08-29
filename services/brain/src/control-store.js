@@ -9,6 +9,11 @@ export const toolDefinitions = [
   { id: 'routes_list', name: 'Routes', category: 'Discovery', description: 'Trace routes and dependencies across applications.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
   { id: 'content_surfaces_list', name: 'Content surfaces', category: 'Content', description: 'Discover app-owned editable content surfaces.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
   { id: 'content_read', name: 'Read content', category: 'Content', description: 'Read the published content view for an app surface.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
+  { id: 'branch_status', name: 'Branch status', category: 'Developer', description: 'Read current branch and commit status.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
+  { id: 'workspace_status', name: 'Workspace status', category: 'Developer', description: 'Read workspace availability and change count.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
+  { id: 'preview_status', name: 'Preview status', category: 'Developer', description: 'Read configured preview availability.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
+  { id: 'git_status', name: 'Git status', category: 'Developer', description: 'Read Git status and diff metadata.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
+  { id: 'code_server_context', name: 'Code-server context', category: 'Developer', description: 'Read sanitized code-server launch context.', risk: 'read-only', defaultEnabled: true, approvalMode: 'automatic' },
   { id: 'content_propose', name: 'Propose content', category: 'AI workflow', description: 'Generate reviewable content without publishing.', risk: 'generative', defaultEnabled: true, approvalMode: 'review' },
   { id: 'content_publish', name: 'Publish content', category: 'Publishing', description: 'Publish an explicitly approved content revision.', risk: 'write', defaultEnabled: false, approvalMode: 'manual' }
 ]

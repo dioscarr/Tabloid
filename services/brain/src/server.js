@@ -12,6 +12,8 @@ import { contentStore } from './content-store.js'
 import { controlStore } from './control-store.js'
 import { getLiveFeed } from './feed.js'
 import { authorize } from './authorization.js'
+import { buildToolDiscovery } from './tool-contract.js'
+import { developerTools } from './developer-tools.js'
 
 const port = Number(process.env.PORT || 8787)
 const host = process.env.HOST || '0.0.0.0'
@@ -58,7 +60,12 @@ export const readConfiguration = () => {
   const mcpToken = readSecret(process.env.BRAIN_MCP_TOKEN, process.env.BRAIN_MCP_TOKEN_FILE, 'BRAIN_MCP_TOKEN')
   const adminToken = readSecret(process.env.BRAIN_ADMIN_TOKEN, process.env.BRAIN_ADMIN_TOKEN_FILE, 'BRAIN_ADMIN_TOKEN')
   if (secretsMatch(mcpToken, adminToken)) throw new Error('BRAIN_ADMIN_TOKEN must differ from BRAIN_MCP_TOKEN.')
-  return { mcpToken, adminToken, adminOrigin: normalizeOrigin(process.env.BRAIN_ADMIN_ORIGIN || '') }
+  return {
+    mcpToken,
+    adminToken,
+    adminOrigin: normalizeOrigin(process.env.BRAIN_ADMIN_ORIGIN || ''),
+    trustAdminAuthorization: process.env.BRAIN_TRUST_ADMIN_AUTHORIZATION === 'true',
+  }
 }
 
 const bearerMatches = (request, expected) => {
@@ -217,6 +224,7 @@ const adminTransport = (request, configuration) => {
 const authorizeMutation = async ({ request, configuration, authorizeFn, application, action, context }) => {
   const transport = adminTransport(request, configuration)
   if (transport.error) return transport
+  if (configuration.trustAdminAuthorization) return { actor: transport.actor }
   try {
     const decision = await authorizeFn({ subject: transport.actor, application, action, context })
     if (!decision || decision.allowed !== true) return { error: new RequestError(403, 'Authorization denied.') }
@@ -244,6 +252,13 @@ const buildMcpServer = () => {
     if (!content) return { isError: true, content: [{ type: 'text', text: 'Unknown application content surface.' }] }
     return textResult(content)
   })
+  for (const [id, label, handler] of [
+    ['branch_status', 'Read current branch and commit status.', developerTools.branchStatus],
+    ['workspace_status', 'Read workspace availability and change count.', developerTools.workspaceStatus],
+    ['preview_status', 'Read configured preview availability.', developerTools.previewStatus],
+    ['git_status', 'Read Git status and diff metadata.', developerTools.gitStatus],
+    ['code_server_context', 'Read sanitized code-server launch context.', developerTools.codeServerContext]
+  ]) register(id, { description: label, annotations: readOnly }, async () => textResult(await handler()))
   return server
 }
 
@@ -281,6 +296,12 @@ const createApiHandler = (configuration, authorizeFn, decomposeIntentFn) => asyn
     if (url.pathname === '/api/v1/routes' && method === 'GET') return json({ routes: catalog.listRoutes(readQueryAppId(url)) }, 200, cors)
     if (url.pathname === '/api/v1/content/surfaces' && method === 'GET') return json({ surfaces: catalog.listSurfaces(readQueryAppId(url, true)) }, 200, cors)
     if (url.pathname === '/api/v1/tools' && method === 'GET') return json({ tools: controlStore.listTools() }, 200, cors)
+    if ((url.pathname === '/api/v1/capabilities' || url.pathname === '/api/v1/tools/discovery') && method === 'GET') {
+      return json(buildToolDiscovery({ apps: catalog.listApps(), tools: controlStore.listTools() }), 200, cors)
+    }
+    const developerRoutes = { '/api/v1/developer/branch': 'branchStatus', '/api/v1/developer/workspace': 'workspaceStatus', '/api/v1/developer/preview': 'previewStatus', '/api/v1/developer/git': 'gitStatus', '/api/v1/developer/code-server': 'codeServerContext' }
+    if (developerRoutes[url.pathname] && method !== 'GET') return json({ error: 'Developer tools are read-only.' }, 405, cors)
+    if (method === 'GET' && developerRoutes[url.pathname]) return json(await developerTools[developerRoutes[url.pathname]](), 200, cors)
     if (url.pathname === '/api/v1/skills' && method === 'GET') return json({ skills: controlStore.listSkills() }, 200, cors)
     if (url.pathname === '/api/v1/activity' && method === 'GET') return json({ activity: controlStore.activity() }, 200, cors)
     if (url.pathname === '/api/v1/feed' && method === 'GET') {
