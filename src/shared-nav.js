@@ -1,3 +1,5 @@
+import { buildVibeHref } from './vibe-handoff.js'
+
 const REPOSITORY = 'dioscarr/Tabloid'
 const TAILNET = 'tail70b7f1.ts.net'
 const BRAIN_API = `https://tabloid-brain-api.${TAILNET}`
@@ -135,7 +137,13 @@ class TabloidSharedNav extends HTMLElement {
       const apps = await Promise.all([...appMap.values()]
         .sort((a, b) => a.branch === 'main' ? -1 : b.branch === 'main' ? 1 : a.branch.localeCompare(b.branch))
         .map(async (app) => ({ ...app, id: app.branch, name: branchLabel(app.branch), url: await branchUrl(app.branch) })))
+<<<<<<< HEAD
       this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><button class="repo studio-launch" type="button">Brain Studio ✦</button></div><div class="apps">${apps.map((app) => {
+=======
+      const currentApp = apps.find((app) => new URL(app.url).hostname === window.location.hostname)
+      const vibeHref = buildVibeHref(currentApp)
+      this.menu.innerHTML = `<div class="menu-head"><div><div class="heading">Switch application</div><div class="subheading">Live branches in your repository</div></div><div class="menu-actions"><a class="repo vibe-launch" href="${vibeHref}">Vibe ✦</a><button class="repo studio-launch" type="button">Brain Studio</button></div></div><div class="apps">${apps.map((app) => {
+>>>>>>> 816a7ba (test(nav): verify Vibe Copilot handoff)
         const current = new URL(app.url).hostname === window.location.hostname
         return `<a class="app${current ? ' current' : ''}" href="${app.url}">${appLogo(app.branch, app.name)}<span><span class="name">${escapeHtml(app.name)}</span><span class="branch">${escapeHtml(app.branch)}</span></span>${current ? '<span class="dot" title="Current application"></span>' : ''}</a>`
       }).join('')}</div><a class="status" style="display:block;text-decoration:none" href="https://github.com/${REPOSITORY}/branches" target="_blank" rel="noreferrer">Manage repository branches ↗</a>`
@@ -291,4 +299,3 @@ export const mountSharedNav = () => {
   }
   document.body.prepend(sharedNav)
 }
-
