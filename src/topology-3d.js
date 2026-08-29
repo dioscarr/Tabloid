@@ -136,12 +136,13 @@ export function mountTopology3D({ container, apps, routes, getMetric, onSelect }
   const projectedPosition = new THREE.Vector3()
   let dragging = false, moved = false, lastX = 0, lastY = 0, targetZoom = 15, focusedId = null
   const focus = (id) => {
-    focusedId = id
     const object = nodes.find((node) => node.userData.appId === id)
     if (object) {
+      const changed = focusedId !== id
+      focusedId = id
       topology.userData.focus = object.position.clone().multiplyScalar(-0.22)
       targetZoom = 10
-      onSelect(id)
+      if (changed) onSelect(id)
     }
   }
   const reset = () => {
