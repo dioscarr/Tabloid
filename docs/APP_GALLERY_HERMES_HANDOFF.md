@@ -242,6 +242,32 @@ Verify the complete path with a test app:
 - `.hermes/plans/2026-08-29_204949-gallery-hermes-end-to-end.md` — phased plan.
 - `docs/OPERATIONS_CONTRACT.md` — repository and runtime ownership contract.
 
+## Activation update — 2026-08-30
+
+The easiest local runtime path has now been activated without changing the Windows branch-worker topology:
+
+- Built image: `localhost/tabloid-admin-api:provisioning`
+- Admin container: `tabloid-admin-api`
+- Worker container: `tabloid-app-provision-worker`
+- Durable volume preserved: `tabloid-api-14c252-data`
+- Existing GitHub token file mounted read-only from the protected local store.
+- Existing Podman Brain secret `tabloid-brain-admin-token` preserved.
+- Deployment endpoint configured to the reachable Podman host gateway:
+  `http://192.168.127.254:8790`
+- Deployment origin configured as:
+  `https://tabloid-admin-8c6976.tail70b7f1.ts.net`
+- Deployment login configured server-side as `dioscarr@github`.
+
+Runtime verification completed:
+
+- Both containers remained up after restart.
+- Worker runner is present in the image.
+- Worker emitted `app_provision_worker_started` with a 30-second interval.
+- Public Admin health endpoint returned HTTP 200.
+- Provider-style branch inventory access through the Admin network returned HTTP 200.
+
+This is a local runtime activation only. No real application request was submitted, no GitHub branch was created, and no public preview deployment was triggered. Hermes scheduling remains disabled until an authenticated Admin status-polling identity and notification policy are explicitly configured.
+
 ## Change-control notes
 
 - Keep the provider fail-closed until live configuration and canary verification succeed.
