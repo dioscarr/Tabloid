@@ -279,7 +279,8 @@ const buildMcpServer = () => {
     ['workspace_status', 'Read workspace availability and change count.', developerTools.workspaceStatus],
     ['preview_status', 'Read configured preview availability.', developerTools.previewStatus],
     ['git_status', 'Read Git status and diff metadata.', developerTools.gitStatus],
-    ['code_server_context', 'Read sanitized code-server launch context.', developerTools.codeServerContext]
+    ['code_server_context', 'Read sanitized code-server launch context.', developerTools.codeServerContext],
+    ['changelog', 'Generate a formatted changelog from git history.', async () => textResult(await developerTools.changelog())]
   ]) register(id, { description: label, annotations: readOnly }, async () => textResult(await handler()))
   return server
 }
@@ -321,7 +322,7 @@ const createApiHandler = (configuration, authorizeFn, decomposeIntentFn, generat
     if ((url.pathname === '/api/v1/capabilities' || url.pathname === '/api/v1/tools/discovery') && method === 'GET') {
       return json(buildToolDiscovery({ apps: catalog.listApps(), tools: controlStore.listTools() }), 200, cors)
     }
-    const developerRoutes = { '/api/v1/developer/branch': 'branchStatus', '/api/v1/developer/workspace': 'workspaceStatus', '/api/v1/developer/preview': 'previewStatus', '/api/v1/developer/git': 'gitStatus', '/api/v1/developer/code-server': 'codeServerContext' }
+    const developerRoutes = { '/api/v1/developer/branch': 'branchStatus', '/api/v1/developer/workspace': 'workspaceStatus', '/api/v1/developer/preview': 'previewStatus', '/api/v1/developer/git': 'gitStatus', '/api/v1/developer/code-server': 'codeServerContext', '/api/v1/developer/changelog': 'changelog' }
     if (developerRoutes[url.pathname] && method !== 'GET') return json({ error: 'Developer tools are read-only.' }, 405, cors)
     if (method === 'GET' && developerRoutes[url.pathname]) return json(await developerTools[developerRoutes[url.pathname]](), 200, cors)
     if (url.pathname === '/api/v1/skills' && method === 'GET') return json({ skills: controlStore.listSkills() }, 200, cors)
