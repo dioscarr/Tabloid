@@ -79,6 +79,67 @@ const mutation = async (baseUrl, path, { method, body = {}, key, confirmAccessCh
   return { response, body: await response.json() }
 }
 
+test('Brain skill mutations are proxied through Admin authorization and CSRF protection', async () => {
+  const calls = []
+  const providers = {
+    ...createFailClosedProviders(),
+    brain: {
+      async mutateSkill(request) {
+        calls.push(request)
+        return { skill: { id: 'release-notes-editor', apps: ['admin', 'brain'] } }
+      }
+    }
+  }
+  await withApi({ providers }, async (baseUrl) => {
+    const denied = await fetch(`${baseUrl}/api/v1/brain/skills/release-notes-editor`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apps: ['admin'] })
+    })
+    assert.equal(denied.status, 403)
+
+    const updated = await mutation(baseUrl, '/api/v1/brain/skills/release-notes-editor', {
+      method: 'PUT', key: 'brain-skill-update-123', body: { id: 'release-notes-editor', apps: ['admin', 'brain'] }
+    })
+    assert.equal(updated.response.status, 200)
+    assert.equal(updated.body.data.skill.id, 'release-notes-editor')
+    assert.deepEqual(calls[0], {
+      method: 'PUT', path: '/api/v1/skills/release-notes-editor',
+      body: { id: 'release-notes-editor', apps: ['admin', 'brain'] },
+      actor: { id: 'test-user', roles: ['owner'] }
+    })
+  })
+})
+
+test('failed Brain skill mutations are audited and replay a completed idempotent failure', async () => {
+  let calls = 0
+  const providers = {
+    ...createFailClosedProviders(),
+    brain: {
+      async mutateSkill() {
+        calls += 1
+        throw new Error('Brain skill mutation request could not be completed.')
+      },
+    },
+  }
+  await withApi({ providers }, async (baseUrl) => {
+    const request = {
+      method: 'PUT',
+      key: 'brain-skill-failure-123',
+      body: { id: 'release-notes-editor', apps: ['brain'] },
+    }
+    const first = await mutation(baseUrl, '/api/v1/brain/skills/release-notes-editor', request)
+    const replay = await mutation(baseUrl, '/api/v1/brain/skills/release-notes-editor', request)
+
+    assert.equal(first.response.status, 502)
+    assert.deepEqual(replay.body, first.body)
+    assert.equal(replay.response.status, 502)
+    assert.equal(calls, 1)
+
+    const audit = await fetch(`${baseUrl}/api/v1/audit-events`)
+    const actions = (await audit.json()).data.map((event) => `${event.action}:${event.outcome}`)
+    assert.ok(actions.includes('brain.skill.update:failure'))
+  })
+})
+
 test('health is public but API requests default to unauthenticated', async () => {
   const dataDir = resolve(workspaceRoot, randomUUID())
   const config = loadConfig({

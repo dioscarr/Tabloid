@@ -218,6 +218,16 @@ const mutationRoute = (method, pathname) => {
   if (method === 'POST' && pathname === '/api/v1/app-intents') {
     return { kind: 'app_intent', roles: ['owner', 'admin'] }
   }
+  if (method === 'POST' && pathname === '/api/v1/brain/skills/generate') {
+    return { kind: 'brain_skill', roles: ['owner', 'admin'], brainPath: '/api/v1/skills/generate', action: 'generate' }
+  }
+  if (method === 'POST' && pathname === '/api/v1/brain/skills') {
+    return { kind: 'brain_skill', roles: ['owner', 'admin'], brainPath: '/api/v1/skills', action: 'create' }
+  }
+  if (['POST', 'PUT', 'DELETE'].includes(method) && (match = pathname.match(/^\/api\/v1\/brain\/skills\/([^/]+)$/))) {
+    const skillId = resourceId(match[1], 'Skill')
+    return { kind: 'brain_skill', roles: ['owner', 'admin'], brainPath: `/api/v1/skills/${skillId}`, skillId, action: method === 'DELETE' ? 'delete' : method === 'PUT' ? 'update' : 'configure' }
+  }
   if (method === 'POST' && pathname === '/api/v1/workspaces') {
     return { kind: 'workspace_create', roles: ['owner'] }
   }
@@ -393,6 +403,8 @@ export const createAdminServer = ({
           input = parseAppProvisionRequest(body)
         } else if (mutation.kind === 'app_intent') {
           input = parseAppIntent(body)
+        } else if (mutation.kind === 'brain_skill') {
+          input = body
         } else if (mutation.kind === 'workspace_create') {
           input = parseWorkspaceRequest(body, config.workspaceRepositories)
         } else {
@@ -523,6 +535,38 @@ export const createAdminServer = ({
             sendJson(response, 502, responseBody)
             return
           }
+        } else if (mutation.kind === 'brain_skill') {
+          action = `brain.skill.${mutation.action}`
+          target = { type: 'brain-skill', id: mutation.skillId || 'draft' }
+          try {
+            result = await providers.brain.mutateSkill({
+              method: request.method,
+              path: mutation.brainPath,
+              body: input,
+              actor: { id: identity.id, roles: identity.roles },
+            })
+          } catch {
+            const failure = {
+              code: 'brain_skill_mutation_failed',
+              message: 'Brain skill mutation failed. No retry was attempted.',
+            }
+            const responseBody = { data: null, error: { ...failure, requestId } }
+            await store.appendAudit({
+              actor: { id: identity.id, roles: identity.roles },
+              action,
+              target,
+              outcome: 'failure',
+              context: requestContext(request, requestId),
+            })
+            await store.completeIdempotencyKey({
+              key: idempotencyKey,
+              response: { status: 502, body: responseBody },
+            })
+            sendJson(response, 502, responseBody)
+            return
+          }
+          target = { type: 'brain-skill', id: mutation.skillId || result.skill?.id || result.draft?.id || 'draft' }
+          result = { ...result, changed: mutation.action !== 'generate' }
         } else if (mutation.kind === 'workspace_create') {
           const workspace = await store.createWorkspace({ ...input, requestedBy: identity.id })
           result = { workspace, changed: true }

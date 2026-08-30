@@ -70,6 +70,10 @@ export class FailClosedBrainProvider {
   async decomposeIntent() {
     throw new ProviderUnavailableError('brain', 'intent decomposition')
   }
+
+  async mutateSkill() {
+    throw new ProviderUnavailableError('brain', 'skill mutation')
+  }
 }
 
 export class BrainProvider {
@@ -117,6 +121,32 @@ export class BrainProvider {
       throw new Error('Brain intent decomposition response did not include a decomposition.')
     }
     return body.decomposition
+  }
+
+  async mutateSkill({ method, path, body, actor }) {
+    if (!['POST', 'PUT', 'DELETE'].includes(method) || !/^\/api\/v1\/skills(?:\/generate|\/[a-z0-9_-]+)?$/i.test(path)) {
+      throw new Error('Invalid Brain skill mutation request.')
+    }
+    let response
+    try {
+      response = await this.fetchImpl(new URL(path, this.apiUrl), {
+        method,
+        headers: {
+          Authorization: `Bearer ${this.adminToken}`,
+          'Content-Type': 'application/json',
+          'X-Actor': actor.id,
+          Origin: this.adminOrigin,
+        },
+        body: JSON.stringify(body),
+      })
+    } catch {
+      throw new Error('Brain skill mutation request could not be completed.')
+    }
+    let payload
+    try { payload = await response.json() } catch { payload = null }
+    if (!response.ok) throw new Error(payload?.error || `Brain skill mutation failed with HTTP ${response.status}.`)
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('Brain skill mutation response was not valid JSON.')
+    return payload
   }
 }
 
