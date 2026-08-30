@@ -277,9 +277,10 @@ A durable Hermes supervisor is now enabled after the authenticated status route 
 - Schedule: every five minutes
 - Delivery: origin Telegram chat
 - Monitor script: `tabloid_provision_status.py`
-- Change detection: enabled; unchanged state suppresses an agent run.
-- Continuity: enabled for notification deduplication across runs.
-- Immediate background tick: launched successfully.
+- Mode: `no_agent` script-only execution; provider availability cannot block collection.
+- Change detection: the collector stores a SHA-256 snapshot locally and emits only changed state.
+- Continuity: enabled for durable job state.
+- Immediate background tick: verified; unchanged state produced a silent run with no delivery.
 
 The collector runs through `podman exec` inside the worker network namespace because the host cannot route directly to the private Admin network. It reads persisted request IDs and calls the authenticated Admin status endpoint with the trusted deployment identity. It emits only request state, phase, retry timing, error code, and preview URL metadata; it does not expose credentials or perform mutations.
 
