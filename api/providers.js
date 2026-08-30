@@ -1,3 +1,5 @@
+import { GitHubAppProvisioningProvider } from './app-provisioning-provider.js'
+
 export class ProviderUnavailableError extends Error {
   constructor(provider, operation) {
     super(`${provider} provider is not configured for ${operation}.`)
@@ -164,6 +166,16 @@ export const createProviders = ({ config = {}, fetchImpl } = {}) => Object.freez
   identity: config.trustedLogins?.length
     ? new TailscaleIdentityProvider({ trustedLogins: config.trustedLogins })
     : new FailClosedIdentityProvider(),
+  appProvisioning: config.githubToken && config.provisioningDeploymentUrl && config.provisioningDeploymentOrigin && config.provisioningDeploymentLogin
+    ? new GitHubAppProvisioningProvider({
+      repository: config.githubRepository,
+      token: config.githubToken,
+      deploymentUrl: config.provisioningDeploymentUrl,
+      deploymentOrigin: config.provisioningDeploymentOrigin,
+      deploymentLogin: config.provisioningDeploymentLogin,
+      ...(fetchImpl ? { fetchImpl } : {}),
+    })
+    : new FailClosedAppProvisioningProvider(),
   brain: config.brainApiUrl && config.brainAdminToken
     ? new BrainProvider({
       apiUrl: config.brainApiUrl,

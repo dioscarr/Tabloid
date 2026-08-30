@@ -81,6 +81,14 @@ export class AdminStore {
     return (await this.listUsers()).find((user) => user.id === userId) || null
   }
 
+  async listAppProvisionRequests() {
+    return requireCollection(await readJson(this.appProvisionRequestsFile, { items: [] }), 'app provision requests')
+  }
+
+  async getAppProvisionRequest(requestId) {
+    return (await this.listAppProvisionRequests()).find((request) => request.id === requestId) || null
+  }
+
   async listApplications() {
     return requireCollection(await readJson(this.applicationsFile, { items: [] }), 'applications')
   }
@@ -124,7 +132,7 @@ export class AdminStore {
     })
   }
 
-  async createAppProvisionRequest({ templateId, appId, branch, actor, idempotencyKey }) {
+  async createAppProvisionRequest({ templateId, appId, branch, sourceBranch, actor, idempotencyKey }) {
     const idempotencyKeyHash = createHash('sha256').update(idempotencyKey).digest('hex')
     return this.#writer.enqueue(async () => {
       const [applicationsDocument, requestsDocument] = await Promise.all([
@@ -144,6 +152,7 @@ export class AdminStore {
         templateId,
         appId,
         branch,
+        sourceBranch,
         status: 'queued',
         actor,
         idempotencyKeyHash,
@@ -164,8 +173,98 @@ export class AdminStore {
     })
   }
 
-  async listAppProvisionRequests() {
-    return requireCollection(await readJson(this.appProvisionRequestsFile, { items: [] }), 'app provision requests')
+  async listAppProvisionEvents(requestId) {
+    try {
+      const content = await readFile(this.appProvisionEventsFile, 'utf8')
+      return content.split('\n').filter(Boolean).map((line) => JSON.parse(line))
+        .filter((event) => event.requestId === requestId)
+    } catch (error) {
+      if (error.code === 'ENOENT') return []
+      throw error
+    }
+  }
+
+  async claimNextAppProvisionRequest({ leaseOwner, leaseMs = 120000 } = {}) {
+    if (!leaseOwner) throw new Error('A provisioning lease owner is required.')
+    return this.#writer.enqueue(async () => {
+      const document = await readJson(this.appProvisionRequestsFile, { version: 1, items: [] })
+      const requests = requireCollection(document, 'app provision requests')
+      const now = Date.now()
+      const request = requests.find((item) => {
+        if (item.status === 'queued' || item.status === 'retryable_failed') {
+          return item.status === 'queued' || !item.nextRetryAt || Date.parse(item.nextRetryAt) <= now
+        }
+        if (!['claiming', 'branch_created', 'workflow_pending', 'preview_pending'].includes(item.status)) return false
+        return item.leaseExpiresAt && Date.parse(item.leaseExpiresAt) <= now
+      })
+      if (!request) return null
+
+      const occurredAt = new Date(now).toISOString()
+      request.status = 'claiming'
+      request.leaseOwner = leaseOwner
+      request.leaseExpiresAt = new Date(now + leaseMs).toISOString()
+      request.attempts = Number(request.attempts || 0) + 1
+      request.sequence = Number(request.sequence || 0) + 1
+      request.updatedAt = occurredAt
+      await writeJson(this.appProvisionRequestsFile, document)
+      await appendFile(this.appProvisionEventsFile, `${JSON.stringify({
+        requestId: request.id,
+        sequence: request.sequence,
+        type: 'claiming',
+        attempt: request.attempts,
+        leaseOwner,
+        occurredAt,
+      })}\n`, { encoding: 'utf8', mode: 0o600, flag: 'a' })
+      return { ...request }
+    })
+  }
+
+  async assertAppProvisionLease({ requestId, leaseOwner }) {
+    const request = await this.getAppProvisionRequest(requestId)
+    if (!request || request.leaseOwner !== leaseOwner || !request.leaseExpiresAt || Date.parse(request.leaseExpiresAt) <= Date.now()) {
+      return false
+    }
+    return true
+  }
+  async transitionAppProvisionRequest({ requestId, status, patch = {}, expectedStatuses = [], leaseOwner = null }) {
+    const terminalStatuses = new Set(['succeeded', 'failed', 'cancelled'])
+    if (!leaseOwner) throw new Error('A provisioning lease owner is required for transitions.')
+    if (!/^[a-z_]+$/.test(status)) throw new Error('Provisioning status is invalid.')
+    return this.#writer.enqueue(async () => {
+      const document = await readJson(this.appProvisionRequestsFile, { version: 1, items: [] })
+      const request = requireCollection(document, 'app provision requests').find((item) => item.id === requestId)
+      if (!request) return { state: 'not_found' }
+      if (leaseOwner && request.leaseOwner !== leaseOwner) {
+        return { state: 'lease_conflict', request: { ...request } }
+      }
+      if (expectedStatuses.length && !expectedStatuses.includes(request.status)) {
+        return { state: 'status_conflict', request: { ...request } }
+      }
+      if (terminalStatuses.has(request.status)) return { state: 'terminal', request: { ...request } }
+
+      const occurredAt = new Date().toISOString()
+      const safePatch = { ...patch }
+      delete safePatch.id
+      delete safePatch.status
+      delete safePatch.sequence
+      request.status = status
+      Object.assign(request, safePatch)
+      request.sequence = Number(request.sequence || 0) + 1
+      request.updatedAt = occurredAt
+      if (terminalStatuses.has(status)) {
+        delete request.leaseOwner
+        delete request.leaseExpiresAt
+      }
+      await writeJson(this.appProvisionRequestsFile, document)
+      await appendFile(this.appProvisionEventsFile, `${JSON.stringify({
+        requestId,
+        sequence: request.sequence,
+        type: status,
+        occurredAt,
+        ...(request.attempts ? { attempt: request.attempts } : {}),
+      })}\n`, { encoding: 'utf8', mode: 0o600, flag: 'a' })
+      return { state: 'updated', request: { ...request } }
+    })
   }
 
   async createAppIntent({ intent, ownerId }) {

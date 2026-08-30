@@ -8,6 +8,7 @@ import { createAdminServer } from '../server.js'
 import { createFailClosedProviders, createProviders, ProviderUnavailableError } from '../providers.js'
 import { createCsrfToken, requireMutationProtection } from '../security.js'
 import { AdminStore } from '../store.js'
+import { AppProvisioningWorker } from '../app-provisioning-worker.js'
 
 const workspaceRoot = resolve('api/.test-data')
 
@@ -454,17 +455,23 @@ test('application gallery requests are governed, idempotent, persisted, and audi
 
     const request = {
       method: 'POST',
-      body: { templateId: 'tabloid-vite', appId: 'gallery-demo', branch: 'gallery-demo' },
+      body: { templateId: 'tabloid-vite', appId: 'gallery-demo', branch: 'gallery-demo', sourceBranch: 'main' },
       key: 'gallery-provision-123',
     }
     const created = await mutation(baseUrl, '/api/v1/applications/provision', request)
     assert.equal(created.response.status, 202)
     assert.equal(created.body.data.request.status, 'queued')
     assert.equal(created.body.data.request.actor.id, 'test-user')
+    const statusResponse = await fetch(`${baseUrl}/api/v1/applications/provision/${created.body.data.request.id}`, {
+      headers: { 'X-CSRF-Token': createCsrfToken('test-user', 'test-csrf-secret') },
+    })
+    assert.equal(statusResponse.status, 200)
+    assert.equal((await statusResponse.json()).data.sourceBranch, 'main')
 
     const persisted = JSON.parse(await readFile(resolve(dataDir, 'app-provision-requests.json'), 'utf8'))
     assert.equal(persisted.items.length, 1)
     assert.equal(persisted.items[0].appId, 'gallery-demo')
+    assert.equal(persisted.items[0].sourceBranch, 'main')
     assert.ok(persisted.items[0].idempotencyKeyHash)
 
     const replay = await mutation(baseUrl, '/api/v1/applications/provision', request)
@@ -480,7 +487,7 @@ test('application gallery requests are governed, idempotent, persisted, and audi
 
     const reserved = await mutation(baseUrl, '/api/v1/applications/provision', {
       method: 'POST',
-      body: { templateId: 'tabloid-vite', appId: 'valid-gallery', branch: 'main' },
+      body: { templateId: 'tabloid-vite', appId: 'valid-gallery', branch: 'main', sourceBranch: 'main' },
       key: 'gallery-reserved-123',
     })
     assert.equal(reserved.response.status, 409)
@@ -496,7 +503,7 @@ test('application gallery requests are governed, idempotent, persisted, and audi
 
     const uppercase = await mutation(baseUrl, '/api/v1/applications/provision', {
       method: 'POST',
-      body: { templateId: 'tabloid-vite', appId: 'Uppercase', branch: 'gallery' },
+      body: { templateId: 'tabloid-vite', appId: 'Uppercase', branch: 'gallery', sourceBranch: 'main' },
       key: 'gallery-uppercase-123',
     })
     assert.equal(uppercase.response.status, 400)
@@ -510,7 +517,7 @@ test('application gallery requests are governed, idempotent, persisted, and audi
   await withApi({ roles: ['admin'] }, async (baseUrl) => {
     const created = await mutation(baseUrl, '/api/v1/applications/provision', {
       method: 'POST',
-      body: { templateId: 'tabloid-vite', appId: 'admin-gallery', branch: 'admin-gallery' },
+      body: { templateId: 'tabloid-vite', appId: 'admin-gallery', branch: 'admin-gallery', sourceBranch: 'main' },
       key: 'admin-gallery-provision-123',
     })
     assert.equal(created.response.status, 202)
@@ -518,7 +525,7 @@ test('application gallery requests are governed, idempotent, persisted, and audi
   await withApi({ roles: ['editor'] }, async (baseUrl) => {
     const denied = await mutation(baseUrl, '/api/v1/applications/provision', {
       method: 'POST',
-      body: { templateId: 'tabloid-vite', appId: 'editor-gallery', branch: 'editor-gallery' },
+      body: { templateId: 'tabloid-vite', appId: 'editor-gallery', branch: 'editor-gallery', sourceBranch: 'main' },
       key: 'editor-gallery-provision-123',
     })
     assert.equal(denied.response.status, 403)
@@ -659,6 +666,48 @@ test('configured Brain provider uses its server token and authenticated actor', 
   })
 })
 
+test('provisioning worker claims requests, records phases, and completes with evidence', async () => {
+  const dataDir = resolve(workspaceRoot, randomUUID())
+  const store = new AdminStore(dataDir)
+  await store.initialize()
+  const created = await store.createAppProvisionRequest({
+    templateId: 'tabloid-vite',
+    appId: 'worker-test-app',
+    branch: 'worker-test-app',
+    sourceBranch: 'main',
+    actor: { id: 'test-user', roles: ['owner'] },
+    idempotencyKey: 'worker-test-key',
+  })
+  const phases = []
+  const worker = new AppProvisioningWorker({
+    store,
+    leaseOwner: 'test-worker',
+    provider: {
+      async provisionApplication(request, { onPhase }) {
+        assert.equal(request.sourceBranch, 'main')
+        await onPhase('branch_created', { commitSha: 'abc123' })
+        phases.push('branch_created')
+        await onPhase('workflow_pending', { workflowRunId: 42 })
+        phases.push('workflow_pending')
+        await onPhase('preview_pending', { image: 'ghcr.io/dioscarr/tabloid:preview-worker-test' })
+        phases.push('preview_pending')
+        return { evidence: { previewUrl: 'https://tabloid-worker-test.tail70b7f1.ts.net/' } }
+      },
+    },
+  })
+
+  try {
+    const result = await worker.runOnce()
+    assert.equal(result.request.status, 'succeeded')
+    assert.deepEqual(phases, ['branch_created', 'workflow_pending', 'preview_pending'])
+    assert.equal(result.request.evidence.previewUrl, 'https://tabloid-worker-test.tail70b7f1.ts.net/')
+    assert.equal((await worker.runOnce()).state, 'idle')
+    const events = await store.listAppProvisionEvents(created.request.id)
+    assert.deepEqual(events.map((event) => event.type), ['queued', 'claiming', 'branch_created', 'workflow_pending', 'preview_pending', 'succeeded'])
+  } finally {
+    await rm(dataDir, { recursive: true, force: true })
+  }
+})
 test('unconfigured external providers fail closed without accepting client credentials', async () => {
   const providers = createFailClosedProviders()
   assert.equal(await providers.identity.getIdentity(), null)

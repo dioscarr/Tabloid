@@ -175,10 +175,13 @@ const parseWorkspaceRequest = (body, workspaceRepositories) => {
 }
 
 const parseAppProvisionRequest = (body) => {
-  requireOnlyKeys(body, ['templateId', 'appId', 'branch'])
-  const { templateId, appId, branch } = body
+  requireOnlyKeys(body, ['templateId', 'appId', 'branch', 'sourceBranch'])
+  const { templateId, appId, branch, sourceBranch } = body
   if (typeof templateId !== 'string' || !getAppTemplate(templateId)) {
     throw new HttpError(422, 'app_template_not_found', 'templateId must identify a governed application template.')
+  }
+  if (typeof sourceBranch !== 'string' || sourceBranch.length > 120 || !/^[A-Za-z0-9._/-]+$/.test(sourceBranch) || sourceBranch.startsWith('/') || sourceBranch.endsWith('/') || sourceBranch.includes('//') || sourceBranch.includes('..') || sourceBranch.endsWith('.lock')) {
+    throw new HttpError(400, 'invalid_source_branch', 'sourceBranch must identify an existing Git branch.')
   }
   for (const value of [appId, branch]) {
     if (typeof value !== 'string' || !/^[a-z][a-z0-9-]{1,62}$/.test(value)) {
@@ -188,7 +191,7 @@ const parseAppProvisionRequest = (body) => {
       throw new HttpError(409, 'reserved_app_identity', 'appId and branch may not use a reserved identity.')
     }
   }
-  return { templateId, appId, branch }
+  return { templateId, appId, branch, sourceBranch }
 }
 
 const parseAppIntent = (body) => {
@@ -242,6 +245,9 @@ const mutationRoute = (method, pathname) => {
 
 const readRoute = (method, pathname) => {
   let match
+  if (method === 'GET' && (match = pathname.match(/^\/api\/v1\/applications\/provision\/([^/]+)$/))) {
+    return { kind: 'application_provision', roles: ['owner', 'admin'], requestId: resourceId(match[1], 'Provisioning request') }
+  }
   if (method === 'GET' && (match = pathname.match(/^\/api\/v1\/app-intents\/([^/]+)$/))) {
     return { kind: 'app_intent', roles: ['owner', 'admin'], appIntentId: resourceId(match[1], 'App intent') }
   }
@@ -662,6 +668,12 @@ export const createAdminServer = ({
       if (pathname === '/api/v1/app-intents') {
         const appIntents = await store.listAppIntents()
         sendJson(response, 200, { data: appIntents, meta: { total: appIntents.length } })
+        return
+      }
+      if (read?.kind === 'application_provision') {
+        const provisionRequest = await store.getAppProvisionRequest(read.requestId)
+        if (!provisionRequest) throw new HttpError(404, 'provisioning_request_not_found', 'The requested provisioning request was not found.')
+        sendJson(response, 200, { data: provisionRequest })
         return
       }
       if (read?.kind === 'app_intent') {

@@ -144,6 +144,14 @@ export const loadConfig = ({ env = process.env, cwd = process.cwd() } = {}) => {
   const brainApiUrl = parseServiceOrigin(env.BRAIN_API_URL || '', 'BRAIN_API_URL')
   const brainAdminToken = readOptionalSecret(env.BRAIN_ADMIN_TOKEN, env.BRAIN_ADMIN_TOKEN_FILE, 'BRAIN_ADMIN_TOKEN')
   const brainAdminOrigin = parseServiceOrigin(env.BRAIN_ADMIN_ORIGIN || '', 'BRAIN_ADMIN_ORIGIN')
+  const githubToken = readOptionalSecret(env.GITHUB_TOKEN, env.GITHUB_TOKEN_FILE, 'GITHUB_TOKEN')
+  const provisioningDeploymentUrl = parseServiceOrigin(env.PROVISIONING_DEPLOYMENT_URL || '', 'PROVISIONING_DEPLOYMENT_URL')
+  const provisioningDeploymentOrigin = parseServiceOrigin(env.PROVISIONING_DEPLOYMENT_ORIGIN || '', 'PROVISIONING_DEPLOYMENT_ORIGIN')
+  const provisioningDeploymentLogin = env.PROVISIONING_DEPLOYMENT_LOGIN || null
+  const githubRepository = env.GITHUB_REPOSITORY || 'dioscarr/Tabloid'
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?\/[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/.test(githubRepository)) {
+    throw new Error('GITHUB_REPOSITORY must be an owner/name pair.')
+  }
   const bootstrapToken = env.ADMIN_BOOTSTRAP_TOKEN || null
   const bootstrapIdentity = parseBootstrapIdentity(env.ADMIN_BOOTSTRAP_IDENTITY || '')
 
@@ -172,6 +180,11 @@ export const loadConfig = ({ env = process.env, cwd = process.cwd() } = {}) => {
     brainApiUrl,
     brainAdminToken,
     brainAdminOrigin,
+    githubToken,
+    githubRepository,
+    provisioningDeploymentUrl,
+    provisioningDeploymentOrigin,
+    provisioningDeploymentLogin,
     developmentIdentity: developmentIdentityValue ? parseDevIdentity(developmentIdentityValue) : null,
   })
 }
