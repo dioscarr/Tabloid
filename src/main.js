@@ -151,7 +151,37 @@ async function configureTool(id,change){
 }
 async function refreshActivity(){const response=await fetch(`${BRAIN_API}/api/v1/activity`,{cache:'no-store'});if(response.ok)activity=(await response.json()).activity;renderActivity()}
 async function loadControlPlane(){
-  try{const [toolResponse,skillResponse,activityResponse,appResponse]=await Promise.all([fetch(`${BRAIN_API}/api/v1/tools`,{cache:'no-store'}),fetch(`${BRAIN_API}/api/v1/skills`,{cache:'no-store'}),fetch(`${BRAIN_API}/api/v1/activity`,{cache:'no-store'}),fetch(`${BRAIN_API}/api/v1/apps`,{cache:'no-store'})]);if(!toolResponse.ok||!skillResponse.ok||!activityResponse.ok||!appResponse.ok)throw new Error('Brain control API is unavailable');tools=(await toolResponse.json()).tools;skills=(await skillResponse.json()).skills;activity=(await activityResponse.json()).activity;catalogApps=(await appResponse.json()).apps;renderTools();renderSkills();renderActivity();document.querySelector('#health-score').textContent='99.2';document.querySelector('#health-copy').textContent=`Healthy · ${tools.filter(tool=>tool.enabled).length} tools ready`;document.querySelector('.live').innerHTML='<i></i> Brain API connected'}catch(error){document.querySelector('#health-score').textContent='—';document.querySelector('#health-copy').textContent=error.message;document.querySelector('.live').innerHTML='<i></i> Control API unavailable';document.querySelector('.live').classList.add('offline');notify(error.message,true)}
+  let preservedBrief = null
+  // Attempt to preserve any existing product brief before showing error state
+  try {
+    const briefElement = document.querySelector('.hero > div > p.intro')
+    if (briefElement) {
+      preservedBrief = briefElement.textContent.trim()
+    }
+  } catch {}
+
+  try {
+    const [toolResponse,skillResponse,activityResponse,appResponse]=await Promise.all([fetch(`${BRAIN_API}/api/v1/tools`,{cache:'no-store'}),fetch(`${BRAIN_API}/api/v1/skills`,{cache:'no-store'}),fetch(`${BRAIN_API}/api/v1/activity`,{cache:'no-store'}),fetch(`${BRAIN_API}/api/v1/apps`,{cache:'no-store'})]);if(!toolResponse.ok||!skillResponse.ok||!activityResponse.ok||!appResponse.ok)throw new Error('Brain control API is unavailable');tools=(await toolResponse.json()).tools;skills=(await skillResponse.json()).skills;activity=(await activityResponse.json()).activity;catalogApps=(await appResponse.json()).apps;renderTools();renderSkills();renderActivity();document.querySelector('#health-score').textContent='99.2';document.querySelector('#health-copy').textContent=`Healthy · ${tools.filter(tool=>tool.enabled).length} tools ready`;document.querySelector('.live').innerHTML='<i></i> Brain API connected'}
+  catch(error){
+    // Restore preserved brief if Brain is unavailable
+    const briefArea = document.querySelector('.hero > div')
+    if (preservedBrief && briefArea) {
+      const existingIntro = briefArea.querySelector('.intro')
+      if (existingIntro) {
+        existingIntro.textContent = preservedBrief
+      } else {
+        const p = document.createElement('p')
+        p.className = 'intro'
+        p.textContent = preservedBrief
+        briefArea.insertBefore(p, briefArea.firstChild)
+      }
+    }
+    document.querySelector('#health-score').textContent='—'
+    document.querySelector('#health-copy').textContent=error.message
+    document.querySelector('.live').innerHTML='<i></i> Control API unavailable'
+    document.querySelector('.live').classList.add('offline')
+    notify(error.message,true)
+  }
 }
 async function loadTelemetry(){
   try{
