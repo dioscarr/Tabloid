@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "check": "node --check src/server.js && node --check src/catalog.js && node --check src/copilot.js && node --check src/content-store.js && node --check src/control-store.js && node --check src/feed.js && node --check src/engagement-store.js && node --check src/telemetry-store.js"
+    "check": "node --check src/server.js && node --check src/authorization.js && node --check src/catalog.js && node --check src/copilot.js && node --check src/content-store.js && node --check src/control-store.js && node --check src/feed.js && node --check src/tool-contract.js && node --check src/developer-tools.js",
+    "test": "node --test test/server.test.js"
   },
   "dependencies": {
     "@modelcontextprotocol/node": "2.0.0",
