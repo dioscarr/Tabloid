@@ -1,5 +1,6 @@
 FROM ghcr.io/dioscarr/tabloid:preview-api-14c252
 
 COPY api /app/api
+COPY scripts/run-app-provision-worker.mjs /app/scripts/run-app-provision-worker.mjs
 
 USER node
