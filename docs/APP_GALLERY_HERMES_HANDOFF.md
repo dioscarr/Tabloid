@@ -266,9 +266,27 @@ Runtime verification completed:
 - Public Admin health endpoint returned HTTP 200.
 - Provider-style branch inventory access through the Admin network returned HTTP 200.
 
-This is a local runtime activation only. No real application request was submitted, no GitHub branch was created, and no public preview deployment was triggered. Hermes scheduling remains disabled until an authenticated Admin status-polling identity and notification policy are explicitly configured.
+This is a local runtime activation only. No real application request was submitted, no GitHub branch was created, and no public preview deployment was triggered. Hermes scheduling was enabled only after the authenticated Admin status-polling path and notification policy were configured.
 
-## Change-control notes
+## Hermes supervisor activation — 2026-08-30
+
+A durable Hermes supervisor is now enabled after the authenticated status route was verified from the provisioning worker network.
+
+- Job: `Tabloid provisioning supervisor`
+- Job ID: `2bacfbe8267f`
+- Schedule: every five minutes
+- Delivery: origin Telegram chat
+- Monitor script: `tabloid_provision_status.py`
+- Change detection: enabled; unchanged state suppresses an agent run.
+- Continuity: enabled for notification deduplication across runs.
+- Immediate background tick: launched successfully.
+
+The collector runs through `podman exec` inside the worker network namespace because the host cannot route directly to the private Admin network. It reads persisted request IDs and calls the authenticated Admin status endpoint with the trusted deployment identity. It emits only request state, phase, retry timing, error code, and preview URL metadata; it does not expose credentials or perform mutations.
+
+A one-line Admin configuration correction was required before activation: trusted Tailscale login validation now accepts the existing `dioscarr@github` identity format. The Admin allowlist includes both the Admin and Gallery origins, and the Brain secret is mounted at the path expected by the service.
+
+The supervisor does not create branches, call GitHub, manipulate Podman, trigger provisioning, or carry infrastructure credentials. The Admin provisioning worker remains responsible for execution, bounded polling, leases, retries, and terminal state.
+
 
 - Keep the provider fail-closed until live configuration and canary verification succeed.
 - Do not commit generated `dist`, dependency files, credentials, or unrelated nested-repository changes.
