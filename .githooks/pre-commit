@@ -1,5 +1,5 @@
 #!/bin/sh
 set -eu
 
-echo "Checking shared app launcher contract..."
-npm run check:shared-nav
+echo "Checking shared app launcher and Vibe contracts..."
+npm run precommit

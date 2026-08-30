@@ -12,6 +12,7 @@ process.env.BRAIN_ADMIN_ORIGIN = 'https://tabloid-admin.example.test'
 const { createBrainServer } = await import('../src/server.js')
 const authorizationCalls = []
 const decompositionCalls = []
+const skillGenerationCalls = []
 const application = createBrainServer({
   authorizeFn: async (request) => {
     authorizationCalls.push(request)
@@ -39,6 +40,18 @@ const application = createBrainServer({
         description: 'Create the responsive pickup listing with clear status and action states.',
         agentHint: 'frontend'
       }]
+    }
+  },
+  generateSkillFn: async (input) => {
+    skillGenerationCalls.push(input)
+    return {
+      id: input.currentSkill?.id || 'release-notes-editor',
+      name: input.currentSkill?.name || 'Release notes editor',
+      description: 'Turns merged changes into concise, audience-aware release notes.',
+      instructions: '# Release notes editor\n\nSummarize verified changes and preserve links to source evidence.',
+      capabilities: ['apps_list', 'routes_list'],
+      apps: ['admin', 'brain'],
+      enabled: input.currentSkill?.enabled ?? true
     }
   }
 })
@@ -303,5 +316,76 @@ test('intent decomposition fails closed when Copilot is not configured', async (
     assert.equal(response.status, 503)
   } finally {
     await unavailable.close()
+  }
+})
+
+test('Hermes skill generation returns a validated draft without persisting it', async () => {
+  skillGenerationCalls.length = 0
+  const generated = await jsonRequest('/api/v1/skills/generate', {
+    method: 'POST', headers: adminHeaders(),
+    body: JSON.stringify({ instruction: 'Create a release notes skill for Admin and Brain.' })
+  })
+  assert.equal(generated.response.status, 200)
+  assert.equal(generated.body.draft.id, 'release-notes-editor')
+  assert.deepEqual(generated.body.draft.apps, ['admin', 'brain'])
+  assert.equal(skillGenerationCalls.length, 1)
+  assert.equal(skillGenerationCalls[0].currentSkill, null)
+
+  const skills = await jsonRequest('/api/v1/skills', { headers: { origin: 'https://tabloid-brain.tail70b7f1.ts.net' } })
+  assert.equal(skills.body.skills.some((skill) => skill.id === 'release-notes-editor'), false)
+})
+
+test('skills can be created, previewed, scoped, edited with Hermes, and deleted', async () => {
+  const draft = {
+    id: 'release-notes-editor', name: 'Release notes editor',
+    description: 'Turns merged changes into concise, audience-aware release notes.',
+    instructions: '# Release notes editor\n\nSummarize verified changes and preserve links to source evidence.',
+    capabilities: ['apps_list', 'routes_list'], apps: ['admin'], enabled: true
+  }
+  const created = await jsonRequest('/api/v1/skills', {
+    method: 'POST', headers: adminHeaders(), body: JSON.stringify(draft)
+  })
+  assert.equal(created.response.status, 201)
+  assert.equal(created.body.skill.id, draft.id)
+  assert.deepEqual(created.body.skill.apps, ['admin'])
+
+  const preview = await jsonRequest(`/api/v1/skills/${draft.id}`, { headers: { origin: 'https://tabloid-brain.tail70b7f1.ts.net' } })
+  assert.equal(preview.response.status, 200)
+  assert.equal(preview.body.skill.instructions, draft.instructions)
+
+  const generatedEdit = await jsonRequest('/api/v1/skills/generate', {
+    method: 'POST', headers: adminHeaders(),
+    body: JSON.stringify({ instruction: 'Also allow Brain to use this skill.', skillId: draft.id })
+  })
+  assert.equal(generatedEdit.response.status, 200)
+  assert.equal(skillGenerationCalls.at(-1).currentSkill.id, draft.id)
+
+  const updated = await jsonRequest(`/api/v1/skills/${draft.id}`, {
+    method: 'PUT', headers: adminHeaders(),
+    body: JSON.stringify({ ...draft, apps: ['admin', 'brain'], description: 'Creates governed release notes from verified changes.' })
+  })
+  assert.equal(updated.response.status, 200)
+  assert.deepEqual(updated.body.skill.apps, ['admin', 'brain'])
+  assert.equal(updated.body.skill.description, 'Creates governed release notes from verified changes.')
+
+  const removed = await jsonRequest(`/api/v1/skills/${draft.id}`, { method: 'DELETE', headers: adminHeaders() })
+  assert.equal(removed.response.status, 200)
+  assert.equal(removed.body.deleted.id, draft.id)
+  const missing = await jsonRequest(`/api/v1/skills/${draft.id}`, { headers: { origin: 'https://tabloid-brain.tail70b7f1.ts.net' } })
+  assert.equal(missing.response.status, 404)
+})
+
+test('skill app scope rejects unknown applications and all mixed with named apps', async () => {
+  for (const [index, apps] of [['not-an-app'], ['all', 'brain']].entries()) {
+    const result = await jsonRequest('/api/v1/skills', {
+      method: 'POST', headers: adminHeaders(),
+      body: JSON.stringify({
+        id: `invalid-scope-${index}`, name: 'Invalid scope',
+        description: 'This skill should be rejected because its application scope is invalid.',
+        instructions: '# Invalid\n\nDo not persist this skill.',
+        capabilities: ['apps_list'], apps, enabled: true
+      })
+    })
+    assert.equal(result.response.status, 400)
   }
 })

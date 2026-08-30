@@ -33,3 +33,32 @@ calling a model when the server-side Copilot token is not configured.
 when absent and mounts it at `/run/secrets/brain_admin_token`. The Admin
 service should mount that same secret for its API proxy; deployments never
 print its value.
+
+## Skill Studio
+
+The Skills section supports read-only previews plus governed Studio-mode create,
+edit, scope, enable/disable, and delete actions. Browser mutations call the
+Admin API at the public build-time `VITE_ADMIN_API_URL`; Admin applies identity,
+role, CSRF, idempotency, and audit controls before forwarding to Brain with the
+server-only Admin credential.
+
+Brain exposes these Admin-only skill routes:
+
+- `POST /api/v1/skills/generate` returns a reviewable draft and does not persist it;
+- `POST /api/v1/skills` creates a validated skill;
+- `GET /api/v1/skills/:id` returns the full preview, including instructions;
+- `PUT /api/v1/skills/:id` updates content, tools, status, and application scope;
+- `POST /api/v1/skills/:id` changes enabled status only; and
+- `DELETE /api/v1/skills/:id` removes a custom or built-in skill.
+
+Hermes generation uses the OpenAI-compatible Hermes API server. Configure only
+on the Brain service:
+
+- `HERMES_API_URL=http://host.containers.internal:8642/v1`
+- `HERMES_API_KEY` or `HERMES_API_KEY_FILE`
+- optional `HERMES_MODEL` (defaults to `hermes-agent`)
+
+Start Hermes with its authenticated API server enabled before using Generate.
+The key is server-side and must never be added to `VITE_*` variables or the
+browser bundle. Skill drafts are schema-validated against Brain's registered
+application and tool catalogs before they can be saved.

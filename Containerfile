@@ -7,6 +7,8 @@ RUN npm ci
 COPY *.html vite.config.js ./
 COPY public ./public
 COPY src ./src
+ARG VITE_ADMIN_API_URL=""
+ENV VITE_ADMIN_API_URL=$VITE_ADMIN_API_URL
 RUN npm run build
 
 FROM docker.io/nginxinc/nginx-unprivileged:1.29-alpine

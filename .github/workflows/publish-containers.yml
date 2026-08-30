@@ -55,6 +55,8 @@ jobs:
         with:
           context: .
           file: ./Containerfile
+          build-args: |
+            VITE_ADMIN_API_URL=${{ vars.ADMIN_API_URL }}
           push: true
           tags: ${{ steps.app-meta.outputs.tags }}
           labels: ${{ steps.app-meta.outputs.labels }}

@@ -8,6 +8,7 @@ import { toNodeHandler } from '@modelcontextprotocol/node'
 import * as z from 'zod/v4'
 import { catalog } from './catalog.js'
 import { decomposeIntentWithCopilot, generateWithCopilot, stopCopilot } from './copilot.js'
+import { generateSkillWithHermes } from './hermes.js'
 import { contentStore } from './content-store.js'
 import { controlStore } from './control-store.js'
 import { getLiveFeed } from './feed.js'
@@ -148,6 +149,27 @@ const toolConfigurationSchema = z.object({
   approvalMode: z.enum(['automatic', 'review', 'manual', 'blocked']).optional()
 }).strict().refine((value) => value.enabled !== undefined || value.approvalMode !== undefined)
 const skillConfigurationSchema = z.object({ enabled: z.boolean() }).strict()
+const skillWriteSchema = z.object({
+  id: z.string().regex(idPattern),
+  name: z.string().trim().min(2).max(120),
+  description: z.string().trim().min(20).max(1000),
+  instructions: z.string().trim().min(20).max(20000),
+  capabilities: z.array(z.string().trim().min(1).max(64)).min(1).max(50),
+  apps: z.array(z.string().trim().min(1).max(64)).min(1).max(50),
+  enabled: z.boolean()
+}).strict().superRefine((value, context) => {
+  if (new Set(value.capabilities).size !== value.capabilities.length || value.capabilities.some((capability) => !controlStore.listTools().some((tool) => tool.id === capability))) {
+    context.addIssue({ code: 'custom', message: 'Capabilities must be unique registered Brain tools.', path: ['capabilities'] })
+  }
+  const uniqueApps = new Set(value.apps)
+  if (uniqueApps.size !== value.apps.length || (uniqueApps.has('all') && uniqueApps.size !== 1) || value.apps.some((appId) => appId !== 'all' && !catalog.getApp(appId))) {
+    context.addIssue({ code: 'custom', message: 'Apps must be unique registered applications, or all by itself.', path: ['apps'] })
+  }
+})
+const skillGenerationSchema = z.object({
+  instruction: z.string().trim().min(10).max(8000),
+  skillId: z.string().regex(idPattern).optional()
+}).strict()
 const draftSchema = z.object({ values: z.record(z.string(), z.string()) }).strict()
 const publishSchema = z.object({
   draftId: z.string().regex(uuidPattern),
@@ -262,7 +284,7 @@ const buildMcpServer = () => {
   return server
 }
 
-const createApiHandler = (configuration, authorizeFn, decomposeIntentFn) => async (request) => {
+const createApiHandler = (configuration, authorizeFn, decomposeIntentFn, generateSkillFn) => async (request) => {
   const url = new URL(request.url)
   const origin = request.headers.get('origin') || ''
   const cors = corsHeaders(origin)
@@ -303,6 +325,12 @@ const createApiHandler = (configuration, authorizeFn, decomposeIntentFn) => asyn
     if (developerRoutes[url.pathname] && method !== 'GET') return json({ error: 'Developer tools are read-only.' }, 405, cors)
     if (method === 'GET' && developerRoutes[url.pathname]) return json(await developerTools[developerRoutes[url.pathname]](), 200, cors)
     if (url.pathname === '/api/v1/skills' && method === 'GET') return json({ skills: controlStore.listSkills() }, 200, cors)
+    const skillReadRoute = url.pathname.match(/^\/api\/v1\/skills\/([a-z0-9_-]+)$/i)
+    if (skillReadRoute && method === 'GET') {
+      const skill = controlStore.getSkill(skillReadRoute[1])
+      if (!skill) throw new RequestError(404, 'Unknown skill.')
+      return json({ skill }, 200, cors)
+    }
     if (url.pathname === '/api/v1/activity' && method === 'GET') return json({ activity: controlStore.activity() }, 200, cors)
     if (url.pathname === '/api/v1/feed' && method === 'GET') {
       try { return json(await getLiveFeed(url.searchParams.get('channel') || 'all'), 200, cors) }
@@ -333,12 +361,33 @@ const createApiHandler = (configuration, authorizeFn, decomposeIntentFn) => asyn
       return json({ tool: controlStore.configureTool(toolRoute[1], input, access.actor) }, 200, cors)
     }
 
-    const skillRoute = url.pathname.match(/^\/api\/v1\/skills\/([a-z0-9_-]+)$/i)
-    if (skillRoute && method === 'POST') {
-      const access = await authorizeMutation({ request, configuration, authorizeFn, application: 'brain', action: 'skills.configure', context: { skillId: skillRoute[1] } })
+    if (url.pathname === '/api/v1/skills/generate' && method === 'POST') {
+      const access = await authorizeMutation({ request, configuration, authorizeFn, application: 'brain', action: 'skills.generate', context: {} })
       if (access.error) throw access.error
-      const input = parseBody(skillConfigurationSchema, await readJson(request))
-      return json({ skill: controlStore.configureSkill(skillRoute[1], input, access.actor) }, 200, cors)
+      const input = parseBody(skillGenerationSchema, await readJson(request))
+      const currentSkill = input.skillId ? controlStore.getSkill(input.skillId) : null
+      if (input.skillId && !currentSkill) throw new RequestError(404, 'Unknown skill.')
+      const generated = skillWriteSchema.safeParse(await generateSkillFn({ instruction: input.instruction, currentSkill, apps: catalog.listApps(), tools: controlStore.listTools() }))
+      if (!generated.success) throw new RequestError(502, 'Hermes returned an invalid skill draft.')
+      if (currentSkill && generated.data.id !== currentSkill.id) throw new RequestError(502, 'Hermes cannot change a skill identifier during editing.')
+      return json({ draft: generated.data }, 200, cors)
+    }
+
+    if (url.pathname === '/api/v1/skills' && method === 'POST') {
+      const access = await authorizeMutation({ request, configuration, authorizeFn, application: 'brain', action: 'skills.create', context: {} })
+      if (access.error) throw access.error
+      const input = parseBody(skillWriteSchema, await readJson(request))
+      return json({ skill: controlStore.createSkill(input, access.actor) }, 201, cors)
+    }
+
+    const skillRoute = url.pathname.match(/^\/api\/v1\/skills\/([a-z0-9_-]+)$/i)
+    if (skillRoute && ['POST', 'PUT', 'DELETE'].includes(method)) {
+      const action = method === 'POST' ? 'configure' : method === 'PUT' ? 'update' : 'delete'
+      const access = await authorizeMutation({ request, configuration, authorizeFn, application: 'brain', action: `skills.${action}`, context: { skillId: skillRoute[1] } })
+      if (access.error) throw access.error
+      if (method === 'DELETE') return json({ deleted: controlStore.deleteSkill(skillRoute[1], access.actor) }, 200, cors)
+      const input = parseBody(method === 'POST' ? skillConfigurationSchema : skillWriteSchema, await readJson(request))
+      return json({ skill: method === 'POST' ? controlStore.configureSkill(skillRoute[1], input, access.actor) : controlStore.updateSkill(skillRoute[1], input, access.actor) }, 200, cors)
     }
 
     const page = pageFromRoute(url)
@@ -391,15 +440,17 @@ const createApiHandler = (configuration, authorizeFn, decomposeIntentFn) => asyn
     if (error instanceof RequestError) return json({ error: error.message }, error.status, cors)
     if (error?.code === 'COPILOT_NOT_CONFIGURED') return json({ error: 'Copilot is not configured.' }, 503, cors)
     if (error?.code === 'COPILOT_INVALID_RESPONSE') return json({ error: 'Copilot returned an invalid intent decomposition.' }, 502, cors)
+    if (error?.code === 'HERMES_NOT_CONFIGURED') return json({ error: 'Hermes skill generation is not configured.' }, 503, cors)
+    if (error?.code === 'HERMES_INVALID_RESPONSE') return json({ error: 'Hermes returned an invalid skill draft.' }, 502, cors)
     if (error instanceof SyntaxError || error instanceof z.ZodError) return json({ error: 'Invalid request body.' }, 400, cors)
     return json({ error: 'Content operation failed.' }, 400, cors)
   }
 }
 
-export const createBrainServer = ({ configuration = readConfiguration(), authorizeFn = authorize, decomposeIntentFn = decomposeIntentWithCopilot } = {}) => {
+export const createBrainServer = ({ configuration = readConfiguration(), authorizeFn = authorize, decomposeIntentFn = decomposeIntentWithCopilot, generateSkillFn = generateSkillWithHermes } = {}) => {
   const mcp = createMcpHandler(buildMcpServer, { responseMode: 'json' })
   const mcpNodeHandler = toNodeHandler(mcp)
-  const apiHandler = createApiHandler(configuration, authorizeFn, decomposeIntentFn)
+  const apiHandler = createApiHandler(configuration, authorizeFn, decomposeIntentFn, generateSkillFn)
   const server = createServer(async (req, res) => {
     const request = new Request(`http://brain.internal${req.url}`, {
       method: req.method,

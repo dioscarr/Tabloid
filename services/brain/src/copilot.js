@@ -1,4 +1,29 @@
+import { CopilotClient } from '@github/copilot-sdk'
 import { readFileSync } from 'node:fs'
+
+let client
+
+const copilotToken = () => process.env.COPILOT_GITHUB_TOKEN || (process.env.COPILOT_GITHUB_TOKEN_FILE ? readFileSync(process.env.COPILOT_GITHUB_TOKEN_FILE, 'utf8').trim() : '')
+const brainToken = () => process.env.BRAIN_MCP_TOKEN || (process.env.BRAIN_MCP_TOKEN_FILE ? readFileSync(process.env.BRAIN_MCP_TOKEN_FILE, 'utf8').trim() : '')
+const allowedContextTools = new Set(['apps_list', 'routes_list', 'content_surfaces_list', 'content_read'])
+
+const approveBrainContextTools = (request) => {
+  if (request.managedApprovalRequired) return { kind: 'no-result' }
+  if (request.kind === 'mcp' && request.serverName === 'brain' && allowedContextTools.has(request.toolName)) {
+    return { kind: 'approve-once' }
+  }
+  return { kind: 'reject', feedback: 'Brain only permits its allow-listed, read-only context tools during content generation.' }
+}
+
+const requireConfiguration = () => {
+  const token = copilotToken()
+  if (!token) {
+    const error = new Error('Copilot is not configured. Set COPILOT_GITHUB_TOKEN on the Brain service; never expose it to a browser.')
+    error.code = 'COPILOT_NOT_CONFIGURED'
+    throw error
+  }
+  return token
+}
 
 const openRouterToken = () => process.env.OPENROUTER_API_KEY || (process.env.OPENROUTER_API_KEY_FILE ? readFileSync(process.env.OPENROUTER_API_KEY_FILE, 'utf8').trim() : '')
 const openRouterModels = () => (process.env.OPENROUTER_MODELS || 'cohere/north-mini-code:free,poolside/laguna-s-2.1:free,z-ai/glm-5.2:free,nvidia/nemotron-3-super-120b-a12b:free').split(',').map((value) => value.trim()).filter(Boolean)

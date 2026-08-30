@@ -20,11 +20,11 @@ export const toolDefinitions = [
 ]
 
 export const skillDefinitions = [
-  { id: 'content-strategist', name: 'Content strategist', description: 'Rewrites page copy while preserving app voice and field contracts.', capabilities: ['content_read', 'content_propose'], apps: ['all'], defaultEnabled: true },
-  { id: 'topology-analyst', name: 'Topology analyst', description: 'Explains routes, dependencies, degraded links, and architectural gaps.', capabilities: ['apps_list', 'routes_list'], apps: ['brain', 'dashboard'], defaultEnabled: true },
-  { id: 'briefing-editor', name: 'Briefing editor', description: 'Shapes useful, source-aware technology briefings for Big News.', capabilities: ['content_read', 'content_propose'], apps: ['big-news'], defaultEnabled: true },
-  { id: 'release-manager', name: 'Release manager', description: 'Coordinates branch readiness, approval evidence, deployment, and rollback.', capabilities: ['apps_list', 'routes_list'], apps: ['admin', 'dashboard'], defaultEnabled: false },
-  { id: 'incident-triage', name: 'Incident triage', description: 'Correlates route health and logs into actionable recovery guidance.', capabilities: ['routes_list'], apps: ['dashboard', 'brain'], defaultEnabled: false }
+  { id: 'content-strategist', name: 'Content strategist', description: 'Rewrites page copy while preserving app voice and field contracts.', instructions: '# Content strategist\n\nRead the current content and propose revised copy that preserves the application voice, required fields, and factual meaning. Never publish without explicit approval.', capabilities: ['content_read', 'content_propose'], apps: ['all'], defaultEnabled: true },
+  { id: 'topology-analyst', name: 'Topology analyst', description: 'Explains routes, dependencies, degraded links, and architectural gaps.', instructions: '# Topology analyst\n\nInspect registered applications and routes, then explain dependencies, degraded links, and concrete architectural gaps with supporting route evidence.', capabilities: ['apps_list', 'routes_list'], apps: ['brain', 'dashboard'], defaultEnabled: true },
+  { id: 'briefing-editor', name: 'Briefing editor', description: 'Shapes useful, source-aware technology briefings for Big News.', instructions: '# Briefing editor\n\nTurn verified source material into a concise technology briefing. Separate facts from interpretation and preserve source attribution.', capabilities: ['content_read', 'content_propose'], apps: ['big-news'], defaultEnabled: true },
+  { id: 'release-manager', name: 'Release manager', description: 'Coordinates branch readiness, approval evidence, deployment, and rollback.', instructions: '# Release manager\n\nReview branch and route readiness, collect approval evidence, and produce a deployment and rollback checklist. Do not deploy automatically.', capabilities: ['apps_list', 'routes_list'], apps: ['admin', 'dashboard'], defaultEnabled: false },
+  { id: 'incident-triage', name: 'Incident triage', description: 'Correlates route health and logs into actionable recovery guidance.', instructions: '# Incident triage\n\nCorrelate route health signals, identify likely impact, and recommend reversible recovery steps with clear uncertainty.', capabilities: ['routes_list'], apps: ['dashboard', 'brain'], defaultEnabled: false }
 ]
 
 const readStore = () => {
@@ -76,17 +76,70 @@ export const controlStore = {
   },
   listSkills() {
     const state = control(readStore())
-    return skillDefinitions.map((definition) => ({ ...definition, enabled: state.skills[definition.id]?.enabled ?? definition.defaultEnabled, updatedAt: state.skills[definition.id]?.updatedAt ?? null }))
+    const builtIn = skillDefinitions.flatMap((definition) => {
+      const saved = state.skills[definition.id] || {}
+      if (saved.deleted) return []
+      return [{
+        ...definition,
+        ...Object.fromEntries(['name', 'description', 'instructions', 'capabilities', 'apps'].filter((key) => saved[key] !== undefined).map((key) => [key, saved[key]])),
+        enabled: saved.enabled ?? definition.defaultEnabled,
+        builtIn: true,
+        updatedAt: saved.updatedAt ?? null
+      }]
+    })
+    const custom = Object.values(state.skills).filter((skill) => skill.custom && !skill.deleted).map((skill) => ({
+      id: skill.id,
+      name: skill.name,
+      description: skill.description,
+      instructions: skill.instructions,
+      capabilities: [...skill.capabilities],
+      apps: [...skill.apps],
+      enabled: skill.enabled,
+      builtIn: false,
+      createdAt: skill.createdAt,
+      updatedAt: skill.updatedAt
+    }))
+    return [...builtIn, ...custom]
   },
+  getSkill(id) { return this.listSkills().find((skill) => skill.id === id) || null },
   configureSkill(id, input, actor) {
-    const definition = skillDefinitions.find((skill) => skill.id === id)
-    if (!definition) throw new Error('Unknown skill.')
+    const existing = this.getSkill(id)
+    if (!existing) throw new Error('Unknown skill.')
     if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 1 || !Object.hasOwn(input, 'enabled') || typeof input.enabled !== 'boolean') throw new Error('Invalid skill configuration.')
     const store = readStore(); const state = control(store)
-    state.skills[id] = { enabled: input.enabled, updatedAt: new Date().toISOString() }
-    addActivity(state, actor, { type: 'skill.configuration', subject: id, message: `${state.skills[id].enabled ? 'Enabled' : 'Disabled'} ${definition.name}` })
+    state.skills[id] = { ...(state.skills[id] || {}), enabled: input.enabled, updatedAt: new Date().toISOString() }
+    addActivity(state, actor, { type: 'skill.configuration', subject: id, message: `${input.enabled ? 'Enabled' : 'Disabled'} ${existing.name}` })
     writeStore(store)
-    return this.listSkills().find((skill) => skill.id === id)
+    return this.getSkill(id)
+  },
+  createSkill(input, actor) {
+    if (this.getSkill(input.id) || skillDefinitions.some((skill) => skill.id === input.id)) throw new Error('Skill already exists.')
+    const store = readStore(); const state = control(store); const timestamp = new Date().toISOString()
+    state.skills[input.id] = { ...input, capabilities: [...input.capabilities], apps: [...input.apps], custom: true, createdAt: timestamp, updatedAt: timestamp }
+    addActivity(state, actor, { type: 'skill.created', subject: input.id, message: `Created ${input.name}` })
+    writeStore(store)
+    return this.getSkill(input.id)
+  },
+  updateSkill(id, input, actor) {
+    const existing = this.getSkill(id)
+    if (!existing) throw new Error('Unknown skill.')
+    if (input.id !== id) throw new Error('Skill identifier cannot be changed.')
+    const store = readStore(); const state = control(store); const saved = state.skills[id] || {}
+    const editable = { name: input.name, description: input.description, instructions: input.instructions, capabilities: [...input.capabilities], apps: [...input.apps], enabled: input.enabled }
+    state.skills[id] = { ...saved, ...editable, ...(existing.builtIn ? {} : { id, custom: true, createdAt: saved.createdAt || new Date().toISOString() }), updatedAt: new Date().toISOString() }
+    addActivity(state, actor, { type: 'skill.updated', subject: id, message: `Updated ${input.name}` })
+    writeStore(store)
+    return this.getSkill(id)
+  },
+  deleteSkill(id, actor) {
+    const existing = this.getSkill(id)
+    if (!existing) throw new Error('Unknown skill.')
+    const store = readStore(); const state = control(store)
+    if (existing.builtIn) state.skills[id] = { ...(state.skills[id] || {}), deleted: true, updatedAt: new Date().toISOString() }
+    else delete state.skills[id]
+    addActivity(state, actor, { type: 'skill.deleted', subject: id, message: `Deleted ${existing.name}` })
+    writeStore(store)
+    return { id, name: existing.name }
   },
   saveIntent({ id, createdAt, actor, input, decomposition }) {
     if (typeof id !== 'string' || !id || typeof createdAt !== 'string' || !createdAt || !input || typeof input !== 'object' || !decomposition || typeof decomposition !== 'object') {
