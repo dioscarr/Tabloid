@@ -48,7 +48,7 @@ const parseRepositories = (value) => [...new Set(
 
 const parseTrustedLogins = (value) => [...new Set(
   value.split(',').map((login) => login.trim().toLowerCase()).filter(Boolean).map((login) => {
-    if (!/^[a-z0-9][a-z0-9._-]{0,127}$/.test(login)) {
+    if (!/^[a-z0-9][a-z0-9._@-]{0,127}$/.test(login)) {
       throw new Error(`ADMIN_TRUSTED_LOGINS contains an invalid login: ${login}`)
     }
     return login
